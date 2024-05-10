@@ -1,0 +1,19 @@
+name: ❓ Question or Support Request
+description: Ask a question or request support.
+title: "[HOWTO]: "
+labels: [documentation, question]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hi there! Thank you for using typhoidsim. 
+        ___
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Describe your question or ask for support.
+      placeholder: How can I do X or Y in typhoidsim? .
+    validations:
+      required: true
