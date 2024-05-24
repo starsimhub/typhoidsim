@@ -70,6 +70,7 @@ class TyphoidSimple(ss.Infection):
             ss.BoolArr("subclinical"),
             ss.BoolArr("chronic"),
             ss.BoolArr("recovered"),
+            ss.FloatArr("n_infections"),
             # Timepoint states
             ss.FloatArr("ti_exposed"),
             ss.FloatArr("ti_prepatent"),
@@ -124,39 +125,114 @@ class TyphoidSimple(ss.Infection):
     #     return
 
     def update_pre(self):
-        """ """
-
-        # Check who becomes susceptible in this timestep
-        self.make_susceptible()
+        """
+        Update the progression of the disease -- handles disease
+        state transitions.
+        """
 
         ti = self.sim.ti  # current timestep
 
-        infected = (self.exposed & (self.ti_infected <= ti)).uids
+        # Check who becomes susceptible in this timestep age 0-20
+        self.make_susceptible()
+        # Age-based susceptibility in chidldren <= 6 years old
+        self.update_susceptible_children_pop(self.sim.people, self.sim.dt)
 
-        self.infected[infected] = True
-        self.prepatent[infected] = True
-
-
-        # Progress to chronic
-        self.make_chronic()
-        self.exposed[recovered] = False
-        self.infected[recovered] = False
-        self.recovered[recovered] = True
-        self.susceptible[recovered] = True
-
-        # Progress to chronic given gallstones, need to define what happens for
-        # people without gallstones and in case the NCD has not een defiend.
-        has_gallstones = (self.sim.people.gallstones.affected).uids
-        self.chronic[has_gallstones] = self.pars.p_chronic.filter(has_gallstones)
-
-        # Trigger deaths
-        deaths = (self.ti_dead <= ti).uids
-        if len(deaths):
-            self.sim.people.request_death(deaths)
+        # Natural history flow - handle transitions
+        # between any two disease states or stages
+        self.progress_to_prepatent(ti)
+        self.progress_to_symptomatic(ti)  # Both acute and sublclinical
+        self.progress_to_chronic(ti)
+        self.progress_to_dead(ti)
+        self.progress_to_recovered(ti)
+        self.progress_to_susceptible(ti)
 
         self.environment.update()
 
         return
+
+    def progress_to_prepatent(self, ti):
+        infected = (self.exposed & (self.ti_infected <= ti)).uids
+        self.infected[infected] = True
+        self.prepatent[infected] = True
+
+        # N_i: number of prior infections,
+        # used to determine the probability of becoming
+        # infected upon exposure (1-P)**N_i,
+        # that provides almost sterilising immunity
+        # in hyper-endemic settings,
+        # but we may want to incorporate a mechanism
+        # to wane naturally acquired immunity.
+        self.n_infections[infected] += 1.0
+        self.exposed = False
+
+    def progress_to_symptomatic(self, ti):
+        # Progress petatent -> acute
+        prep2acute = (
+                self.prepatent &
+                (self.ti_acute <= ti)
+        ).uids
+        self.acute[prep2acute] = True
+        self.prepatent[prep2acute] = False
+
+        # Progress prepatent -> subclinical
+        prep2subcl = (
+                self.prepatent &
+                (self.ti_subclinical <= ti)
+        ).uids
+        self.subclinical[prep2subcl] = True
+        self.prepatent[prep2subcl] = False
+
+    def progress_to_chronic(self, ti):
+        # Progress acute -> chronic
+        acu2chro = (
+                self.acute &
+                (self.ti_chronic <= ti)
+        ).uids
+        self.chronic[acu2chro] = True
+        self.acute[acu2chro] = False
+
+        # Progress subclinical -> chronic
+        sub2chro = (
+                self.subclinical &
+                (self.ti_chronic <= ti)
+        ).uids
+        self.chronic[sub2chro] = True
+        self.subclinical[sub2chro] = False
+
+    def progress_to_death(self, ti):
+        # Trigger deaths
+        deaths = (self.ti_dead <= ti).uids
+        if len(deaths):
+            self.sim.people.request_death(deaths)
+        pass
+
+    def progress_to_recovered(self, ti):
+        # handle acute pathway
+        acu2rec = (
+            self.acute & (
+                self.ti_recovered <= ti) & (self.ti_dead <= ti)
+        ).uids
+        self.recovered[acu2rec] = True
+        self.acute[acu2rec] = False
+        self.infected[acu2rec] = False
+
+        # handle subclinical pathway
+        sub2rec = (
+            self.subclinical & (
+                self.ti_recovered <= ti) & (self.ti_dead <= ti)
+        ).uids
+        self.recovered[sub2rec] = True
+        self.subclinical[sub2rec] = False
+        self.infected[sub2rec] = False
+
+    def progress_to_susceptible(self, ti):
+        # Make agents susceptible again
+        rec2suc = (
+                self.recovered &
+                (self.ti_susceptible <= ti)
+        ).uids
+        self.susceptible[rec2suc] = True
+        self.recovered[rec2suc] = False
 
     def update_environmental_prevalence(self):
         """
@@ -190,7 +266,9 @@ class TyphoidSimple(ss.Infection):
 
     def set_prognoses(self, uids, source_uids=None):
         """
-        Set prognoses for those who get infected.
+        Here we define the whole natural history for every agent
+        that has been infected agent. The progression of this natural
+        history can be altered by interventions, or other diseases.
 
         Duration. The duration of the prepatent stage of an individual’s
         infection is calculated at the beginning of the infection as a
@@ -222,10 +300,11 @@ class TyphoidSimple(ss.Infection):
 
         # Determine when prepatent becomes acute
         self.ti_acute[acute_uids] = ti + p.dur_prepatent.rvs(acute_uids) / dt
-        # Determine when prepatent becomessubclinical
+
+        # Determine when prepatent becomes subclinical
         self.ti_subcl[subcl_uids] = ti + p.dur_prepatent.rvs(subcl_uids) / dt
 
-        # Determine who becomes a carrier
+        # Determine who becomes a carrier (from acute and sublclinical)
         carrier_uids = p.p_carrier.filter(uids)
 
         # From the acute cases, determine who can die because they don't become carriers
@@ -247,7 +326,7 @@ class TyphoidSimple(ss.Infection):
 
         # From the sublinical cases, determine who can recover because they don't become carriers
         can_recover_uids = np.setdiff1d(subcl_uids, carrier_uids)
-
+        # Determine when non-carriers recover
         self.ti_recovered[can_recover_uids] = (
             self.ti_subcl[can_recover_uids] + p.dur_subcl2rec.rvs(can_recover_uids) / dt
         )
@@ -277,7 +356,16 @@ class TyphoidSimple(ss.Infection):
 
     def update_death(self, uids):
         """Reset states for dead agents"""
-        for state in ["susceptible", "exposed", "infected", "symptomatic", "recovered"]:
+        for state in [
+            "susceptible",
+            "exposed",
+            "infected",
+            "prepatent",
+            "acute",
+            "subclinical",
+            "chronic",
+            "recovered",
+        ]:
             self.statesdict[state][uids] = False
         return
 
@@ -293,7 +381,8 @@ class TyphoidSimple(ss.Infection):
         pass
 
     def make_susceptible(self):
-        """Placeholder function to make agent susceptible as a function of
+        """
+        Placeholder function to make agent susceptible as a function of
         their age.
 
         From Gauld et al. 2018:
@@ -302,7 +391,7 @@ class TyphoidSimple(ss.Infection):
         Specifically, at each month of age a fitted curve determines the
         probability of an individual entering the susceptible class.
 
-        The curve isanchored at 0% exposure at birth, and 100% exposure at age
+        The curve is anchored at 0% exposure at birth, and 100% exposure at age
         20 years, with a free slope parameter (S) determining the concavity/shape
         of the function (Fig 2B).'
 
@@ -319,8 +408,9 @@ class TyphoidSimple(ss.Infection):
 
 def environmental_transmission(people, disease, contaminated_environment, current_ti):
     """
-    Transmission and make new cases can form the basis for a Propagation class, which would be
-    a specific class of the more abstract Connector
+    Transmission and make new cases can form the basis for
+    a Propagation class, which would be a specific class of
+    the more abstract Connector.
     """
     # Make new cases via indirect transmission
     pars = contaminated_environment.pars
@@ -330,7 +420,7 @@ def environmental_transmission(people, disease, contaminated_environment, curren
     return new_cases
 
 
-def age_based_childhood_susceptibility(people, dt):
+def update_susceptible_children_pop(people, dt):
     """
     From:
     https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/SusceptibilityTyphoid.cpp
