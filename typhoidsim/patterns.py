@@ -14,7 +14,7 @@ import starsim as ss
 
 import typhoidsim.defaults as tyd
 
-__all__ = ["StateVariable"]
+__all__ = ["Pattern", "StateVariable"]
 
 
 class Pattern:
@@ -76,6 +76,13 @@ class Pattern:
         string = f"typ.{classname}({tracestr}, {pttrnstr}pars={dict(self.pars)})"
         return string
 
+    def __call__(self, var=None):
+        """Alias to self.evaluate(var)"""
+        pattern = None
+        if var is not None:
+            pattern = self.evaluate(var)
+        return pattern
+
     def disp(self):
         """Return full display of object"""
         return sc.pr(self)
@@ -98,9 +105,7 @@ class Pattern:
             print(s)
             return
 
-    def __call__(self, var):
-        """Alias to self.evaluate(var)"""
-        return self.evaluate(var)
+
 
     def validate_equation(self):
         # TODO: perform some basic checks that the equation is well formed?

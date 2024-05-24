@@ -21,6 +21,16 @@ class TyphoidSimple(ss.Infection):
 
     This is a proof-of-concept 'monolithic' and 'simplfieied' implementation,
     similar to starsim's Cholera module.
+
+    The parent class ss.Infection has the following states
+
+    ss.BoolArr('susceptible', default=True) -- for typhoid we may need to reset
+    this to False
+    ss.BoolArr('infected'), -- default False
+    ss.FloatArr('rel_sus', default=1.0),
+    ss.FloatArr('rel_trans', default=1.0),
+    ss.FloatArr('ti_infected'),)
+
     """
 
     def __init__(self, pars=None, *args, **kwargs):
@@ -33,14 +43,14 @@ class TyphoidSimple(ss.Infection):
             # Natural history parameters, all specified in days
             # Age-based exposure
             age_exposure_slope=1.0,
-            dur_prep2acute=ss.lognorm_ex(mean=0.0, stdev=0.0),  # Prepatent -> acute
+            dur_prep2acute=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Prepatent -> acute
             dur_prep2subcl=ss.lognorm_ex(
-                mean=0.0, stdev=0.0
+                mean=0.1, stdev=0.0
             ),  # Prepatent -> subclinical
             dur_subcl2chro=ss.lognorm_ex(
-                mean=0.0, stdev=0.0
+                mean=0.1, stdev=0.0
             ),  # Subclinical - > chronic
-            dur_acute2chro=ss.lognorm_ex(mean=0.0, stdev=0.0),  # Acute -> Chronic
+            dur_acute2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Chronic
             p_death=ss.bernoulli(p=0.0),  # Probability of dying from acute
             p_acute=ss.bernoulli(p=0.0),  # Probability of becoming acute
             p_chronic=0.015,  # Prob of becoming chronic carrier in persons with gallstones
@@ -80,10 +90,16 @@ class TyphoidSimple(ss.Infection):
             ss.FloatArr("ti_recovered"),
             ss.FloatArr("ti_dead"),
         )
+        # NOTE: Typhoid may assume that all individuals are born into an
+        # a class where they cannot get infected, and then
+        # move to the susceptible class at probabilities
+        # for each age. The ss.Infection class set the self.susceptible state
+        # to True by default, so here reset this array to False
+        self.make_impervious()
 
-        self.init_state_vars(
-            **kwargs,
-        )
+        # self.init_state_vars(
+        #     **kwargs,
+        # )
         return
 
     @property
@@ -338,21 +354,20 @@ class TyphoidSimple(ss.Infection):
         # Make new cases via person-to-person transmission
         super().make_new_cases()
 
-        new_cases = self._environmental_transmission()
-        # new_cases = environmental_transmission(self.sim.people, self, self.pars.long_ccvt, self.sim.ti)
+        new_cases = self.environmental_transmission()
 
         if new_cases.any():
             self.set_prognoses(new_cases, source_uids=None)
         return
 
-    # def _environmental_transmission(self):
-    #     # Make new cases via indirect transmission
-    #     env_pars = self.pars.environment
-    #     sv = self.state_variables
-    #     p_transmit = sv.env_concentration[self.sim.ti] * env_pars.beta
-    #     env_pars.p_env_transmit.set(p=p_transmit)
-    #     new_cases = pars.p_env_transmit.filter(self.sim.people.uid[self.susceptible])
-    #     return new_cases
+    def environmental_transmission(self):
+        # Make new cases via indirect transmission
+        env_pars = self.pars.environment
+        sv = self.state_variables
+        p_transmit = env_pars.beta * sv.env_concentration[self.sim.ti]
+        env_pars.p_transmit.set(p=p_transmit)
+        new_cases = env_pars.p_transmit.filter(self.sim.people.uid[self.susceptible])
+        return new_cases
 
     def update_death(self, uids):
         """Reset states for dead agents"""
@@ -405,6 +420,9 @@ class TyphoidSimple(ss.Infection):
             )
         )
 
+    def make_impervious(self):
+        self.susceptible[(self.susceptible).uids] = False
+
 
 def environmental_transmission(people, disease, contaminated_environment, current_ti):
     """
@@ -413,10 +431,10 @@ def environmental_transmission(people, disease, contaminated_environment, curren
     the more abstract Connector.
     """
     # Make new cases via indirect transmission
-    pars = contaminated_environment.pars
-    p_transmit = pars.beta * contaminated_environment.concentration[current_ti]
-    pars.p_transmit.set(p=p_transmit)
-    new_cases = pars.p_env_transmit.filter(people.uid[disease.susceptible])
+    env_pars = contaminated_environment.pars
+    p_transmit = env_pars.beta * contaminated_environment.concentration[current_ti]
+    env_pars.p_transmit.set(p=p_transmit)
+    new_cases = env_pars.p_env_transmit.filter(people.uid[disease.susceptible])
     return new_cases
 
 
