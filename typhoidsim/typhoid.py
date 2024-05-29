@@ -39,7 +39,7 @@ class TyphoidSimple(ss.Infection):
         self.default_pars(
             # Initial conditions and beta
             beta=1.0,  # Placeholder value
-            init_prev=ss.bernoulli(0.0),
+            init_prev=ss.bernoulli(0.005),
             # Natural history parameters, all specified in days
             # Age-based exposure
             age_exposure_slope=1.0,
@@ -51,8 +51,8 @@ class TyphoidSimple(ss.Infection):
                 mean=0.1, stdev=0.0
             ),  # Subclinical - > chronic
             dur_acute2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Chronic
-            p_death=ss.bernoulli(p=0.0),  # Probability of dying from acute
-            p_acute=ss.bernoulli(p=0.0),  # Probability of becoming acute
+            p_death=ss.bernoulli(p=0.2),  # Probability of dying from acute
+            p_acute=ss.bernoulli(p=0.1),  # Probability of becoming acute
             p_chronic=0.015,  # Prob of becoming chronic carrier in persons with gallstones
             # Environmental parameters - long-cycle CCVT
             environment=dict(
@@ -297,6 +297,7 @@ class TyphoidSimple(ss.Infection):
         a High dose prepatent duration.
 
         """
+
         super().set_prognoses(uids, source_uids)
         ti = self.sim.ti
         dt = self.sim.dt
@@ -311,8 +312,7 @@ class TyphoidSimple(ss.Infection):
 
         # Determine who will become acute and who will become subclinical
         acu_scl = p.p_acute.filter(uids, both=True)
-        acute_uids = (acu_scl).uids
-        subcl_uids = (~acu_scl).uids
+        acute_uids, subcl_uids = acu_scl
 
         # Determine when prepatent becomes acute
         self.ti_acute[acute_uids] = ti + p.dur_prepatent.rvs(acute_uids) / dt
@@ -355,7 +355,7 @@ class TyphoidSimple(ss.Infection):
         super().make_new_cases()
 
         new_cases = self.environmental_transmission()
-
+        import ipdb; ipdb.set_trace()
         if new_cases.any():
             self.set_prognoses(new_cases, source_uids=None)
         return
