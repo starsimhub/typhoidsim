@@ -105,7 +105,7 @@ class TyphoidSimple(ss.Infection):
 
     @property
     def infectious(self):
-        return self.infected | self.exposed
+        return self.infected | self.exposed | self.prepatent
 
     @property
     def asymptomatic(self):
@@ -335,7 +335,6 @@ class TyphoidSimple(ss.Infection):
 
         # Set duration of prepatent state, by defining when they will
         # progress to the next state (either acute or sublinical)
-
         dur_pre = ti + p.dur_prep2next.rvs(uids) / dt
 
         # Determine who will become acute and who will become subclinical
@@ -345,7 +344,7 @@ class TyphoidSimple(ss.Infection):
         # Set prepatent duration of those who will become acute
         self.ti_acute[acute_uids] = dur_pre[acute_uids]
 
-        # Set prepatent duration of those who will become sublclinical
+        # Set prepatent duration of those who will become subclinical
         self.ti_subclinical[subcl_uids] = dur_pre[subcl_uids]
 
         # Determine who becomes a (chronic) carrier (from acute and sublclinical)
