@@ -86,6 +86,7 @@ class TyphoidSimple(ss.Infection):
             ss.BoolArr("chronic"),
             ss.BoolArr("recovered"),
             ss.FloatArr("n_infections"),
+            ss.FloatArr("infectiousness"),
             # Timepoint states
             ss.FloatArr("ti_exposed"),
             ss.FloatArr("ti_susceptible"),
