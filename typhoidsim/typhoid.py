@@ -79,12 +79,12 @@ class TyphoidSimple(ss.Infection):
         # Boolean states
         self.add_states(
             # Susceptible & infected are added automatically, here we add the rest
-            ss.BoolArr("exposed"),  # NOTE: i don't think we need this state here
             ss.BoolArr("prepatent"),
             ss.BoolArr("acute"),
             ss.BoolArr("subclinical"),
             ss.BoolArr("chronic"),
             ss.BoolArr("recovered"),
+            ss.BoolArr("xposed"),  # NOTE: i don't think we need this state here
             ss.FloatArr("n_infections"),
             # Timepoint states
             ss.FloatArr("ti_exposed"),
@@ -110,7 +110,7 @@ class TyphoidSimple(ss.Infection):
 
     @property
     def infectious(self):
-        return self.infected | self.exposed
+        return self.infected | self.xposed
 
     @property
     def asymptomatic(self):
@@ -167,11 +167,11 @@ class TyphoidSimple(ss.Infection):
         self.progress_to_dead(ti)
         self.progress_to_recovered(ti)
         self.progress_to_susceptible(ti)
-        #self.update_environmental_prevalence()
+        # self.update_environmental_prevalence()
         return
 
     def progress_to_prepatent(self, ti):
-        infected = (self.exposed & (self.ti_infected <= ti)).uids
+        infected = (self.xposed & (self.ti_infected <= ti)).uids
         self.infected[infected] = True
         self.prepatent[infected] = True
 
@@ -183,7 +183,7 @@ class TyphoidSimple(ss.Infection):
         # but we may want to incorporate a mechanism
         # to wane naturally acquired immunity.
         self.n_infections[infected] += 1.0
-        self.exposed = False
+        #self.exposed[infected] = False
 
     def progress_to_symptomatic(self, ti):
         # Progress petatent -> acute
@@ -359,7 +359,7 @@ class TyphoidSimple(ss.Infection):
         """Reset states for dead agents"""
         for state in [
             "susceptible",
-            "exposed",
+            "xposed",
             "infected",
             "prepatent",
             "acute",
@@ -408,6 +408,7 @@ class TyphoidSimple(ss.Infection):
 
     def make_impervious(self):
         self.susceptible[(self.susceptible).uids] = False
+        self.xposed[(self.xposed).uids] = False
 
 
 def environmental_transmission(people, disease, contaminated_environment, current_ti):
