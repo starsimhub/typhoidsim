@@ -79,12 +79,12 @@ class TyphoidSimple(ss.Infection):
         # Boolean states
         self.add_states(
             # Susceptible & infected are added automatically, here we add the rest
+            ss.BoolArr("exposed"),
             ss.BoolArr("prepatent"),
             ss.BoolArr("acute"),
             ss.BoolArr("subclinical"),
             ss.BoolArr("chronic"),
             ss.BoolArr("recovered"),
-            ss.BoolArr("xposed"),  # NOTE: i don't think we need this state here
             ss.FloatArr("n_infections"),
             # Timepoint states
             ss.FloatArr("ti_exposed"),
@@ -96,12 +96,6 @@ class TyphoidSimple(ss.Infection):
             ss.FloatArr("ti_recovered"),
             ss.FloatArr("ti_dead"),
         )
-        # NOTE: Typhoid may assume that all individuals are born into an
-        # a class where they cannot get infected, and then
-        # move to the susceptible class at probabilities
-        # for each age. The ss.Infection class set the self.susceptible state
-        # to True by default, so here reset this array to False
-        self.make_impervious()
 
         # self.init_state_vars(
         #     **kwargs,
@@ -110,7 +104,7 @@ class TyphoidSimple(ss.Infection):
 
     @property
     def infectious(self):
-        return self.infected | self.xposed
+        return self.infected | self.exposed
 
     @property
     def asymptomatic(self):
@@ -134,6 +128,29 @@ class TyphoidSimple(ss.Infection):
         ]
         return
 
+    def init_vals(self):
+        """
+        Set initial values for states. This could involve passing in a full
+        set of initial conditions, or using init_prev (initial prevalence), or other.
+
+        Note that this is different to initialization of the Arr objects i.e.,
+        creating their dynamic array, linking them to a People instance.
+        That should have already taken place by the time this method is called.
+        """
+        # NOTE: Typhoid may assume that all individuals are born into an
+        # a class where they cannot get infected, and then
+        # move to the susceptible class at probabilities
+        # for each age. The ss.Infection class set the self.susceptible state
+        # to True by default, so here reset this array to False
+        self.make_impervious()
+
+        if self.pars.init_prev is None:
+            return
+
+        initial_cases = self.pars.init_prev.filter()
+        self.set_prognoses(initial_cases)  # TODO: sentinel value to indicate seeds?
+        return
+
     # def init_state_vars(self, **kwargs):
     #     """
     #     State variables, states that are not defined on a per-agent basis,
@@ -146,10 +163,58 @@ class TyphoidSimple(ss.Infection):
     #     ]
     #     return
 
+    # Methods that are specific to a single state (though they can modify other
+    # states)
+    def make_susceptible(self):
+        """
+        Placeholder function to make agent susceptible as a function of
+        their age.
+
+        From Gauld et al. 2018:
+        'Our model assumes all individuals are born into an unexposed class
+        and move to the susceptible class at probabilities for each age.
+        Specifically, at each month of age a fitted curve determines the
+        probability of an individual entering the susceptible class.
+
+        The curve is anchored at 0% exposure at birth, and 100% exposure at age
+        20 years, with a free slope parameter (S) determining the concavity/shape
+        of the function (Fig 2B).'
+
+        """
+
+        max_age = 20.0  # TODO: make configurbale?
+        unexposed = (~self.susceptible).uids
+        self.susceptible[unexposed] = ss.bernoulli(
+            p=tyu.sigmoid(
+                self.sim.people.age[unexposed], max_age, self.pars.age_exposure_slope
+            )
+        )
+
+    def make_impervious(self):
+        self.exposed[self.susceptible.uids] = False
+        self.susceptible[self.susceptible.uids] = False
+
+    def update_death(self, uids):
+        """Reset states for dead agents"""
+        for state in [
+            "susceptible",
+            "exposed",
+            "infected",
+            "prepatent",
+            "acute",
+            "subclinical",
+            "chronic",
+            "recovered",
+        ]:
+            self.statesdict[state][uids] = False
+        return
+
     def update_pre(self):
         """
         Update the progression of the disease -- handles disease
-        state transitions.
+        state transitions. In the typical simulation flow this method is called
+        before propagating the infection/disease is propagated via
+        make_new_cases()
         """
 
         ti = self.sim.ti  # current timestep
@@ -171,7 +236,7 @@ class TyphoidSimple(ss.Infection):
         return
 
     def progress_to_prepatent(self, ti):
-        infected = (self.xposed & (self.ti_infected <= ti)).uids
+        infected = (self.exposed & (self.ti_infected <= ti)).uids
         self.infected[infected] = True
         self.prepatent[infected] = True
 
@@ -183,7 +248,6 @@ class TyphoidSimple(ss.Infection):
         # but we may want to incorporate a mechanism
         # to wane naturally acquired immunity.
         self.n_infections[infected] += 1.0
-        #self.exposed[infected] = False
 
     def progress_to_symptomatic(self, ti):
         # Progress petatent -> acute
@@ -220,6 +284,7 @@ class TyphoidSimple(ss.Infection):
         self.recovered[acu2rec] = True
         self.acute[acu2rec] = False
         self.infected[acu2rec] = False
+        self.exposed[acu2rec] = False
 
         # handle subclinical pathway
         sub2rec = (
@@ -234,35 +299,6 @@ class TyphoidSimple(ss.Infection):
         rec2suc = (self.recovered & (self.ti_susceptible <= ti)).uids
         self.susceptible[rec2suc] = True
         self.recovered[rec2suc] = False
-
-    def update_environmental_prevalence(self):
-        """
-        Calculate environmental prevalence
-        long-cycle CCVT
-        """
-        env_pars = self.pars.environment
-        trans_pars = self.pars.ppl_env_transmission
-
-        sv = self.state_vars
-        ti = self.sim.ti
-
-        n_symptomatic = self.symptomatic.sum()
-        n_asymptomatic = self.asymptomatic.sum()
-
-        # Update environment
-        previous_ep = sv.env_prevalence[ti - 1]
-        bacteria_from_env = previous_ep * (1.0 - env_pars.decay_rate)
-
-        bacteria_from_ppl = trans_pars.shedding_rate * (
-            n_symptomatic + trans_pars.asymp_trans * n_asymptomatic
-        )
-
-        # Current prevalence
-        sv.env_prevalence[ti] = bacteria_from_env + bacteria_from_ppl
-        sv.env_concentration[ti] = sv.env_prevalence[ti] / (
-            sv.env_prevalence[ti] + env_pars.half_sat_rate
-        )
-        return
 
     def set_prognoses(self, uids, source_uids=None):
         """
@@ -288,6 +324,7 @@ class TyphoidSimple(ss.Infection):
 
         self.susceptible[uids] = False
         self.infected[uids] = True
+        self.exposed[uids] = True
         self.prepatent[uids] = True
         self.ti_prepatent[uids] = ti
         self.ti_infected[uids] = ti
@@ -334,6 +371,8 @@ class TyphoidSimple(ss.Infection):
 
         return
 
+    #  Transmission-realated methods - interaction between agents and "else" (other agents)
+    #  or the environment
     def make_new_cases(self):
         """Add short-cycle transmission and long-cycle transmission transmission"""
         # Make new cases via person-to-person transmission
@@ -341,7 +380,7 @@ class TyphoidSimple(ss.Infection):
 
         new_cases = self.environmental_transmission()
 
-        if new_cases.any():
+        if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
         return
 
@@ -352,22 +391,37 @@ class TyphoidSimple(ss.Infection):
         # p_transmit = env_pars.beta * sv.env_concentration[self.sim.ti]
         # env_pars.p_transmit.set(p=p_transmit)
         # new_cases = env_pars.p_transmit.filter(self.sim.people.uid[self.susceptible])
-        new_cases = ss.FloatArr([])
+        new_cases = []
         return new_cases
 
-    def update_death(self, uids):
-        """Reset states for dead agents"""
-        for state in [
-            "susceptible",
-            "xposed",
-            "infected",
-            "prepatent",
-            "acute",
-            "subclinical",
-            "chronic",
-            "recovered",
-        ]:
-            self.statesdict[state][uids] = False
+    #  "Naturral history of the environment"
+    def update_environmental_prevalence(self):
+        """
+        Calculate environmental prevalence
+        long-cycle CCVT
+        """
+        env_pars = self.pars.environment
+        trans_pars = self.pars.ppl_env_transmission
+
+        sv = self.state_vars
+        ti = self.sim.ti
+
+        n_symptomatic = self.symptomatic.sum()
+        n_asymptomatic = self.asymptomatic.sum()
+
+        # Update environment
+        previous_ep = sv.env_prevalence[ti - 1]
+        bacteria_from_env = previous_ep * (1.0 - env_pars.decay_rate)
+
+        bacteria_from_ppl = trans_pars.shedding_rate * (
+            n_symptomatic + trans_pars.asymp_trans * n_asymptomatic
+        )
+
+        # Current prevalence
+        sv.env_prevalence[ti] = bacteria_from_env + bacteria_from_ppl
+        sv.env_concentration[ti] = sv.env_prevalence[ti] / (
+            sv.env_prevalence[ti] + env_pars.half_sat_rate
+        )
         return
 
     def update_results(self):
@@ -380,35 +434,6 @@ class TyphoidSimple(ss.Infection):
 
     def make_new_cases_long_cycle(self):
         pass
-
-    def make_susceptible(self):
-        """
-        Placeholder function to make agent susceptible as a function of
-        their age.
-
-        From Gauld et al. 2018:
-        'Our model assumes all individuals are born into an unexposed class
-        and move to the susceptible class at probabilities for each age.
-        Specifically, at each month of age a fitted curve determines the
-        probability of an individual entering the susceptible class.
-
-        The curve is anchored at 0% exposure at birth, and 100% exposure at age
-        20 years, with a free slope parameter (S) determining the concavity/shape
-        of the function (Fig 2B).'
-
-        """
-
-        max_age = 20.0  # TODO: make configurbale?
-        unexposed = (~self.susceptible).uids
-        self.susceptible[unexposed] = ss.bernoulli(
-            p=tyu.sigmoid(
-                self.sim.people.age[unexposed], max_age, self.pars.age_exposure_slope
-            )
-        )
-
-    def make_impervious(self):
-        self.susceptible[(self.susceptible).uids] = False
-        self.xposed[(self.xposed).uids] = False
 
 
 def environmental_transmission(people, disease, contaminated_environment, current_ti):
