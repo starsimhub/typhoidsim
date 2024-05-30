@@ -46,12 +46,13 @@ class TyphoidSimple(ss.Infection):
             # Natural history parameters, all specified in days
             # Age-based exposure
             age_exposure_slope=1.0,
-            dur_prep2acute=ss.lognorm_ex(mean=1.548, stdev=0.3442),  # 'High dose' prepatent duration, from typhoid-spec docs
-            dur_prep2subcl=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Prepatent -> subclinical
-            dur_acute2dead=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Dead
+            dur_prep2next=ss.lognorm_ex(mean=1.548, stdev=0.3442),  # 'High dose' prepatent duration, in days.
+            dur_acute2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Acute duration for under (<) 30 yo, in weeks.
+            dur_acute2next_geq30=ss.lognorm_ex(mean=1.258, stdev=0.788),  # Acute duration for over (>=) 30 yo, in weeks.
+
             dur_subcl2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
-            dur_subcl2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
-            dur_acute2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
+            dur_subcl2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),   # Subclinical - > chronic
+            dur_acute2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),   # Subclinical - > chronic
             dur_acute2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Chronic
             p_acute=ss.bernoulli(p=0.234),  # Probability of becoming acute (or symptomatic)
             p_chronic=ss.bernoulli(
@@ -319,9 +320,11 @@ class TyphoidSimple(ss.Infection):
         """
 
         super().set_prognoses(uids, source_uids)
+        p = self.pars
         ti = self.sim.ti
         dt = self.sim.dt
 
+        # Set value of states associated to being infected, and record events
         self.susceptible[uids] = False
         self.infected[uids] = True
         self.exposed[uids] = True
@@ -329,17 +332,21 @@ class TyphoidSimple(ss.Infection):
         self.ti_prepatent[uids] = ti
         self.ti_infected[uids] = ti
 
-        p = self.pars
+
+        # Set duration of prepatent state, by defining when they will
+        # progress to the next state (either acute or sublinical)
+
+        dur_pre = ti + p.dur_prep2next.rvs(uids) / dt
 
         # Determine who will become acute and who will become subclinical
         acu_scl = p.p_acute.filter(uids, both=True)
         acute_uids, subcl_uids = acu_scl
 
-        # Determine when prepatent becomes acute
-        self.ti_acute[acute_uids] = ti + p.dur_prep2acute.rvs(acute_uids) / dt
+        # Set prepatent duration of those who will become acute
+        self.ti_acute[acute_uids] = dur_pre[acute_uids]
 
-        # Determine when prepatent becomes subclinical
-        self.ti_subclinical[subcl_uids] = ti + p.dur_prep2subcl.rvs(subcl_uids) / dt
+        # Set prepatent duration of those who will become sublclinical
+        self.ti_subclinical[subcl_uids] = dur_pre[subcl_uids]
 
         # Determine who becomes a (chronic) carrier (from acute and sublclinical)
         carrier_uids = p.p_chronic.filter(uids)
