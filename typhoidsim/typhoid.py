@@ -47,13 +47,18 @@ class TyphoidSimple(ss.Infection):
             dur_prep2subcl=ss.lognorm_ex(
                 mean=0.1, stdev=0.0
             ),  # Prepatent -> subclinical
+            dur_acute2dead=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Dead
             dur_subcl2chro=ss.lognorm_ex(
                 mean=0.1, stdev=0.0
             ),  # Subclinical - > chronic
+            dur_subcl2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
+            dur_acute2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
             dur_acute2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Chronic
             p_death=ss.bernoulli(p=0.2),  # Probability of dying from acute
             p_acute=ss.bernoulli(p=0.1),  # Probability of becoming acute
-            p_chronic=0.015,  # Prob of becoming chronic carrier in persons with gallstones
+            p_chronic=ss.bernoulli(
+                p=0.015
+            ),  # Prob of becoming chronic carrier in persons with gallstones
             # Environmental parameters - long-cycle CCVT
             environment=dict(
                 beta=0.0,
@@ -83,6 +88,7 @@ class TyphoidSimple(ss.Infection):
             ss.FloatArr("n_infections"),
             # Timepoint states
             ss.FloatArr("ti_exposed"),
+            ss.FloatArr("ti_susceptible"),
             ss.FloatArr("ti_prepatent"),
             ss.FloatArr("ti_subclinical"),
             ss.FloatArr("ti_acute"),
@@ -151,7 +157,7 @@ class TyphoidSimple(ss.Infection):
         # Check who becomes susceptible in this timestep age 0-20
         self.make_susceptible()
         # Age-based susceptibility in chidldren <= 6 years old
-        self.update_susceptible_children_pop(self.sim.people, self.sim.dt)
+        # self.increase_childhood_susceptibility()
 
         # Natural history flow - handle transitions
         # between any two disease states or stages
@@ -161,9 +167,7 @@ class TyphoidSimple(ss.Infection):
         self.progress_to_dead(ti)
         self.progress_to_recovered(ti)
         self.progress_to_susceptible(ti)
-
-        self.environment.update()
-
+        #self.update_environmental_prevalence()
         return
 
     def progress_to_prepatent(self, ti):
@@ -183,39 +187,27 @@ class TyphoidSimple(ss.Infection):
 
     def progress_to_symptomatic(self, ti):
         # Progress petatent -> acute
-        prep2acute = (
-                self.prepatent &
-                (self.ti_acute <= ti)
-        ).uids
+        prep2acute = (self.prepatent & (self.ti_acute <= ti)).uids
         self.acute[prep2acute] = True
         self.prepatent[prep2acute] = False
 
         # Progress prepatent -> subclinical
-        prep2subcl = (
-                self.prepatent &
-                (self.ti_subclinical <= ti)
-        ).uids
+        prep2subcl = (self.prepatent & (self.ti_subclinical <= ti)).uids
         self.subclinical[prep2subcl] = True
         self.prepatent[prep2subcl] = False
 
     def progress_to_chronic(self, ti):
         # Progress acute -> chronic
-        acu2chro = (
-                self.acute &
-                (self.ti_chronic <= ti)
-        ).uids
+        acu2chro = (self.acute & (self.ti_chronic <= ti)).uids
         self.chronic[acu2chro] = True
         self.acute[acu2chro] = False
 
         # Progress subclinical -> chronic
-        sub2chro = (
-                self.subclinical &
-                (self.ti_chronic <= ti)
-        ).uids
+        sub2chro = (self.subclinical & (self.ti_chronic <= ti)).uids
         self.chronic[sub2chro] = True
         self.subclinical[sub2chro] = False
 
-    def progress_to_death(self, ti):
+    def progress_to_dead(self, ti):
         # Trigger deaths
         deaths = (self.ti_dead <= ti).uids
         if len(deaths):
@@ -224,18 +216,14 @@ class TyphoidSimple(ss.Infection):
 
     def progress_to_recovered(self, ti):
         # handle acute pathway
-        acu2rec = (
-            self.acute & (
-                self.ti_recovered <= ti) & (self.ti_dead <= ti)
-        ).uids
+        acu2rec = (self.acute & (self.ti_recovered <= ti) & (self.ti_dead <= ti)).uids
         self.recovered[acu2rec] = True
         self.acute[acu2rec] = False
         self.infected[acu2rec] = False
 
         # handle subclinical pathway
         sub2rec = (
-            self.subclinical & (
-                self.ti_recovered <= ti) & (self.ti_dead <= ti)
+            self.subclinical & (self.ti_recovered <= ti) & (self.ti_dead <= ti)
         ).uids
         self.recovered[sub2rec] = True
         self.subclinical[sub2rec] = False
@@ -243,10 +231,7 @@ class TyphoidSimple(ss.Infection):
 
     def progress_to_susceptible(self, ti):
         # Make agents susceptible again
-        rec2suc = (
-                self.recovered &
-                (self.ti_susceptible <= ti)
-        ).uids
+        rec2suc = (self.recovered & (self.ti_susceptible <= ti)).uids
         self.susceptible[rec2suc] = True
         self.recovered[rec2suc] = False
 
@@ -255,9 +240,8 @@ class TyphoidSimple(ss.Infection):
         Calculate environmental prevalence
         long-cycle CCVT
         """
-        pars = self.pars
         env_pars = self.pars.environment
-        trans_pars = self.pars.transmission
+        trans_pars = self.pars.ppl_env_transmission
 
         sv = self.state_vars
         ti = self.sim.ti
@@ -315,13 +299,13 @@ class TyphoidSimple(ss.Infection):
         acute_uids, subcl_uids = acu_scl
 
         # Determine when prepatent becomes acute
-        self.ti_acute[acute_uids] = ti + p.dur_prepatent.rvs(acute_uids) / dt
+        self.ti_acute[acute_uids] = ti + p.dur_prep2acute.rvs(acute_uids) / dt
 
         # Determine when prepatent becomes subclinical
-        self.ti_subcl[subcl_uids] = ti + p.dur_prepatent.rvs(subcl_uids) / dt
+        self.ti_subclinical[subcl_uids] = ti + p.dur_prep2subcl.rvs(subcl_uids) / dt
 
-        # Determine who becomes a carrier (from acute and sublclinical)
-        carrier_uids = p.p_carrier.filter(uids)
+        # Determine who becomes a (chronic) carrier (from acute and sublclinical)
+        carrier_uids = p.p_chronic.filter(uids)
 
         # From the acute cases, determine who can die because they don't become carriers
         can_die_uids = np.setdiff1d(acute_uids, carrier_uids)
@@ -344,7 +328,8 @@ class TyphoidSimple(ss.Infection):
         can_recover_uids = np.setdiff1d(subcl_uids, carrier_uids)
         # Determine when non-carriers recover
         self.ti_recovered[can_recover_uids] = (
-            self.ti_subcl[can_recover_uids] + p.dur_subcl2rec.rvs(can_recover_uids) / dt
+            self.ti_subclinical[can_recover_uids]
+            + p.dur_subcl2rec.rvs(can_recover_uids) / dt
         )
 
         return
@@ -355,18 +340,19 @@ class TyphoidSimple(ss.Infection):
         super().make_new_cases()
 
         new_cases = self.environmental_transmission()
-        import ipdb; ipdb.set_trace()
+
         if new_cases.any():
             self.set_prognoses(new_cases, source_uids=None)
         return
 
     def environmental_transmission(self):
         # Make new cases via indirect transmission
-        env_pars = self.pars.environment
-        sv = self.state_variables
-        p_transmit = env_pars.beta * sv.env_concentration[self.sim.ti]
-        env_pars.p_transmit.set(p=p_transmit)
-        new_cases = env_pars.p_transmit.filter(self.sim.people.uid[self.susceptible])
+        # env_pars = self.pars.environment
+        # sv = self.state_variables
+        # p_transmit = env_pars.beta * sv.env_concentration[self.sim.ti]
+        # env_pars.p_transmit.set(p=p_transmit)
+        # new_cases = env_pars.p_transmit.filter(self.sim.people.uid[self.susceptible])
+        new_cases = ss.FloatArr([])
         return new_cases
 
     def update_death(self, uids):
@@ -453,9 +439,9 @@ def update_susceptible_children_pop(people, dt):
     age_boundary_3y = 3.0 * tyd.days_per_year  # in days
     age_boundary_6y = 6.0 * tyd.days_per_year  # in days
 
-    p_6m = ss.bernoulli(0.1)
-    p_3y = ss.bernoulli(0.1)
-    p_6y = ss.bernoulli(0.1)
+    p_6m = ss.bernoulli(0.1).initialize()
+    p_3y = ss.bernoulli(0.1).initialize()
+    p_6y = ss.bernoulli(0.1).initialize()
 
     uids_6m = (
         (people.age >= age_boundary_6m) & ((people.age - dt) < age_boundary_6m)
@@ -476,8 +462,8 @@ def update_susceptible_children_pop(people, dt):
     return people
 
 
-def make_children_susceptible(people, uids_aged_x, frac_susceptible_aged_x):
-    new_susc = frac_susceptible_aged_x.filter(people.uid[uids_aged_x])
+def make_children_susceptible(people, uids_aged_x, prop_susceptible):
+    new_susc = prop_susceptible.filter(people.uid[uids_aged_x])
     people.typhoid.susceptible[new_susc] = True
     return people
 
