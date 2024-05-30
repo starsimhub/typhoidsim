@@ -43,7 +43,7 @@ class TyphoidSimple(ss.Infection):
             # Natural history parameters, all specified in days
             # Age-based exposure
             age_exposure_slope=1.0,
-            dur_prep2acute=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Prepatent -> acute
+            dur_prep2acute=ss.lognorm_ex(mean=1.548, stdev=0.3442),  # Prepatent -> acute
             dur_prep2subcl=ss.lognorm_ex(
                 mean=0.1, stdev=0.0
             ),  # Prepatent -> subclinical
