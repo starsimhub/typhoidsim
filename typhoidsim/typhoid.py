@@ -31,6 +31,9 @@ class TyphoidSimple(ss.Infection):
     ss.FloatArr('rel_trans', default=1.0),
     ss.FloatArr('ti_infected'),)
 
+    # TODO: add linkl to specification document
+    Unless otherwise specified, parameters come from: XXX
+
     """
 
     def __init__(self, pars=None, *args, **kwargs):
@@ -43,22 +46,18 @@ class TyphoidSimple(ss.Infection):
             # Natural history parameters, all specified in days
             # Age-based exposure
             age_exposure_slope=1.0,
-            dur_prep2acute=ss.lognorm_ex(mean=1.548, stdev=0.3442),  # Prepatent -> acute
-            dur_prep2subcl=ss.lognorm_ex(
-                mean=0.1, stdev=0.0
-            ),  # Prepatent -> subclinical
+            dur_prep2acute=ss.lognorm_ex(mean=1.548, stdev=0.3442),  # 'High dose' prepatent duration, from typhoid-spec docs
+            dur_prep2subcl=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Prepatent -> subclinical
             dur_acute2dead=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Dead
-            dur_subcl2chro=ss.lognorm_ex(
-                mean=0.1, stdev=0.0
-            ),  # Subclinical - > chronic
+            dur_subcl2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
             dur_subcl2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
             dur_acute2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
             dur_acute2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Chronic
-            p_death=ss.bernoulli(p=0.2),  # Probability of dying from acute
-            p_acute=ss.bernoulli(p=0.1),  # Probability of becoming acute
+            p_acute=ss.bernoulli(p=0.234),  # Probability of becoming acute (or symptomatic)
             p_chronic=ss.bernoulli(
                 p=0.015
             ),  # Prob of becoming chronic carrier in persons with gallstones
+            p_death=ss.bernoulli(p=0.2),  # Probability of dying from acute
             # Environmental parameters - long-cycle CCVT
             environment=dict(
                 beta=0.0,
@@ -109,11 +108,11 @@ class TyphoidSimple(ss.Infection):
 
     @property
     def asymptomatic(self):
-        return self.prepatent | self.chronic
+        return self.prepatent | self.subclinical | self.chronic
 
     @property
     def symptomatic(self):
-        return self.subclinical & self.acute
+        return self.acute
 
     def init_results(self):
         """
