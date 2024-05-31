@@ -49,16 +49,13 @@ class TyphoidSimple(ss.Infection):
             dur_prep2next=ss.lognorm_ex(mean=1.548, stdev=0.3442),  # 'High dose' prepatent duration, in days.
             dur_acute2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Acute duration for under (<) 30 yo, in weeks.
             dur_acute2next_geq30=ss.lognorm_ex(mean=1.258, stdev=0.788),  # Acute duration for over (>=) 30 yo, in weeks.
-
             dur_subcl2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
-            dur_subcl2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),   # Subclinical - > chronic
-            dur_acute2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),   # Subclinical - > chronic
+            dur_subcl2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),   # Subclinical - > recovered
+            dur_acute2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),   # Acute - > recovered
             dur_acute2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Chronic
-            p_acute=ss.bernoulli(p=0.234),  # Probability of becoming acute (or symptomatic)
-            p_chronic=ss.bernoulli(
-                p=0.015
-            ),  # Prob of becoming chronic carrier in persons with gallstones
-            p_death=ss.bernoulli(p=0.2),  # Probability of dying from acute
+            p_acute=ss.bernoulli(p=0.234),       # Prob of becoming acute (or symptomatic)
+            p_chro=ss.bernoulli(p=0.15),   # Prob of becoming chronic carrier from acute or clinical infection, same for females and males
+            p_death=ss.bernoulli(p=0.0001),  # Probability of dying from acute, context dependent
             # Environmental parameters - long-cycle CCVT
             environment=dict(
                 beta=0.0,
@@ -225,10 +222,10 @@ class TyphoidSimple(ss.Infection):
         # Age-based susceptibility in chidldren <= 6 years old
         # self.increase_childhood_susceptibility()
 
-        # Natural history flow - handle transitions
-        # between any two disease states or stages
-        self.progress_to_prepatent(ti)
-        self.progress_to_symptomatic(ti)  # Both acute and sublclinical
+        # The infection life cycle or natural history flow
+        # handles transitions between any two infection states or stages
+        self.progress_to_prepatent(ti)  # Incubation
+        self.progress_to_diseased(ti)   # Both acute and subclinical
         self.progress_to_chronic(ti)
         self.progress_to_dead(ti)
         self.progress_to_recovered(ti)
@@ -250,8 +247,8 @@ class TyphoidSimple(ss.Infection):
         # to wane naturally acquired immunity.
         self.n_infections[infected] += 1.0
 
-    def progress_to_symptomatic(self, ti):
-        # Progress petatent -> acute
+    def progress_to_diseased(self, ti):
+        # Progress pretatent -> acute
         prep2acute = (self.prepatent & (self.ti_acute <= ti)).uids
         self.acute[prep2acute] = True
         self.prepatent[prep2acute] = False
@@ -315,8 +312,23 @@ class TyphoidSimple(ss.Infection):
         # convert duration pars in weeks -> to days -> to timesteps
         dur_acu[uids[over30]] += ((p.dur_acute2next_geq30.rvs(over30) *
                                    tyd.days_per_week) / dt)  # in timesteps
-
         return dur_acu
+
+    def get_subclinical_duration_by_age(self, uids):
+        p = self.pars
+        dt = self.sim.dt
+
+        dur_scl = self.ti_subclinical[uids]
+        under30 = (self.sim.people.age[uids] < 30.0).uids
+        over30  = (self.sim.people.age[uids] >= 30.0).uids
+
+        # convert duration pars in weeks -> to days -> to timesteps
+        dur_scl[uids[under30]] += ((p.dur_subcl2next_le30.rvs(under30) *
+                                    tyd.days_per_week) / dt)
+        # convert duration pars in weeks -> to days -> to timesteps
+        dur_scl[uids[over30]] += ((p.dur_subcl2next_geq30.rvs(over30) *
+                                   tyd.days_per_week) / dt)  # in timesteps
+        return dur_scl
 
     def set_prognoses(self, uids, source_uids=None):
         """
@@ -364,6 +376,12 @@ class TyphoidSimple(ss.Infection):
         # Set prepatent duration of those who will become subclinical
         self.ti_subclinical[subcl_uids] = dur_pre[subcl_uids]
 
+        # Estimate duration of acute stage
+        dur_acu = self.get_acute_duration_by_age(acute_uids)
+        # Estimate duration of subclinical by age
+        dur_scl = self.get_sublclinical_duration_by_age(subcl_uids)
+
+
         # Determine who becomes a (chronic) carrier (from acute and sublclinical)
         carrier_uids = p.p_chronic.filter(uids)
 
@@ -376,7 +394,6 @@ class TyphoidSimple(ss.Infection):
         dead_uids = can_die_uids[will_die]
         recovered_uids = can_die_uids[~will_die]
 
-        dur_acu = self.get_acute_duration_by_age(acute_uids)
         self.ti_dead[dead_uids] = (self.ti_acute[dead_uids] + dur_acu[dead_uids])
         self.ti_recovered[recovered_uids] = (self.ti_acute[recovered_uids] + dur_acu[recovered_uids])
 
