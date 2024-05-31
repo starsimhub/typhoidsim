@@ -57,7 +57,7 @@ class TyphoidSimple(ss.Infection):
             # Age-based exposure
             age_exposure_slope=1.0,
             # Infectiousness parameters
-            tai=40_000,  # Typhoid acute infectiousness
+            tai=40_000,  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi
             tpri=0.4,    # Typhoid relative (to acute) prepatent infectiousness
             tsri=0.8,    # Typhoid relative (to acute) subclinic infectiousness
             tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
@@ -71,8 +71,8 @@ class TyphoidSimple(ss.Infection):
             ),
             ppl_env_transmission=dict(
                 # Interaction parameters between people and environment
-                # Rate at which infectious people shed bacteria to the environment (per day),
-                ppl2env_shedding_rate=0.0,
+                # Rate at which infectious people shed colony-forming units to the environment (per day),
+                ppl2env_shedding_rate=1.0,
                 # Probability of environmental transmission - filled out later
                 env2ppl_p_transmit=ss.bernoulli(p=0),
             ),
@@ -154,11 +154,18 @@ class TyphoidSimple(ss.Infection):
         # to True by default, so here reset this array to False
         self.make_impervious()
 
-        if self.pars.init_prev is None:
+        if self.pars.init_prev is None and self.pars.env_pars.init_prev is None:
             return
 
-        initial_cases = self.pars.init_prev.filter()
-        self.set_prognoses(initial_cases)  # TODO: sentinel value to indicate seeds?
+        if self.pars.init_prev is not None:
+            # Initial cases from person-to-person transmission
+            initial_cases_contact = self.pars.init_prev.filter()
+            self.set_prognoses(initial_cases_contact)
+        if self.pars.env_pars.init_prev is not None:
+            # Initial cases from environment-to-person transmission
+            initial_cases_env = self.pars.env_pars.init_prev.filter((~self.infected).uids)
+            self.set_prognoses(initial_cases_env)
+
         return
 
     # def init_state_vars(self, **kwargs):
@@ -465,7 +472,15 @@ class TyphoidSimple(ss.Infection):
         #    self.set_prognoses(new_cases, source_uids=None)
         return
 
-    def environmental_transmission(self):
+    def make_new_cases_environmental_transmission(self):
+        """ TODO: this should move to a different module """
+        trans_pars = self.pars.ppl_env_transmission
+
+        # Infectious individuals shed contagion into both the CPs
+        shedded_contagion = trans_pars.shedding_rate * self.infectiousness[self.infected].sum()
+
+        p_transmit = trans_pars.beta * sv.env_cfu[self.sim.ti]
+
         # Make new cases via indirect transmission
         # env_pars = self.pars.environment
         # sv = self.state_variables
@@ -475,34 +490,56 @@ class TyphoidSimple(ss.Infection):
         new_cases = []
         return new_cases
 
+
+    def environmental_exposure(self):
+        """
+        The exposures aren’t completely independent: since exposure is done
+        through one route before the other each time, if the first has a high
+        contagion population (or rate), exposure will skew to that
+        transmission route.
+        """
+
+    def drc(self, env_cfu_dose, alpha=0.175, n50=1.16e6):
+        """
+        The probability of infection is mediated by the dose-response curve (drc),
+        taking in the contagion population as a value of colony-forming units (CFU)
+        and returning a probability of infection. Dose can be mediated by
+        seasonality factors described below. The function is a beta-binomial
+        curve fitted the historical challenge data by QMRA (Enger, 2013), where:
+
+        P(response) = 1- [1 + dose * (2^(1/ α)- 1)/N50] ^(-α)
+        """
+
+        p_exp = 1.0 - (1.0 + env_cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
+        return p_exp
+
+
+
     #  "Naturral history of the environment"
-    def update_environmental_prevalence(self):
+    def update_environmental_transmission(self):
         """
-        Calculate environmental prevalence
-        long-cycle CCVT
+        Calculate environmental prevalence long-cycle CCVT
+        This should occur at the end of each timestep (infected individuals
+        shed into theenvironment,
+        individuals get exposed by the environment, the environment
+        decays).
         """
-        env_pars = self.pars.environment
+        # Environemental contagion pool parameters (decay)
+        env_cp_p   = self.pars.environment
         trans_pars = self.pars.ppl_env_transmission
 
         sv = self.state_vars
         ti = self.sim.ti
 
-        n_symptomatic = self.symptomatic.sum()
-        n_asymptomatic = self.asymptomatic.sum()
+        # Infectious individuals shed contagion into both the CPs
+        shedded_contagion = self.infectiousness[self.infected].sum()
 
-        # Update environment
-        previous_ep = sv.env_prevalence[ti - 1]
-        bacteria_from_env = previous_ep * (1.0 - env_pars.decay_rate)
+        # Colony-forming units from the previous time step
+        cfu_tm1 = sv.env_contagion_pool[ti - 1]
+        cfu_t   = cfu_tm1 * np.exp(-env_cp_p.decay_rate*(ti/dt))
 
-        bacteria_from_ppl = trans_pars.shedding_rate * (
-            n_symptomatic + trans_pars.asymp_trans * n_asymptomatic
-        )
+        bacteria_from_ppl = trans_pars.shedding_rate * shedded_contagion
 
-        # Current prevalence
-        sv.env_prevalence[ti] = bacteria_from_env + bacteria_from_ppl
-        sv.env_concentration[ti] = sv.env_prevalence[ti] / (
-            sv.env_prevalence[ti] + env_pars.half_sat_rate
-        )
         return
 
     def update_results(self):
