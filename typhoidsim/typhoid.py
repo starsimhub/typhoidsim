@@ -236,7 +236,7 @@ class TyphoidSimple(ss.Infection):
 
         # The infection life cycle or natural history flow
         # handles transitions between any two infection states or stages
-        self.progress_to_prepatent(ti)  # Incubation
+        self.progress_to_prepatent(ti)  # Incubation period
         self.progress_to_diseased(ti)   # Both acute and subclinical
         self.progress_to_chronic(ti)
         self.progress_to_dead(ti)
@@ -258,23 +258,27 @@ class TyphoidSimple(ss.Infection):
         # but we may want to incorporate a mechanism
         # to wane naturally acquired immunity.
         self.n_infections[infected] += 1.0
+        self.infectiousness[infected] = self.pars.tai * self.pars.tpri
 
     def progress_to_diseased(self, ti):
         # Progress pretatent -> acute
         prep2acute = (self.prepatent & (self.ti_acute <= ti)).uids
         self.acute[prep2acute] = True
         self.prepatent[prep2acute] = False
+        self.infectiousness[prep2acute] = self.p.tai
 
         # Progress prepatent -> subclinical
         prep2subcl = (self.prepatent & (self.ti_subclinical <= ti)).uids
         self.subclinical[prep2subcl] = True
         self.prepatent[prep2subcl] = False
+        self.infectiousness[prep2subcl] = self.pars.tai * self.tsri
 
     def progress_to_chronic(self, ti):
         # Progress acute -> chronic
         acu2chro = (self.acute & (self.ti_chronic <= ti)).uids
         self.chronic[acu2chro] = True
         self.acute[acu2chro] = False
+        self.infectiousness[acu2chro] = self.pars.tai * self.pars.tcri
 
         # Progress subclinical -> chronic
         sub2chro = (self.subclinical & (self.ti_chronic <= ti)).uids
@@ -295,6 +299,7 @@ class TyphoidSimple(ss.Infection):
         self.acute[acu2rec] = False
         self.infected[acu2rec] = False
         self.exposed[acu2rec] = False
+        self.infectiousness[acu2rec] = 0.0
 
         # handle subclinical pathway
         sub2rec = (
@@ -303,6 +308,7 @@ class TyphoidSimple(ss.Infection):
         self.recovered[sub2rec] = True
         self.subclinical[sub2rec] = False
         self.infected[sub2rec] = False
+        self.infectiousness[sub2rec] = 0.0
 
     def progress_to_susceptible(self, ti):
         # Make agents susceptible again
