@@ -76,6 +76,7 @@ class TyphoidSimple(ss.Infection):
                 ppl2env_shedding_rate=1.0,
                 # Probability of environmental transmission - filled out later
                 env2ppl_exposure_rate=ss.poisson(lam=10.0),
+                env2ppl_p_inf = ss.bernoulli(p=0.0)  ## updated later
             ),
         )
         self.update_pars(pars, **kwargs)
@@ -476,11 +477,25 @@ class TyphoidSimple(ss.Infection):
         return
 
     def make_new_cases_environmental_transmission(self):
-        """ TODO: this should move to a different module """
-        trans_pars = self.pars.env_ppl.transmission.env2ppl_exposure
+        """
+        TODO: this should move to a different module
+        1. infected individuals shed into theenvironment,
+        2. individuals get exposed by the environment (increases their n_exposures)
+        3.
+
+        , the environment
+        decays).
+        """
+        trans_pars = self.pars.env_ppl.transmission
+        dt = self.sim.dt
 
         # Infectious individuals shed contagion into both the CPs
         shedded_contagion = trans_pars.shedding_rate * self.infectiousness[self.infected].sum()
+
+        # Expose to environment
+        self.expose_to_environment(dt)
+        p_inf = self.drc()
+        inf_uids = trans_pars.env2ppl_p_inf(alive & ~self.infected, p=p_inf)
 
         p_transmit = trans_pars.beta * sv.env_cfu[self.sim.ti]
 
@@ -493,7 +508,7 @@ class TyphoidSimple(ss.Infection):
         new_cases = []
         return new_cases
 
-    def immunity(self, uids):
+    def update_immunity(self, uids):
         self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
         return
 
@@ -506,7 +521,6 @@ class TyphoidSimple(ss.Infection):
         """
         self.n_exposures += self.pars.transmision.ppl_exposure_rate.rvs()*dt
         return
-
 
     def drc(self, alpha=0.175, n50=1.16e6):
         """
@@ -523,17 +537,13 @@ class TyphoidSimple(ss.Infection):
         """
         p_response  = 1.0 - (1.0 + self.cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
         p_infection = 1.0 - (1.0 + self.immunity * p_response)**self.n_exposures  # n_exposures per day
-        return p_response
-
+        return p_infection
 
     #  "Natural history of the environment"
     def update_environmental_transmission(self):
         """
         Calculate environmental prevalence long-cycle CCVT
-        This should occur at the end of each timestep (infected individuals
-        shed into theenvironment,
-        individuals get exposed by the environment, the environment
-        decays).
+
         """
         # Environemental contagion pool parameters (decay)
         env_cp_p   = self.pars.environment
