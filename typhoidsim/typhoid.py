@@ -370,7 +370,9 @@ class TyphoidSimple(ss.Infection):
         a High dose prepatent duration.
 
         """
-
+        if len(uids) > len(np.unique(uids)):
+            UserWarning('Removing duplicated uids')
+            uids = np.unique(uids)
         super().set_prognoses(uids, source_uids)
         p = self.pars
         ti = self.sim.ti
@@ -407,8 +409,6 @@ class TyphoidSimple(ss.Infection):
         # Determine who becomes a (chronic) carrier (from acute and sublclinical)
         carrier_uids = self.will_become_chronic_carrier(acute_uids.concat(subcl_uids))
 
-        import ipdb; ipdb.set_trace()
-
         # From the acute cases, determine who can die because they don't become carriers
         can_die_uids = np.setdiff1d(acute_uids, carrier_uids)
 
@@ -417,24 +417,23 @@ class TyphoidSimple(ss.Infection):
         dead_uids = can_die_uids[will_die]
         rec_from_acu_uids = can_die_uids[~will_die]
 
-        # From the sublinical cases, determine who can recover because they don't become carriers
+        # Get sublinical cases that recover because they won't become carriers
         rec_from_subcl_uids = np.setdiff1d(subcl_uids, carrier_uids)
 
-        # Concatentate uids
         will_recover_uids = rec_from_acu_uids.concat(rec_from_subcl_uids)
 
         # Determine when non-carriers recover and become susceptible again,
         # NOTE: we do not have to track a recovered state, we can simply output results
         # that track the 'concept' of a recovered state
-        self.ti_recovered[rec_from_subcl_uids] = self.ti_subclinical[rec_from_subcl_uids] + dur_scl
-        self.ti_recovered[rec_from_acu_uids]   = self.ti_acute[rec_from_acu_uids] + dur_acu
+        self.ti_recovered[rec_from_subcl_uids] = self.ti_subclinical[rec_from_subcl_uids] + dur_scl[np.isin(subcl_uids, rec_from_subcl_uids)]
+        self.ti_recovered[rec_from_acu_uids]   = self.ti_acute[rec_from_acu_uids]         + dur_acu[np.isin(acute_uids, rec_from_acu_uids)]
 
         # TODO: handle empty uids typhoid can get very low death probabilities,
         # so there is a high chance of getting empty dead_uids. When that
         # happens, this line seg faults
-        self.ti_dead[dead_uids] = (self.ti_acute[dead_uids] + dur_acu[dead_uids])
+        self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu[dead_uids]
 
-        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1  # recover in the next time step, just to make things tidy
+        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1.0  # recover in the next time step, just to make things tidy
 
         return
 
@@ -445,10 +444,10 @@ class TyphoidSimple(ss.Infection):
         # Make new cases via person-to-person transmission
         super().make_new_cases()
 
-        new_cases = self.environmental_transmission()
+        #new_cases = self.environmental_transmission()
 
-        if len(new_cases):
-            self.set_prognoses(new_cases, source_uids=None)
+        #if len(new_cases):
+        #    self.set_prognoses(new_cases, source_uids=None)
         return
 
     def environmental_transmission(self):
