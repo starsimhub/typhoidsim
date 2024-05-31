@@ -69,12 +69,13 @@ class TyphoidSimple(ss.Infection):
                 decay_rate=0.0,
                 # Rate at which bacteria in the environment change (per day), >0 decays, <0 grows
             ),
-            ppl_env_transmission=dict(
+            # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
+            transmission=dict(
                 # Interaction parameters between people and environment
                 # Rate at which infectious people shed colony-forming units to the environment (per day),
                 ppl2env_shedding_rate=1.0,
                 # Probability of environmental transmission - filled out later
-                env2ppl_p_transmit=ss.bernoulli(p=0),
+                env2ppl_exposure_rate=ss.poisson(lam=10.0),
             ),
         )
         self.update_pars(pars, **kwargs)
@@ -92,9 +93,12 @@ class TyphoidSimple(ss.Infection):
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
+            ss.FloatArr("n_exposures"),
+            ss.FloatArr("cfu_doses"),
             ss.FloatArr("n_infections"),
             ss.FloatArr("infectiousness"),
             ss.FloatArr("p_chronic"),
+            ss.FloatArr("immunity"),
 
             # States that track timing of events
             ss.FloatArr("ti_exposed"),
@@ -133,8 +137,7 @@ class TyphoidSimple(ss.Infection):
         self.results += [
             ss.Result(self.name, "new_deaths", npts, dtype=int),
             ss.Result(self.name, "cum_deaths", npts, dtype=int),
-            ss.Result(self.name, "env_prevalence", npts, dtype=float),
-            ss.Result(self.name, "env_concentration", npts, dtype=float),
+            ss.Result(self.name, "env_cfu", npts, dtype=float),
         ]
         return
 
@@ -474,7 +477,7 @@ class TyphoidSimple(ss.Infection):
 
     def make_new_cases_environmental_transmission(self):
         """ TODO: this should move to a different module """
-        trans_pars = self.pars.ppl_env_transmission
+        trans_pars = self.pars.env_ppl.transmission.env2ppl_exposure
 
         # Infectious individuals shed contagion into both the CPs
         shedded_contagion = trans_pars.shedding_rate * self.infectiousness[self.infected].sum()
@@ -490,16 +493,22 @@ class TyphoidSimple(ss.Infection):
         new_cases = []
         return new_cases
 
+    def immunity(self, uids):
+        self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
+        return
 
-    def environmental_exposure(self):
+    def expose_to_environment(self, dt):
         """
         The exposures aren’t completely independent: since exposure is done
         through one route before the other each time, if the first has a high
         contagion population (or rate), exposure will skew to that
         transmission route.
         """
+        self.n_exposures += self.pars.transmision.ppl_exposure_rate.rvs()*dt
+        return
 
-    def drc(self, env_cfu_dose, alpha=0.175, n50=1.16e6):
+
+    def drc(self, alpha=0.175, n50=1.16e6):
         """
         The probability of infection is mediated by the dose-response curve (drc),
         taking in the contagion population as a value of colony-forming units (CFU)
@@ -508,14 +517,16 @@ class TyphoidSimple(ss.Infection):
         curve fitted the historical challenge data by QMRA (Enger, 2013), where:
 
         P(response) = 1- [1 + dose * (2^(1/ α)- 1)/N50] ^(-α)
+
+        # TODO: parameterise this function via pars. Also this function could
+        be user-defined if the environment was a separate module.
         """
+        p_response  = 1.0 - (1.0 + self.cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
+        p_infection = 1.0 - (1.0 + self.immunity * p_response)**self.n_exposures  # n_exposures per day
+        return p_response
 
-        p_exp = 1.0 - (1.0 + env_cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
-        return p_exp
 
-
-
-    #  "Naturral history of the environment"
+    #  "Natural history of the environment"
     def update_environmental_transmission(self):
         """
         Calculate environmental prevalence long-cycle CCVT
