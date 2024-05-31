@@ -395,28 +395,33 @@ class TyphoidSimple(ss.Infection):
         # Estimate duration of subclinical by age
         dur_scl = self.get_sublclinical_duration_by_age(subcl_uids)
 
-        carrier_uids = self.will_become_chronic_carrier()
         # Determine who becomes a (chronic) carrier (from acute and sublclinical)
+        carrier_uids = self.will_become_chronic_carrier(acu_scl)
 
         # From the acute cases, determine who can die because they don't become carriers
         can_die_uids = np.setdiff1d(acute_uids, carrier_uids)
 
-        # From the acutes who do not become carriers, determine who actually
-        # dies and who recovers
+        # From the acutes who do not become carriers, determine who recovers and who dies
         will_die = p.p_death.rvs(can_die_uids)
         dead_uids = can_die_uids[will_die]
-        recovered_uids = can_die_uids[~will_die]
-
-        self.ti_dead[dead_uids] = (self.ti_acute[dead_uids] + dur_acu[dead_uids])
-        self.ti_recovered[recovered_uids] = (self.ti_acute[recovered_uids] + dur_acu[recovered_uids])
+        rec_from_acu_uids = can_die_uids[~will_die]
 
         # From the sublinical cases, determine who can recover because they don't become carriers
-        can_recover_uids = np.setdiff1d(subcl_uids, carrier_uids)
-        # Determine when non-carriers recover
-        self.ti_recovered[can_recover_uids] = (
-            self.ti_subclinical[can_recover_uids]
-            + p.dur_subcl2rec.rvs(can_recover_uids) / dt
-        )
+        rec_from_subcl_uids = np.setdiff1d(subcl_uids, carrier_uids)
+
+        # Concatentate uids
+        will_recover_uids = rec_from_acu_uids + rec_from_subcl_uids
+
+        # Determine when non-carriers recover and become susceptible again,
+        # NOTE: we do not have to track a recovered state, we can simply output results
+        # that track the 'concept' of a recovered state
+        self.ti_recovered[rec_from_subcl_uids] = self.ti_subclinical[rec_from_subcl_uids] + dur_scl
+        self.ti_recovered[rec_from_acu_uids] = self.ti_acute[rec_from_acu_uids] + dur_acu
+
+        #
+        self.ti_dead[dead_uids] = (self.ti_acute[dead_uids] + dur_acu[dead_uids])
+
+        #self.ti_susceptible = self.ti_recovered[] + 1  # recover in the next time step, just
 
         return
 
