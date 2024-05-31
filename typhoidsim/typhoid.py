@@ -431,7 +431,7 @@ class TyphoidSimple(ss.Infection):
         # TODO: handle empty uids typhoid can get very low death probabilities,
         # so there is a high chance of getting empty dead_uids. When that
         # happens, this line seg faults
-        self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu[dead_uids]
+        self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu[np.isin(acute_uids, dead_uids)]
 
         self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1.0  # recover in the next time step, just to make things tidy
 
