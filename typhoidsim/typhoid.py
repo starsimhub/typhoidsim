@@ -31,7 +31,7 @@ class TyphoidSimple(ss.Infection):
     ss.FloatArr('rel_trans', default=1.0),
     ss.FloatArr('ti_infected'),)
 
-    # TODO: add linkl to specification document
+    # TODO: add link to specification document
     Unless otherwise specified, parameters come from: XXX
 
     """
@@ -43,9 +43,7 @@ class TyphoidSimple(ss.Infection):
             # Initial conditions and beta
             beta=1.0,  # Placeholder value
             init_prev=ss.bernoulli(0.005),
-            # Natural history parameters, all specified in days
-            # Age-based exposure
-            age_exposure_slope=1.0,
+            # Natural history parameters,
             dur_prep2next=ss.lognorm_ex(mean=1.548, stdev=0.3442),  # 'High dose' prepatent duration, in days.
             dur_acute2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Acute duration for under (<) 30 yo, in weeks.
             dur_acute2next_geq30=ss.lognorm_ex(mean=1.258, stdev=0.788),  # Acute duration for over (>=) 30 yo, in weeks.
@@ -54,6 +52,16 @@ class TyphoidSimple(ss.Infection):
             p_acute=ss.bernoulli(p=0.234),   # Prob of becoming acute (or symptomatic)
             p_chro=ss.bernoulli(p=0.150),     # Prob of becoming chronic carrier from acute or clinical infection, average multiplicative factor, same for females and males.
             p_death=ss.bernoulli(p=0.001),  # Probability of dying from acute, context dependent, and by default set to something zero or something very small
+
+            # Within-host parameters
+            # Age-based exposure
+            age_exposure_slope=1.0,
+            # Infectiousness parameters
+            tai=40_000,  # Typhoid acute infectiousness
+            tpri=0.4,    # Typhoid relative (to acute) prepatent infectiousness
+            tsri=0.8,    # Typhoid relative (to acute) subclinic infectiousness
+            tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
+
             # Environmental parameters - long-cycle CCVT
             environment=dict(
                 beta=0.0,
@@ -106,7 +114,7 @@ class TyphoidSimple(ss.Infection):
 
     @property
     def infectious(self):
-        return self.infected | self.exposed | self.prepatent
+        return self.infected
 
     @property
     def asymptomatic(self):
