@@ -49,13 +49,11 @@ class TyphoidSimple(ss.Infection):
             dur_prep2next=ss.lognorm_ex(mean=1.548, stdev=0.3442),  # 'High dose' prepatent duration, in days.
             dur_acute2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Acute duration for under (<) 30 yo, in weeks.
             dur_acute2next_geq30=ss.lognorm_ex(mean=1.258, stdev=0.788),  # Acute duration for over (>=) 30 yo, in weeks.
-            dur_subcl2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Subclinical - > chronic
-            dur_subcl2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),   # Subclinical - > recovered
-            dur_acute2rec=ss.lognorm_ex(mean=0.1, stdev=0.0),   # Acute - > recovered
-            dur_acute2chro=ss.lognorm_ex(mean=0.1, stdev=0.0),  # Acute -> Chronic
-            p_acute=ss.bernoulli(p=0.234),       # Prob of becoming acute (or symptomatic)
-            p_chro=ss.bernoulli(p=0.15),   # Prob of becoming chronic carrier from acute or clinical infection, same for females and males
-            p_death=ss.bernoulli(p=0.0001),  # Probability of dying from acute, context dependent
+            dur_subcl2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Subclinical duration for under (<) 30 yo, in weeks.
+            dur_subcl2next_geq30=ss.lognorm_ex(mean=1.172, stdev=0.788),  # Subclinical duration for over (>=) 30 yo, in weeks.
+            p_acute=ss.bernoulli(p=0.234),   # Prob of becoming acute (or symptomatic)
+            p_chro=ss.bernoulli(p=0.15),     # Prob of becoming chronic carrier from acute or clinical infection, average multiplicative factor, same for females and males.
+            p_death=ss.bernoulli(p=0.0001),  # Probability of dying from acute, context dependent, and by default set to something zero or something very small
             # Environmental parameters - long-cycle CCVT
             environment=dict(
                 beta=0.0,
@@ -75,6 +73,7 @@ class TyphoidSimple(ss.Infection):
 
         # Boolean states
         self.add_states(
+            # Infection life cycle states
             # Susceptible & infected are added automatically, here we add the rest
             ss.BoolArr("exposed"),
             ss.BoolArr("prepatent"),
@@ -82,9 +81,14 @@ class TyphoidSimple(ss.Infection):
             ss.BoolArr("subclinical"),
             ss.BoolArr("chronic"),
             ss.BoolArr("recovered"),
+
+            # States that track immunity-related quantities or variables
+            # and depend on infection states
             ss.FloatArr("n_infections"),
             ss.FloatArr("infectiousness"),
-            # Timepoint states
+            ss.FloatArr("p_chronic"),
+
+            # States that track timing of events
             ss.FloatArr("ti_exposed"),
             ss.FloatArr("ti_susceptible"),
             ss.FloatArr("ti_prepatent"),
@@ -330,6 +334,16 @@ class TyphoidSimple(ss.Infection):
                                    tyd.days_per_week) / dt)  # in timesteps
         return dur_scl
 
+    def will_become_chronic_carrier(self, uids):
+        """Determine who will become a chronic carrier"""
+        p = self.pars
+        if p.p_chronic is not None:
+            # Use an "average" probability for everyone
+            return p.p_chronic.filter(uids)
+
+        # Estimate by age and gender probabilities
+        # TODO: implement
+
     def set_prognoses(self, uids, source_uids=None):
         """
         Here we define the whole natural history for every agent
@@ -381,9 +395,8 @@ class TyphoidSimple(ss.Infection):
         # Estimate duration of subclinical by age
         dur_scl = self.get_sublclinical_duration_by_age(subcl_uids)
 
-
+        carrier_uids = self.will_become_chronic_carrier()
         # Determine who becomes a (chronic) carrier (from acute and sublclinical)
-        carrier_uids = p.p_chronic.filter(uids)
 
         # From the acute cases, determine who can die because they don't become carriers
         can_die_uids = np.setdiff1d(acute_uids, carrier_uids)
@@ -528,6 +541,14 @@ def make_children_susceptible(people, uids_aged_x, prop_susceptible):
     new_susc = prop_susceptible.filter(people.uid[uids_aged_x])
     people.typhoid.susceptible[new_susc] = True
     return people
+
+
+def age_sex_chronic_probs():
+     # Load probs from file
+     # Interpolate to get age_based prob in the range min max age?
+     # Get interpolant at initialisation and then evaluate by age and by sex
+     # Get array of probs that will be used with bernoulli
+
 
 
 class Typhoid(ss.Infection):
