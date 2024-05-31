@@ -52,8 +52,8 @@ class TyphoidSimple(ss.Infection):
             dur_subcl2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Subclinical duration for under (<) 30 yo, in weeks.
             dur_subcl2next_geq30=ss.lognorm_ex(mean=1.172, stdev=0.788),  # Subclinical duration for over (>=) 30 yo, in weeks.
             p_acute=ss.bernoulli(p=0.234),   # Prob of becoming acute (or symptomatic)
-            p_chro=ss.bernoulli(p=0.15),     # Prob of becoming chronic carrier from acute or clinical infection, average multiplicative factor, same for females and males.
-            p_death=ss.bernoulli(p=0.0001),  # Probability of dying from acute, context dependent, and by default set to something zero or something very small
+            p_chro=ss.bernoulli(p=0.150),     # Prob of becoming chronic carrier from acute or clinical infection, average multiplicative factor, same for females and males.
+            p_death=ss.bernoulli(p=0.001),  # Probability of dying from acute, context dependent, and by default set to something zero or something very small
             # Environmental parameters - long-cycle CCVT
             environment=dict(
                 beta=0.0,
@@ -303,18 +303,26 @@ class TyphoidSimple(ss.Infection):
         self.recovered[rec2suc] = False
 
     def get_acute_duration_by_age(self, uids):
+        """
+        TODO: refactor in to a single function that returns both
+        acute and subclinical durations, though that would prevent
+        further differentiating between those two stages (ie, if the
+        if we wanted to change the 'threshold' age in one of the
+        stages but not the other. )
+        """
         p = self.pars
         dt = self.sim.dt
 
         dur_acu = self.ti_acute[uids]
-        under30 = (self.sim.people.age[uids] < 30.0).uids
-        over30  = (self.sim.people.age[uids] >= 30.0).uids
+        # From the acute uids, who is under or over 30
+        under30 = np.isin(uids, (self.sim.people.age < 30.0).uids)
+        over30  = np.isin(uids, (self.sim.people.age >= 30.0).uids)
 
         # convert duration pars in weeks -> to days -> to timesteps
-        dur_acu[uids[under30]] += ((p.dur_acute2next_le30.rvs(under30) *
+        dur_acu[under30] += ((p.dur_acute2next_le30.rvs(uids[under30]) *
                                     tyd.days_per_week) / dt)
         # convert duration pars in weeks -> to days -> to timesteps
-        dur_acu[uids[over30]] += ((p.dur_acute2next_geq30.rvs(over30) *
+        dur_acu[over30] += ((p.dur_acute2next_geq30.rvs(uids[over30]) *
                                    tyd.days_per_week) / dt)  # in timesteps
         return dur_acu
 
@@ -323,23 +331,24 @@ class TyphoidSimple(ss.Infection):
         dt = self.sim.dt
 
         dur_scl = self.ti_subclinical[uids]
-        under30 = (self.sim.people.age[uids] < 30.0).uids
-        over30  = (self.sim.people.age[uids] >= 30.0).uids
+        # From the subclinical uids, who is under or over 30
+        under30 = np.isin(uids, (self.sim.people.age < 30.0).uids)
+        over30  = np.isin(uids, (self.sim.people.age >= 30.0).uids)
 
         # convert duration pars in weeks -> to days -> to timesteps
-        dur_scl[uids[under30]] += ((p.dur_subcl2next_le30.rvs(under30) *
+        dur_scl[under30] += ((p.dur_subcl2next_le30.rvs(uids[under30]) *
                                     tyd.days_per_week) / dt)
         # convert duration pars in weeks -> to days -> to timesteps
-        dur_scl[uids[over30]] += ((p.dur_subcl2next_geq30.rvs(over30) *
+        dur_scl[over30] += ((p.dur_subcl2next_geq30.rvs(uids[over30]) *
                                    tyd.days_per_week) / dt)  # in timesteps
         return dur_scl
 
     def will_become_chronic_carrier(self, uids):
         """Determine who will become a chronic carrier"""
         p = self.pars
-        if p.p_chronic is not None:
+        if p.p_chro is not None:
             # Use an "average" probability for everyone
-            return p.p_chronic.filter(uids)
+            return p.p_chro.filter(uids)
 
         # Estimate by age and gender probabilities
         # TODO: implement
@@ -385,18 +394,20 @@ class TyphoidSimple(ss.Infection):
         acute_uids, subcl_uids = acu_scl
 
         # Set prepatent duration of those who will become acute
-        self.ti_acute[acute_uids] = dur_pre[acute_uids]
+        self.ti_acute[acute_uids] = ti + dur_pre[np.isin(uids, acute_uids)]
 
         # Set prepatent duration of those who will become subclinical
-        self.ti_subclinical[subcl_uids] = dur_pre[subcl_uids]
+        self.ti_subclinical[subcl_uids] = ti + dur_pre[np.isin(uids, subcl_uids)]
 
         # Estimate duration of acute stage
         dur_acu = self.get_acute_duration_by_age(acute_uids)
         # Estimate duration of subclinical by age
-        dur_scl = self.get_sublclinical_duration_by_age(subcl_uids)
+        dur_scl = self.get_subclinical_duration_by_age(subcl_uids)
 
         # Determine who becomes a (chronic) carrier (from acute and sublclinical)
-        carrier_uids = self.will_become_chronic_carrier(acu_scl)
+        carrier_uids = self.will_become_chronic_carrier(acute_uids.concat(subcl_uids))
+
+        import ipdb; ipdb.set_trace()
 
         # From the acute cases, determine who can die because they don't become carriers
         can_die_uids = np.setdiff1d(acute_uids, carrier_uids)
@@ -410,18 +421,20 @@ class TyphoidSimple(ss.Infection):
         rec_from_subcl_uids = np.setdiff1d(subcl_uids, carrier_uids)
 
         # Concatentate uids
-        will_recover_uids = rec_from_acu_uids + rec_from_subcl_uids
+        will_recover_uids = rec_from_acu_uids.concat(rec_from_subcl_uids)
 
         # Determine when non-carriers recover and become susceptible again,
         # NOTE: we do not have to track a recovered state, we can simply output results
         # that track the 'concept' of a recovered state
         self.ti_recovered[rec_from_subcl_uids] = self.ti_subclinical[rec_from_subcl_uids] + dur_scl
-        self.ti_recovered[rec_from_acu_uids] = self.ti_acute[rec_from_acu_uids] + dur_acu
+        self.ti_recovered[rec_from_acu_uids]   = self.ti_acute[rec_from_acu_uids] + dur_acu
 
-        #
+        # TODO: handle empty uids typhoid can get very low death probabilities,
+        # so there is a high chance of getting empty dead_uids. When that
+        # happens, this line seg faults
         self.ti_dead[dead_uids] = (self.ti_acute[dead_uids] + dur_acu[dead_uids])
 
-        #self.ti_susceptible = self.ti_recovered[] + 1  # recover in the next time step, just
+        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1  # recover in the next time step, just to make things tidy
 
         return
 
@@ -553,6 +566,7 @@ def age_sex_chronic_probs():
      # Interpolate to get age_based prob in the range min max age?
      # Get interpolant at initialisation and then evaluate by age and by sex
      # Get array of probs that will be used with bernoulli
+     pass
 
 
 
