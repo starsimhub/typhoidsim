@@ -301,6 +301,23 @@ class TyphoidSimple(ss.Infection):
         self.susceptible[rec2suc] = True
         self.recovered[rec2suc] = False
 
+    def get_acute_duration_by_age(self, uids):
+        p = self.pars
+        dt = self.sim.dt
+
+        dur_acu = self.ti_acute[uids]
+        under30 = (self.sim.people.age[uids] < 30.0).uids
+        over30  = (self.sim.people.age[uids] >= 30.0).uids
+
+        # convert duration pars in weeks -> to days -> to timesteps
+        dur_acu[uids[under30]] += ((p.dur_acute2next_le30.rvs(under30) *
+                                    tyd.days_per_week) / dt)
+        # convert duration pars in weeks -> to days -> to timesteps
+        dur_acu[uids[over30]] += ((p.dur_acute2next_geq30.rvs(over30) *
+                                   tyd.days_per_week) / dt)  # in timesteps
+
+        return dur_acu
+
     def set_prognoses(self, uids, source_uids=None):
         """
         Here we define the whole natural history for every agent
@@ -359,13 +376,9 @@ class TyphoidSimple(ss.Infection):
         dead_uids = can_die_uids[will_die]
         recovered_uids = can_die_uids[~will_die]
 
-        self.ti_dead[dead_uids] = (
-            self.ti_acute[dead_uids] + p.dur_acute2dead.rvs(dead_uids) / dt
-        )
-
-        self.ti_recovered[recovered_uids] = (
-            self.ti_acute[recovered_uids] + p.dur_acute2rec.rvs(recovered_uids) / dt
-        )
+        dur_acu = self.get_acute_duration_by_age(acute_uids)
+        self.ti_dead[dead_uids] = (self.ti_acute[dead_uids] + dur_acu[dead_uids])
+        self.ti_recovered[recovered_uids] = (self.ti_acute[recovered_uids] + dur_acu[recovered_uids])
 
         # From the sublinical cases, determine who can recover because they don't become carriers
         can_recover_uids = np.setdiff1d(subcl_uids, carrier_uids)
