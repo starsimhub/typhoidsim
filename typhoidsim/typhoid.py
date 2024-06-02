@@ -44,7 +44,10 @@ class TyphoidSimple(ss.Infection):
             beta=1.0,  # Placeholder value
             init_prev=ss.bernoulli(0.005),
             # Natural history parameters,
-            dur_prep2next=ss.lognorm_ex(mean=1.548, stdev=0.3442),  # 'High dose' prepatent duration, in days.
+            prep_dur_mean=1.5487,  # 'High dose' prepatent duration mean, in days.
+            prep_dur_std=0.3442,   # 'High dose' prepatent duration std, in days.
+            dur_prep2next=ss.lognorm_ex(mean=self.prepatent_duration_mean,
+                                        stdev=self.prepatent_duration_std),
             dur_acute2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Acute duration for under (<) 30 yo, in weeks.
             dur_acute2next_geq30=ss.lognorm_ex(mean=1.258, stdev=0.788),  # Acute duration for over (>=) 30 yo, in weeks.
             dur_subcl2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Subclinical duration for under (<) 30 yo, in weeks.
@@ -113,7 +116,6 @@ class TyphoidSimple(ss.Infection):
 
         # Track a variable that does not belong to individual agents
         self.sv = typ.StateVariables(self.name)
-
 
         return
 
@@ -379,19 +381,9 @@ class TyphoidSimple(ss.Infection):
     def set_prognoses(self, uids, source_uids=None):
         """
         Here we define the whole natural history for every agent
-        that has been infected agent. The progression of this natural
-        history can be altered by interventions, or other diseases.
-
-        Duration. The duration of the prepatent stage of an individual’s
-        infection is calculated at the beginning of the infection as a
-        draw from a log-normal distribution using one of three
-        mu-sigma parameter pairs. The mu-sigma pair is selected based on the
-        "quantization" of the exposure amount into one of three buckets
-        using various thresholds. (Glynn et al., 1995).
-
-        Currently, all infections from the Contact route are assumed to be
-        a High dose prepatent duration.
-
+        that has been infected. The progression of this natural
+        history can be altered by the environment, interventions, or
+        other diseases.
         """
         if len(uids) > len(np.unique(uids)):
             UserWarning('Removing duplicated uids')
@@ -482,6 +474,56 @@ class TyphoidSimple(ss.Infection):
         p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
         return np.array(p_infc)
 
+    @staticmethod
+    def prepatent_duration_mean(module, sim, uids):
+        """
+        Choose mu of the lognormal distribution used to determine an individual’s
+        prepatent stage duration.
+
+        The mu value is is selected based on the "quantization" of the
+        exposure amount (cfu_dose) into one of three buckets using various
+        thresholds. (Glynn et al., 1995).
+
+        Currently, all infections from the Contact route are assumed to be
+        a High dose prepatent duration.
+        """
+        # TODO: parameterise?
+        th1 =  5_050_000
+        th2 = 55_000_000
+
+        mu = np.full_like(module.cfu_dose[uids], module.pars.prep_dur_mean) # high-dose mean
+        # replace elements where the condition is met
+        mu[module.cfu_dose[uids] <= th1] = 2.235     # low dose
+        mask = ((th1 > module.cfu_dose[uids]) &
+                (module.cfu_dose[uids] <= th2))
+        mu[mask] = 2.002                             # medium dose
+        return mu
+
+    @staticmethod
+    def prepatent_duration_std(module, sim, uids):
+        """
+        Choose mu of the lognormal distribution used to determine an individual’s
+        prepatent stage duration.
+
+        The sigma value is is selected based on the "quantization" of the
+        exposure amount (cfu_dose) into one of three buckets using various
+        thresholds. (Glynn et al., 1995).
+
+        Currently, all infections from the Contact route are assumed to be
+        a High dose prepatent duration.
+        """
+        # TODO: parameterise?
+        th1 =  5_050_000
+        th2 = 55_000_000
+
+        sigma = np.full_like(module.cfu_dose[uids], module.pars.prep_dur_std)  # high-dose standard deviation
+        # replace elements where the condition is met
+        sigma[module.cfu_dose[uids] <= th1] = 0.4964     # low dose
+        mask = ((th1 > module.cfu_dose[uids]) &
+                (module.cfu_dose[uids] <= th2))
+        sigma[mask] = 0.706                              # medium dose
+        return sigma
+
     def make_new_cases_environmental_transmission(self):
         """
         TODO: this should move to a different module
@@ -504,9 +546,13 @@ class TyphoidSimple(ss.Infection):
         # Net number of Colony-forming units at this time step (include growth due to shedded cfu, and decay)
         self.sv.env_cfu[ti] = cfu_total * np.exp(-env_pars.decay_rate*(ti/dt))
 
-
         # Increase cfu doses in susceptible people by exposing them to the environment
         self.expose_to_environment(cfu_total, ti, dt)
+
+        ## The distribution trans_pars.env2ppl_p_inf() calls self.drc() via
+        # infection_prob_function(). self.drc assesses the responses of the hosts
+        # due to a certain amount of exposure doses (cfu_doses). Then,
+        # infection_...() it estimates a probability of infection.
 
         # Determine who gets infected from environment
         susc_uids = (self.susceptible).uids
@@ -526,11 +572,11 @@ class TyphoidSimple(ss.Infection):
         contagion population (or rate) exposure will skew to that
         transmission route.
         """
-        sus_uids = (self.susceptible).uids
+        susc_uids = (self.susceptible).uids
         # TODO: check whether the multiplication by dt makes sense in particular if dt < 1
         n_exp = self.pars.transmission.env2ppl_exposure_rate.rvs()*dt
-        self.n_exposures[sus_uids] += n_exp
-        self.cfu_doses[sus_uids] += env_cfu_dose * n_exp
+        self.n_exposures[susc_uids] += n_exp
+        self.cfu_doses[susc_uids] += env_cfu_dose * n_exp
         return
 
     def exposted_to_contacts(self, dt):
@@ -553,7 +599,6 @@ class TyphoidSimple(ss.Infection):
         """
         p_response  = 1.0 - (1.0 + self.cfu_doses * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
         return p_response
-
 
 
     def update_results(self):
