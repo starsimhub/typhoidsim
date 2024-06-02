@@ -4,6 +4,7 @@ Typhoid model.
 """
 
 import numpy as np
+import scipy.stats as sps
 import starsim as ss
 
 import typhoidsim.utils as tyu
@@ -46,8 +47,8 @@ class TyphoidSimple(ss.Infection):
             # Natural history parameters,
             prep_dur_mean=1.5487,  # 'High dose' prepatent duration mean, in days.
             prep_dur_std=0.3442,   # 'High dose' prepatent duration std, in days.
-            dur_prep2next=ss.lognorm_ex(mean=self.prepatent_duration_mean,
-                                        stdev=self.prepatent_duration_std),
+            # dur_prep2next=ss.lognorm_ex(mean=self.prepatent_duration_mean,
+            #                             stdev=self.prepatent_duration_std),
             dur_acute2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Acute duration for under (<) 30 yo, in weeks.
             dur_acute2next_geq30=ss.lognorm_ex(mean=1.258, stdev=0.788),  # Acute duration for over (>=) 30 yo, in weeks.
             dur_subcl2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Subclinical duration for under (<) 30 yo, in weeks.
@@ -327,10 +328,17 @@ class TyphoidSimple(ss.Infection):
         self.susceptible[rec2suc] = True
         self.recovered[rec2suc] = False
 
+    def get_prepatent_duration_by_exposure(self, uids):
+        """ TODO: TEMPORARY: Not random-number safe implementation """
+        mu, sigma = self.get_prepatent_duration_pars(uids)
+        dur_prep_dist = sps.lognorm(s=sigma, scale=np.exp(mu))
+        dur_prep = dur_prep_dist.rvs(uids.size)
+        return dur_prep
+
     def get_acute_duration_by_age(self, uids):
         """
         TODO: refactor in to a single function that returns both
-        acute and subclinical durations, though that would prevent
+        acute and subclinical durations?, though that would prevent
         further differentiating between those two stages (ie, if the
         if we wanted to change the 'threshold' age in one of the
         stages but not the other. )
@@ -404,7 +412,7 @@ class TyphoidSimple(ss.Infection):
 
         # Set duration of prepatent state, by defining when they will
         # progress to the next state (either acute or sublinical)
-        dur_pre = ti + p.dur_prep2next.rvs(uids) / dt
+        dur_pre = ti + self.get_prepatent_duration_by_exposure(uids) / dt
 
         # Determine who will become acute and who will become subclinical
         acu_scl = p.p_acute.filter(uids, both=True)
@@ -491,11 +499,11 @@ class TyphoidSimple(ss.Infection):
         th1 =  5_050_000
         th2 = 55_000_000
 
-        mu = np.full_like(module.cfu_dose[uids], module.pars.prep_dur_mean) # high-dose mean
+        mu = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_mean) # high-dose mean
         # replace elements where the condition is met
-        mu[module.cfu_dose[uids] <= th1] = 2.235     # low dose
-        mask = ((th1 > module.cfu_dose[uids]) &
-                (module.cfu_dose[uids] <= th2))
+        mu[module.cfu_doses[uids] <= th1] = 2.235     # low dose
+        mask = ((th1 > module.cfu_doses[uids]) &
+                (module.cfu_doses[uids] <= th2))
         mu[mask] = 2.002                             # medium dose
         return mu
 
@@ -516,13 +524,39 @@ class TyphoidSimple(ss.Infection):
         th1 =  5_050_000
         th2 = 55_000_000
 
-        sigma = np.full_like(module.cfu_dose[uids], module.pars.prep_dur_std)  # high-dose standard deviation
+        sigma = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_std)  # high-dose standard deviation
         # replace elements where the condition is met
-        sigma[module.cfu_dose[uids] <= th1] = 0.4964     # low dose
-        mask = ((th1 > module.cfu_dose[uids]) &
-                (module.cfu_dose[uids] <= th2))
+        sigma[module.cfu_doses[uids] <= th1] = 0.4964     # low dose
+        mask = ((th1 > module.cfu_doses[uids]) &
+                (module.cfu_doses[uids] <= th2))
         sigma[mask] = 0.706                              # medium dose
         return sigma
+
+    def get_prepatent_duration_pars(self, uids):
+        th1 =  5_050_000
+        th2 = 55_000_000
+
+        # High-dose
+        mu = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_mean)
+        sigma = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_std)
+
+        # Medium dose
+        mask = ((th1 > self.cfu_doses[uids]) &
+                (self.cfu_doses[uids] <= th2))
+        mu[mask] = 2.002
+        sigma[mask] = 0.706
+
+        # Low-dose
+        mu[self.cfu_doses[uids] <= th1] = 2.235       # low dose
+        sigma[self.cfu_doses[uids] <= th1] = 0.4964   # low dose
+
+        # From ss.lognormal_ex.convert_ex_to_im
+        var   = sigma**2
+        mean2 = mu**2
+        sigma_im = np.sqrt(np.log(var/mean2 + 1))  # Computes stdev for the underlying normal distribution
+        mean_im  = np.log(mean2 / np.sqrt(var + mean2))
+
+        return mean_im, sigma_im
 
     def make_new_cases_environmental_transmission(self):
         """
