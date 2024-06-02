@@ -478,32 +478,38 @@ class TyphoidSimple(ss.Infection):
     def make_new_cases_environmental_transmission(self):
         """
         TODO: this should move to a different module
-        1. infected individuals shed into theenvironment,
+        1. infected individuals shed into the environment (contagion pool in environment grows)
         2. individuals get exposed by the environment (increases their n_exposures)
-        3. the environment decays.
+        3. contagion pool in environment decays.
         """
-        trans_pars = self.pars.env_ppl.transmission
+        trans_pars = self.pars.transmission
+        env_pars = self.pars.environment
+        ti = self.sim.ti
         dt = self.sim.dt
 
         # Infectious individuals shed contagion into both the CPs
-        shedded_contagion = trans_pars.shedding_rate * self.infectiousness[self.infected].sum()
+        shedded_cfu = trans_pars.shedding_rate * self.infectiousness[self.infected].sum()
 
-        # Expose to environment ()
-        self.expose_to_environment(dt)
-        # Update their probs of acquiring infection
-        p_inf = self.drc()
+        # Environmental Colony-forming units from the previous time step
+        cfu_tm1   = self.sv.env_cfu[ti - 1]
+        cfu_total = cfu_tm1 + shedded_cfu
+
+        # Net number of Colony-forming units at this time step (include growth due to shedded cfu, and decay)
+        self.sv.env_cfu[ti] = cfu_total * np.exp(-env_pars.decay_rate*(ti/dt))
+
+
+        # Increase cfu doses in susceptible people by exposing them to the environment
+        self.expose_to_environment(cfu_total, ti, dt)
+
+        # Evoke an immunity-like response
+        p_response = self.drc()
+
+        # TODO: check whether we  multiply p_infection by a lumped parameters like environmental beta
+        p_infection = 1.0 - (1.0 + self.immunity * p_response)**self.n_exposures  # total number of n_exposures per unit of time? total?
+
         # Determine who gets infected from environment
-        inf_uids = trans_pars.env2ppl_p_inf((~self.infected).uids, p=p_inf)
+        new_cases = trans_pars.env2ppl_p_inf((self.susceptible).uids, p=p_infection)
 
-        p_transmit = trans_pars.beta * sv.env_cfu[self.sim.ti]
-
-        # Make new cases via indirect transmission
-        # env_pars = self.pars.environment
-        # sv = self.state_variables
-        # p_transmit = env_pars.beta * sv.env_concentration[self.sim.ti]
-        # env_pars.p_transmit.set(p=p_transmit)
-        # new_cases = env_pars.p_transmit.filter(self.sim.people.uid[self.susceptible])
-        new_cases = []
         return new_cases
 
     def update_immunity(self, uids):
@@ -511,7 +517,7 @@ class TyphoidSimple(ss.Infection):
         self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
         return
 
-    def expose_to_environment(self, dt):
+    def expose_to_environment(self, env_cfu_dose, ti, dt):
         """
         The exposures aren’t completely independent: since exposure is done
         through one route before the other each time, if the first has a high
@@ -520,7 +526,9 @@ class TyphoidSimple(ss.Infection):
         """
         sus_uids = (self.susceptible).uids
         # TODO: check whether the multiplication by dt makes sense in particular if dt < 1
-        self.n_exposures[sus_uids] += self.pars.transmision.env2ppl_exposure_rate.rvs()*dt
+        n_exp = self.pars.transmision.env2ppl_exposure_rate.rvs()*dt
+        self.n_exposures[sus_uids] += n_exp
+        self.cfu_dose[sus_uids] += env_cfu_dose * n_exp
         return
 
     def exposted_to_contacts(self, dt):
@@ -542,36 +550,9 @@ class TyphoidSimple(ss.Infection):
         be user-defined if the environment was a separate module.
         """
         p_response  = 1.0 - (1.0 + self.cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
-        p_infection = 1.0 - (1.0 + self.immunity * p_response)**self.n_exposures  # n_exposures per day
-        return p_infection
-
-    #  "Natural history of the environment"
-    def update_environmental_transmission(self):
-        """
-        Calculate environmental prevalence long-cycle CCVT
-
-        """
-        # Environemental contagion pool parameters (ie, decay)
-        env_pars   = self.pars.environment
-        # Parameters related to interaction between environment and people
-        trans_pars = self.pars.transmission
-
-        sv = self.state_vars
-        ti = self.sim.ti
-        dt = self.sim.dt
-
-        # Infectious individuals shed contagion into both contagion pools
-        shedded_contagion = self.infectiousness[self.infected].sum()
+        return p_response
 
 
-        # Colony-forming units from the previous time step
-        cfu_tm1 = sv.env_contagion_pool[ti - 1]
-        # Colony forming units from this time step
-        cfu_t   = cfu_tm1 * np.exp(-env_pars.decay_rate*(ti/dt))
-
-        bacteria_from_ppl = trans_pars.shedding_rate * shedded_contagion
-
-        return
 
     def update_results(self):
         super().update_results()
