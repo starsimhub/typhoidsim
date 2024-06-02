@@ -328,6 +328,7 @@ class TyphoidSimple(ss.Infection):
         rec2suc = (self.recovered & (self.ti_susceptible <= ti)).uids
         self.susceptible[rec2suc] = True
         self.recovered[rec2suc] = False
+        self.update_immunity(rec2suc)
 
     # Methods that handle durations/duration pars that are dependent on other variables
     def get_prepatent_duration_by_exposure(self, uids):
