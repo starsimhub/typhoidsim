@@ -63,13 +63,13 @@ class TyphoidSimple(ss.Infection):
             tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
 
             # Environmental parameters - long-cycle CCVT
-            environment=dict(
+            environment=ss.Pars(
                 beta=0.0,
                 init_prev=ss.bernoulli(0.0),
                 decay_rate=0.0,
             ),
             # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
-            transmission=dict(
+            transmission=ss.Pars(
                 # Interaction parameters between people and environment
                 # Rate at which infectious people shed colony-forming units to the environment (per day),
                 ppl2env_shedding_rate=1.0,
@@ -157,16 +157,16 @@ class TyphoidSimple(ss.Infection):
         # to True by default, so here reset this array to False
         self.make_impervious()
 
-        if self.pars.init_prev is None and self.pars.env_pars.init_prev is None:
+        if self.pars.init_prev is None and self.pars.environment.init_prev is None:
             return
 
         if self.pars.init_prev is not None:
             # Initial cases from person-to-person transmission
             initial_cases_contact = self.pars.init_prev.filter()
             self.set_prognoses(initial_cases_contact)
-        if self.pars.env_pars.init_prev is not None:
+        if self.pars.environment.init_prev is not None:
             # Initial cases from environment-to-person transmission
-            initial_cases_env = self.pars.env_pars.init_prev.filter((~self.infected).uids)
+            initial_cases_env = self.pars.environment.init_prev.filter((self.susceptible).uids)
             self.set_prognoses(initial_cases_env)
 
         return
@@ -275,13 +275,13 @@ class TyphoidSimple(ss.Infection):
         prep2acute = (self.prepatent & (self.ti_acute <= ti)).uids
         self.acute[prep2acute] = True
         self.prepatent[prep2acute] = False
-        self.infectiousness[prep2acute] = self.p.tai
+        self.infectiousness[prep2acute] = self.pars.tai
 
         # Progress prepatent -> subclinical
         prep2subcl = (self.prepatent & (self.ti_subclinical <= ti)).uids
         self.subclinical[prep2subcl] = True
         self.prepatent[prep2subcl] = False
-        self.infectiousness[prep2subcl] = self.pars.tai * self.tsri
+        self.infectiousness[prep2subcl] = self.pars.tai * self.pars.tsri
 
     def progress_to_chronic(self, ti):
         # Progress acute -> chronic
@@ -561,20 +561,6 @@ class TyphoidSimple(ss.Infection):
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
         res.cum_deaths[ti] = np.sum(res.new_deaths[: ti + 1])
         return
-
-
-def environmental_transmission(people, disease, contaminated_environment, current_ti):
-    """
-    Transmission and make new cases can form the basis for
-    a Propagation class, which would be a specific class of
-    the more abstract Connector.
-    """
-    # Make new cases via indirect transmission
-    env_pars = contaminated_environment.pars
-    p_transmit = env_pars.beta * contaminated_environment.concentration[current_ti]
-    env_pars.p_transmit.set(p=p_transmit)
-    new_cases = env_pars.p_env_transmit.filter(people.uid[disease.susceptible])
-    return new_cases
 
 
 def update_susceptible_children_pop(people, dt):
