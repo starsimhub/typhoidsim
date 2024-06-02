@@ -111,9 +111,10 @@ class TyphoidSimple(ss.Infection):
             ss.FloatArr("ti_dead"),
         )
 
-        # self.init_state_vars(
-        #     **kwargs,
-        # )
+        # Track a variable that does not belong to individual agents
+        self.sv = typ.StateVariables(self.name)
+
+
         return
 
     @property
@@ -138,6 +139,13 @@ class TyphoidSimple(ss.Infection):
             ss.Result(self.name, "new_deaths", npts, dtype=int),
             ss.Result(self.name, "cum_deaths", npts, dtype=int),
             ss.Result(self.name, "env_cfu", npts, dtype=float),
+        ]
+        return
+
+    def init_env_svs(self):
+        npts = self.sim.npts
+        self.sv += [
+            typ.StateVariable(self.name, "env_cfu", npts, dtype=float),
         ]
         return
 
@@ -168,6 +176,7 @@ class TyphoidSimple(ss.Infection):
             # Initial cases from environment-to-person transmission
             initial_cases_env = self.pars.environment.init_prev.filter((self.susceptible).uids)
             self.set_prognoses(initial_cases_env)
+            self.init_env_svs(initial_cases_env)
 
         return
 
@@ -202,7 +211,7 @@ class TyphoidSimple(ss.Infection):
 
         """
 
-        max_age = 20.0  # TODO: make configurbale?
+        max_age = 20.0  # TODO: make configurable?
         unexposed = (~self.susceptible).uids
         self.susceptible[unexposed] = ss.bernoulli(
             p=tyu.sigmoid(

@@ -255,6 +255,38 @@ class StateVariable(np.ndarray):
         return sc.dataframe({self.name: self})
 
 
+class StateVariables(ss.ndict):
+
+    def __init__(self, module, strict=True, *args, **kwargs):
+        super().__init__(type=StateVariable, strict=strict)
+        if hasattr(module, 'name'):
+            module = module.name
+        self.setattribute('_module', module)
+        return
+
+    def append(self, arg, key=None):
+        if isinstance(arg, (list, tuple)):
+            state_variable = StateVariable(self._module, *arg)
+        elif isinstance(arg, dict):
+            state_variable = StateVariable(self._module, **arg)
+        else:
+            state_variable = arg
+        if state_variable.module != self._module:
+            state_variable.module = self._module
+
+        super().append(state_variable, key=key)
+        return
+
+    def to_df(self):
+        pass
+
+    def __repr__(self, *args, **kwargs):
+        return super().__repr__(*args, **kwargs)
+
+    def plot(self):
+        pass
+
+
 ## ----------------- Vignettes of  Data Classes --------------------------- ####
 # class Equation(DataClass):
 #     equation = Field(
