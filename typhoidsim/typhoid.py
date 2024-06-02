@@ -67,7 +67,6 @@ class TyphoidSimple(ss.Infection):
                 beta=0.0,
                 init_prev=ss.bernoulli(0.0),
                 decay_rate=0.0,
-                # Rate at which bacteria in the environment change (per day), >0 decays, <0 grows
             ),
             # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
             transmission=dict(
@@ -76,7 +75,7 @@ class TyphoidSimple(ss.Infection):
                 ppl2env_shedding_rate=1.0,
                 # Probability of environmental transmission - filled out later
                 env2ppl_exposure_rate=ss.poisson(lam=10.0),
-                env2ppl_p_inf = ss.bernoulli(p=0.0)  ## updated later
+                env2ppl_p_inf=ss.bernoulli(p=0.0)    ## updated later
             ),
         )
         self.update_pars(pars, **kwargs)
@@ -481,10 +480,7 @@ class TyphoidSimple(ss.Infection):
         TODO: this should move to a different module
         1. infected individuals shed into theenvironment,
         2. individuals get exposed by the environment (increases their n_exposures)
-        3.
-
-        , the environment
-        decays).
+        3. the environment decays.
         """
         trans_pars = self.pars.env_ppl.transmission
         dt = self.sim.dt
@@ -492,10 +488,12 @@ class TyphoidSimple(ss.Infection):
         # Infectious individuals shed contagion into both the CPs
         shedded_contagion = trans_pars.shedding_rate * self.infectiousness[self.infected].sum()
 
-        # Expose to environment
+        # Expose to environment ()
         self.expose_to_environment(dt)
+        # Update their probs of acquiring infection
         p_inf = self.drc()
-        inf_uids = trans_pars.env2ppl_p_inf(alive & ~self.infected, p=p_inf)
+        # Determine who gets infected from environment
+        inf_uids = trans_pars.env2ppl_p_inf((~self.infected).uids, p=p_inf)
 
         p_transmit = trans_pars.beta * sv.env_cfu[self.sim.ti]
 
@@ -509,6 +507,7 @@ class TyphoidSimple(ss.Infection):
         return new_cases
 
     def update_immunity(self, uids):
+        # TPPI: Typhoid Protection Per Infection
         self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
         return
 
@@ -516,11 +515,18 @@ class TyphoidSimple(ss.Infection):
         """
         The exposures aren’t completely independent: since exposure is done
         through one route before the other each time, if the first has a high
-        contagion population (or rate), exposure will skew to that
+        contagion population (or rate) exposure will skew to that
         transmission route.
         """
-        self.n_exposures += self.pars.transmision.ppl_exposure_rate.rvs()*dt
+        sus_uids = (self.susceptible).uids
+        # TODO: check whether the multiplication by dt makes sense in particular if dt < 1
+        self.n_exposures[sus_uids] += self.pars.transmision.env2ppl_exposure_rate.rvs()*dt
         return
+
+    def exposted_to_contacts(self, dt):
+        # For person-to-person transmission
+        #self.n_exposures += self.pars.transmision.p2p_exposure_rate.rvs()*dt
+        pass
 
     def drc(self, alpha=0.175, n50=1.16e6):
         """
@@ -545,19 +551,23 @@ class TyphoidSimple(ss.Infection):
         Calculate environmental prevalence long-cycle CCVT
 
         """
-        # Environemental contagion pool parameters (decay)
-        env_cp_p   = self.pars.environment
-        trans_pars = self.pars.ppl_env_transmission
+        # Environemental contagion pool parameters (ie, decay)
+        env_pars   = self.pars.environment
+        # Parameters related to interaction between environment and people
+        trans_pars = self.pars.transmission
 
         sv = self.state_vars
         ti = self.sim.ti
+        dt = self.sim.dt
 
-        # Infectious individuals shed contagion into both the CPs
+        # Infectious individuals shed contagion into both contagion pools
         shedded_contagion = self.infectiousness[self.infected].sum()
+
 
         # Colony-forming units from the previous time step
         cfu_tm1 = sv.env_contagion_pool[ti - 1]
-        cfu_t   = cfu_tm1 * np.exp(-env_cp_p.decay_rate*(ti/dt))
+        # Colony forming units from this time step
+        cfu_t   = cfu_tm1 * np.exp(-env_pars.decay_rate*(ti/dt))
 
         bacteria_from_ppl = trans_pars.shedding_rate * shedded_contagion
 
@@ -570,9 +580,6 @@ class TyphoidSimple(ss.Infection):
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
         res.cum_deaths[ti] = np.sum(res.new_deaths[: ti + 1])
         return
-
-    def make_new_cases_long_cycle(self):
-        pass
 
 
 def environmental_transmission(people, disease, contaminated_environment, current_ti):
