@@ -20,8 +20,7 @@ class TyphoidSimple(ss.Infection):
     agent and also environmental 'state' variables and parameters that
     capture the growth and decay of S. typhii bacteria in contaminated resources.
 
-    This is a proof-of-concept 'monolithic' and 'simplfieied' implementation,
-    similar to starsim's Cholera module.
+    This is an early-stage 'monolithic' implementation.
 
     The parent class ss.Infection has the following states
 
@@ -231,6 +230,7 @@ class TyphoidSimple(ss.Infection):
             self.statesdict[state][uids] = False
         return
 
+    # Update progression of disease, handle transitions
     def update_pre(self):
         """
         Update the progression of the disease -- handles disease
@@ -257,6 +257,7 @@ class TyphoidSimple(ss.Infection):
         self.progress_to_susceptible(ti)
         return
 
+    # Methods that handle transitions
     def progress_to_prepatent(self, ti):
         infected = (self.exposed & (self.ti_infected <= ti)).uids
         self.infected[infected] = True
@@ -328,6 +329,7 @@ class TyphoidSimple(ss.Infection):
         self.susceptible[rec2suc] = True
         self.recovered[rec2suc] = False
 
+    # Methods that handle durations/duration pars that are dependent on other variables
     def get_prepatent_duration_by_exposure(self, uids):
         """ TODO: TEMPORARY: Not random-number safe implementation """
         mu, sigma = self.get_prepatent_duration_pars(uids)
@@ -375,6 +377,82 @@ class TyphoidSimple(ss.Infection):
         dur_scl[over30] += ((p.dur_subcl2next_geq30.rvs(uids[over30]) *
                                    tyd.days_per_week) / dt)  # in timesteps
         return dur_scl
+
+    def get_prepatent_duration_pars(self, uids):
+        th1 =  5_050_000
+        th2 = 55_000_000
+
+        # High-dose
+        mu = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_mean)
+        sigma = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_std)
+
+        # Medium dose
+        mask = ((th1 > self.cfu_doses[uids]) &
+                (self.cfu_doses[uids] <= th2))
+        mu[mask] = 2.002
+        sigma[mask] = 0.706
+
+        # Low-dose
+        mu[self.cfu_doses[uids] <= th1] = 2.235       # low dose
+        sigma[self.cfu_doses[uids] <= th1] = 0.4964   # low dose
+
+        # From ss.lognormal_ex.convert_ex_to_im
+        var   = sigma**2
+        mean2 = mu**2
+        sigma_im = np.sqrt(np.log(var/mean2 + 1))  # Computes stdev for the underlying normal distribution
+        mean_im  = np.log(mean2 / np.sqrt(var + mean2))
+
+        return mean_im, sigma_im
+
+    @staticmethod
+    def prepatent_duration_mean(module, sim, uids):
+        """
+        Choose mu of the lognormal distribution used to determine an individual’s
+        prepatent stage duration.
+
+        The mu value is is selected based on the "quantization" of the
+        exposure amount (cfu_dose) into one of three buckets using various
+        thresholds. (Glynn et al., 1995).
+
+        Currently, all infections from the Contact route are assumed to be
+        a High dose prepatent duration.
+        """
+        # TODO: parameterise?
+        th1 =  5_050_000
+        th2 = 55_000_000
+
+        mu = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_mean) # high-dose mean
+        # replace elements where the condition is met
+        mu[module.cfu_doses[uids] <= th1] = 2.235     # low dose
+        mask = ((th1 > module.cfu_doses[uids]) &
+                (module.cfu_doses[uids] <= th2))
+        mu[mask] = 2.002                             # medium dose
+        return mu
+
+    @staticmethod
+    def prepatent_duration_std(module, sim, uids):
+        """
+        Choose mu of the lognormal distribution used to determine an individual’s
+        prepatent stage duration.
+
+        The sigma value is is selected based on the "quantization" of the
+        exposure amount (cfu_dose) into one of three buckets using various
+        thresholds. (Glynn et al., 1995).
+
+        Currently, all infections from the Contact route are assumed to be
+        a High dose prepatent duration.
+        """
+        # TODO: parameterise?
+        th1 =  5_050_000
+        th2 = 55_000_000
+
+        sigma = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_std)  # high-dose standard deviation
+        # replace elements where the condition is met
+        sigma[module.cfu_doses[uids] <= th1] = 0.4964     # low dose
+        mask = ((th1 > module.cfu_doses[uids]) &
+                (module.cfu_doses[uids] <= th2))
+        sigma[mask] = 0.706                              # medium dose
+        return sigma
 
     def will_become_chronic_carrier(self, uids):
         """Determine who will become a chronic carrier"""
@@ -474,90 +552,6 @@ class TyphoidSimple(ss.Infection):
             self.set_prognoses(new_cases, source_uids=None)
         return
 
-    @staticmethod
-    def infection_prob_function(module, sim, uids):
-
-        # Evoke an immunity-like response
-        p_resp = module.drc()
-        p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
-        return np.array(p_infc)
-
-    @staticmethod
-    def prepatent_duration_mean(module, sim, uids):
-        """
-        Choose mu of the lognormal distribution used to determine an individual’s
-        prepatent stage duration.
-
-        The mu value is is selected based on the "quantization" of the
-        exposure amount (cfu_dose) into one of three buckets using various
-        thresholds. (Glynn et al., 1995).
-
-        Currently, all infections from the Contact route are assumed to be
-        a High dose prepatent duration.
-        """
-        # TODO: parameterise?
-        th1 =  5_050_000
-        th2 = 55_000_000
-
-        mu = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_mean) # high-dose mean
-        # replace elements where the condition is met
-        mu[module.cfu_doses[uids] <= th1] = 2.235     # low dose
-        mask = ((th1 > module.cfu_doses[uids]) &
-                (module.cfu_doses[uids] <= th2))
-        mu[mask] = 2.002                             # medium dose
-        return mu
-
-    @staticmethod
-    def prepatent_duration_std(module, sim, uids):
-        """
-        Choose mu of the lognormal distribution used to determine an individual’s
-        prepatent stage duration.
-
-        The sigma value is is selected based on the "quantization" of the
-        exposure amount (cfu_dose) into one of three buckets using various
-        thresholds. (Glynn et al., 1995).
-
-        Currently, all infections from the Contact route are assumed to be
-        a High dose prepatent duration.
-        """
-        # TODO: parameterise?
-        th1 =  5_050_000
-        th2 = 55_000_000
-
-        sigma = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_std)  # high-dose standard deviation
-        # replace elements where the condition is met
-        sigma[module.cfu_doses[uids] <= th1] = 0.4964     # low dose
-        mask = ((th1 > module.cfu_doses[uids]) &
-                (module.cfu_doses[uids] <= th2))
-        sigma[mask] = 0.706                              # medium dose
-        return sigma
-
-    def get_prepatent_duration_pars(self, uids):
-        th1 =  5_050_000
-        th2 = 55_000_000
-
-        # High-dose
-        mu = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_mean)
-        sigma = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_std)
-
-        # Medium dose
-        mask = ((th1 > self.cfu_doses[uids]) &
-                (self.cfu_doses[uids] <= th2))
-        mu[mask] = 2.002
-        sigma[mask] = 0.706
-
-        # Low-dose
-        mu[self.cfu_doses[uids] <= th1] = 2.235       # low dose
-        sigma[self.cfu_doses[uids] <= th1] = 0.4964   # low dose
-
-        # From ss.lognormal_ex.convert_ex_to_im
-        var   = sigma**2
-        mean2 = mu**2
-        sigma_im = np.sqrt(np.log(var/mean2 + 1))  # Computes stdev for the underlying normal distribution
-        mean_im  = np.log(mean2 / np.sqrt(var + mean2))
-
-        return mean_im, sigma_im
-
     def make_new_cases_environmental_transmission(self):
         """
         TODO: this should move to a different module
@@ -594,10 +588,34 @@ class TyphoidSimple(ss.Infection):
         new_cases = susc_uids[got_infected]
         return new_cases
 
+    @staticmethod
+    def infection_prob_function(module, sim, uids):
+
+        # Evoke an immunity-like response
+        p_resp = module.drc()
+        p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
+        return np.array(p_infc)
+
     def update_immunity(self, uids):
         # TPPI: Typhoid Protection Per Infection
         self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
         return
+
+    def drc(self, alpha=0.175, n50=1.16e6):
+        """
+        The probability of infection is mediated by the dose-response curve (drc),
+        taking in the contagion population as a value of colony-forming units (CFU)
+        and returning a probability of infection. Dose can be mediated by
+        seasonality factors described below. The function is a beta-binomial
+        curve fitted the historical challenge data by QMRA (Enger, 2013), where:
+
+        P(response) = 1- [1 + dose * (2^(1/ α)- 1)/N50] ^(-α)
+
+        # TODO: parameterise this function via pars. Also this function could
+        be user-defined if the environment was a separate module.
+        """
+        p_response = 1.0 - (1.0 + self.cfu_doses * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
+        return p_response
 
     def expose_to_environment(self, env_cfu_dose, ti, dt):
         """
@@ -613,27 +631,10 @@ class TyphoidSimple(ss.Infection):
         self.cfu_doses[susc_uids] += env_cfu_dose * n_exp
         return
 
-    def exposted_to_contacts(self, dt):
+    def expose_to_contacts(self, dt):
         # For person-to-person transmission
         #self.n_exposures += self.pars.transmision.p2p_exposure_rate.rvs()*dt
         pass
-
-    def drc(self, alpha=0.175, n50=1.16e6):
-        """
-        The probability of infection is mediated by the dose-response curve (drc),
-        taking in the contagion population as a value of colony-forming units (CFU)
-        and returning a probability of infection. Dose can be mediated by
-        seasonality factors described below. The function is a beta-binomial
-        curve fitted the historical challenge data by QMRA (Enger, 2013), where:
-
-        P(response) = 1- [1 + dose * (2^(1/ α)- 1)/N50] ^(-α)
-
-        # TODO: parameterise this function via pars. Also this function could
-        be user-defined if the environment was a separate module.
-        """
-        p_response  = 1.0 - (1.0 + self.cfu_doses * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
-        return p_response
-
 
     def update_results(self):
         super().update_results()
