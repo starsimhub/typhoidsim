@@ -75,7 +75,7 @@ class TyphoidSimple(ss.Infection):
                 ppl2env_shedding_rate=1.0,
                 # Probability of environmental transmission - filled out later
                 env2ppl_exposure_rate=ss.poisson(lam=10.0),
-                env2ppl_p_inf=ss.bernoulli(p=0.0)    ## updated later
+                env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function)    ## updated later
             ),
         )
         self.update_pars(pars, **kwargs)
@@ -142,11 +142,14 @@ class TyphoidSimple(ss.Infection):
         ]
         return
 
-    def init_env_svs(self):
+    def init_env_svs(self, uids):
         npts = self.sim.npts
-        self.sv += [
-            typ.StateVariable(self.name, "env_cfu", npts, dtype=float),
-        ]
+        ti = self.sim.ti
+        self.sv += [typ.StateVariable(self.name, "env_cfu", npts, dtype=float),]
+
+        # TODO: confirm this way of initialising env cfu is ok
+        # Estimate initial value of cfu doses in the environment
+        self.sv.env_cfu[ti] = self.pars.transmission.ppl2env_shedding_rate * self.infectiousness[uids].sum()
         return
 
     def init_vals(self):
@@ -180,20 +183,7 @@ class TyphoidSimple(ss.Infection):
 
         return
 
-    # def init_state_vars(self, **kwargs):
-    #     """
-    #     State variables, states that are not defined on a per-agent basis,
-    #     and that could be user-defined.
-    #     """
-    #
-    #     self.state_vars += [
-    #         typ.Pattern(self.name, "env_prevalence", 2, dtype=float),
-    #         typ.Pattern(self.name, "env_concentration", 2, dtype=float),
-    #     ]
-    #     return
-
-    # Methods that are specific to a single state (though they can modify other
-    # states)
+    # Methods that are specific to a single stage of infection
     def make_susceptible(self):
         """
         Placeholder function to make agent susceptible as a function of
@@ -250,6 +240,7 @@ class TyphoidSimple(ss.Infection):
 
         # Check who becomes susceptible in this timestep age 0-20
         self.make_susceptible()
+
         # Age-based susceptibility in chidldren <= 6 years old
         # self.increase_childhood_susceptibility()
 
@@ -261,7 +252,6 @@ class TyphoidSimple(ss.Infection):
         self.progress_to_dead(ti)
         self.progress_to_recovered(ti)
         self.progress_to_susceptible(ti)
-        # self.update_environmental_prevalence()
         return
 
     def progress_to_prepatent(self, ti):
@@ -478,11 +468,19 @@ class TyphoidSimple(ss.Infection):
         # Make new cases via person-to-person transmission
         super().make_new_cases()
 
-        #new_cases = self.environmental_transmission()
+        new_cases = self.make_new_cases_environmental_transmission()
 
-        #if len(new_cases):
-        #    self.set_prognoses(new_cases, source_uids=None)
+        if len(new_cases):
+            self.set_prognoses(new_cases, source_uids=None)
         return
+
+    @staticmethod
+    def infection_prob_function(module, sim, uids):
+
+        # Evoke an immunity-like response
+        p_resp = module.drc()
+        p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
+        return np.array(p_infc)
 
     def make_new_cases_environmental_transmission(self):
         """
@@ -497,7 +495,7 @@ class TyphoidSimple(ss.Infection):
         dt = self.sim.dt
 
         # Infectious individuals shed contagion into both the CPs
-        shedded_cfu = trans_pars.shedding_rate * self.infectiousness[self.infected].sum()
+        shedded_cfu = trans_pars.ppl2env_shedding_rate * self.infectiousness[self.infected].sum()
 
         # Environmental Colony-forming units from the previous time step
         cfu_tm1   = self.sv.env_cfu[ti - 1]
@@ -510,15 +508,10 @@ class TyphoidSimple(ss.Infection):
         # Increase cfu doses in susceptible people by exposing them to the environment
         self.expose_to_environment(cfu_total, ti, dt)
 
-        # Evoke an immunity-like response
-        p_response = self.drc()
-
-        # TODO: check whether we  multiply p_infection by a lumped parameters like environmental beta
-        p_infection = 1.0 - (1.0 + self.immunity * p_response)**self.n_exposures  # total number of n_exposures per unit of time? total?
-
         # Determine who gets infected from environment
-        new_cases = trans_pars.env2ppl_p_inf((self.susceptible).uids, p=p_infection)
-
+        susc_uids = (self.susceptible).uids
+        got_infected = trans_pars.env2ppl_p_inf(susc_uids)
+        new_cases = susc_uids[got_infected]
         return new_cases
 
     def update_immunity(self, uids):
@@ -535,9 +528,9 @@ class TyphoidSimple(ss.Infection):
         """
         sus_uids = (self.susceptible).uids
         # TODO: check whether the multiplication by dt makes sense in particular if dt < 1
-        n_exp = self.pars.transmision.env2ppl_exposure_rate.rvs()*dt
+        n_exp = self.pars.transmission.env2ppl_exposure_rate.rvs()*dt
         self.n_exposures[sus_uids] += n_exp
-        self.cfu_dose[sus_uids] += env_cfu_dose * n_exp
+        self.cfu_doses[sus_uids] += env_cfu_dose * n_exp
         return
 
     def exposted_to_contacts(self, dt):
@@ -558,7 +551,7 @@ class TyphoidSimple(ss.Infection):
         # TODO: parameterise this function via pars. Also this function could
         be user-defined if the environment was a separate module.
         """
-        p_response  = 1.0 - (1.0 + self.cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
+        p_response  = 1.0 - (1.0 + self.cfu_doses * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
         return p_response
 
 
