@@ -17,6 +17,14 @@ pars = sc.objdict(
     rand_seed=2,  # Set a non-default seed
 )
 
+
+my_product = ty.infectiousness_redux(multiplier=0.5)
+
+my_intervention = ss.BaseTreatment(
+    prob=1.0,             # probability of seeking treatment when acute
+    product=my_product  # use basic treatment that reduces infectiousness
+)
+
 typhoid = ty.TyphoidSimple()
 
 
