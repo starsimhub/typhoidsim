@@ -50,6 +50,7 @@ class TyphoidSimple(ss.Infection):
             #                             stdev=self.prepatent_duration_std),
             dur_acute2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Acute duration for under (<) 30 yo, in weeks.
             dur_acute2next_geq30=ss.lognorm_ex(mean=1.258, stdev=0.788),  # Acute duration for over (>=) 30 yo, in weeks.
+            dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, stdev=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
             dur_subcl2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Subclinical duration for under (<) 30 yo, in weeks.
             dur_subcl2next_geq30=ss.lognorm_ex(mean=1.172, stdev=0.788),  # Subclinical duration for over (>=) 30 yo, in weeks.
             p_acute=ss.bernoulli(p=0.234),   # Prob of becoming acute (or symptomatic)
@@ -66,10 +67,11 @@ class TyphoidSimple(ss.Infection):
             tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
 
             # Environmental parameters - long-cycle CCVT
+            tppi=0.99,   # Decrease in susceptibility per infection (exponential decrease)
             environment=ss.Pars(
                 beta=0.0,
                 init_prev=ss.bernoulli(0.0),
-                decay_rate=0.0,
+                decay_rate=0.3,
             ),
             # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
             transmission=ss.Pars(
@@ -109,6 +111,7 @@ class TyphoidSimple(ss.Infection):
             ss.FloatArr("ti_prepatent"),
             ss.FloatArr("ti_subclinical"),
             ss.FloatArr("ti_acute"),
+            ss.FloatArr("ti_seek_treatment"),  # TODO: maybe move to treatment intervention
             ss.FloatArr("ti_chronic"),
             ss.FloatArr("ti_recovered"),
             ss.FloatArr("ti_dead"),
@@ -505,6 +508,10 @@ class TyphoidSimple(ss.Infection):
 
         # Estimate duration of acute stage
         dur_acu = self.get_acute_duration_by_age(acute_uids)
+
+        # If treatment applied, this is when acute cases would seek treatment  -- this may need to be moved to the intervention
+        self.ti_seek_treatment[acute_uids] = dur_acu + p.dur_wait2treatment.rvs(acute_uids) / dt
+
         # Estimate duration of subclinical by age
         dur_scl = self.get_subclinical_duration_by_age(subcl_uids)
 
