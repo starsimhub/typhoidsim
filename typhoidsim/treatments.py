@@ -7,7 +7,7 @@ import sciris as sc
 import numpy as np
 from .typhoid import TyphoidSimple
 
-__all__ = ['basic_treatment']
+__all__ = ['acute_treatment', 'infectiousness_redux']
 
 
 class ViVax(ss.Vx):
@@ -23,10 +23,13 @@ class ViVax(ss.Vx):
         pass
 
 
-class AcuteTreatment(ss.BaseTreatment):
+class acute_treatment(ss.BaseTreatment):
 
     def __init__(self, product=None, prob=None, eligibility=None, **kwargs):
         super().__init__(**kwargs)
+        self.prob = sc.promotetoarray(prob)
+        self.eligibility = eligibility
+        self._parse_product(product)
         self.under_treatment = ss.BoolArr('under_treatment')
         return
 
@@ -37,7 +40,16 @@ class AcuteTreatment(ss.BaseTreatment):
         return
 
     def apply(self, sim):
-        eligible_uids = self.check_eligibility(sim)  # Check eligibility
+        # Who receives the treatment
+        # 1. Get acute candidates
+        # 2. Check who is untreated and may seek treatment today (asess ti_seek_treatment is close to
+        # this timestep (new candidates); agents under treatment continue to be under treatment until
+        # the end of their acute phase
+        # 3. Of the ones that are eligible to 'seek' treatment today, decide who
+        # does and who doesnt't
+        # 4. Search candidates that are
+        acute_candidates = self.get_candidates(sim)
+        eligible_uids = self.check_eligibility(sim, acute_candidates)  # Check eligibility
         self.coverage_dist.set(p=self.prob)
         seek_uids = self.coverage_dist.filter(eligible_uids)
 
@@ -51,15 +63,23 @@ class AcuteTreatment(ss.BaseTreatment):
 
         return n_treated
 
-    def check_eligibility(self, sim):
+    def check_eligibility(self, sim, uids):
         may_seek_treatment_today = (sim.typhoidsimple.ti_seek_treatment == sim.ti).uids
         return may_seek_treatment_today
 
+    def get_candidates(self, sim):
+        """
+        Get candidates for treatment on this timestep.
+        """
+        # Only agents experience the acute stage of infection
+        acute_uids = (sim.people.typhoisimple.acute).uids
+        return acute_uids
 
-class basic_treatment(ss.Vx):
+
+class infectiousness_redux(ss.Vx):
         """
         Reduction in infectiousness. This product is applied to acute cases
-        and results in a reduction in shedding.
+        and results in a reduction or blocking in shedding.
         """
 
         def __init__(self, pars=None, *args, **kwargs):
