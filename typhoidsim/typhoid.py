@@ -41,24 +41,43 @@ class TyphoidSimple(ss.Infection):
         """Initialize with parameters"""
         super().__init__()
         self.default_pars(
-            # Initial conditions and beta
+            # Initial conditions and transmissibility beta
             beta=1.0,  # Placeholder value
             init_prev=ss.bernoulli(0.005),
-            # Natural history parameters,
+
+            # NATURAL HISTORY PARAMETERS
+            # Prepatent stage
+            prep_dur_pars={"mean_dur": {"lo": 2.235, "me": 2.002, "hi": 1.5487},
+                           "std_dur": {"lo": 0.4964, "me": 0.706, "hi": 0.3442}},  # CFU dose-dependent duration parameters, in days.
+
             prep_dur_mean=1.5487,  # 'High dose' prepatent duration mean, in days.
-            prep_dur_std=0.3442,   # 'High dose' prepatent duration std, in days.
+            prep_dur_std=0.3442,   # 'High dose' prep. dur. std, in days.
+
+            cfu_lo_me=5_050_000,   # 'Low dose' prep. dur. if cfu_doses <= cfu_lo_me, 'medium dose' otherwise
+            cfu_me_hi=55_000_000,  # 'Medium dose' prep. dur. if cfu_doses > cfu_lo_me & <= cfu_me_hi, 'high_dose' otherwise
+
+            # Symptomatic stage (acute and/or sublinical)
             # dur_prep2next=ss.lognorm_ex(mean=self.prepatent_duration_mean,
             #                             stdev=self.prepatent_duration_std),
+            symp_dur_th_age=30.0,        # Symptomatic duration age threshold.
+            symp_dur_mean_le_th=1.172,   # Symptomatic duration mean if age < age_threshold, in weeks.
+            symp_dur_std_le_th=0.483,    # Symptomatic duration std  if age < age_threshold, in weeks.
+            symp_dur_mean_geq_th=1.172,  # Symptomatic duration mean if age >= age_threshold, in weeks.
+            symp_dur_std_geq_th=0.788,   # Symptomatic duration std if age  >= age_threshold, in weeks.
             dur_acute2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Acute duration for under (<) 30 yo, in weeks.
             dur_acute2next_geq30=ss.lognorm_ex(mean=1.258, stdev=0.788),  # Acute duration for over (>=) 30 yo, in weeks.
-            dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, stdev=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
             dur_subcl2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Subclinical duration for under (<) 30 yo, in weeks.
             dur_subcl2next_geq30=ss.lognorm_ex(mean=1.172, stdev=0.788),  # Subclinical duration for over (>=) 30 yo, in weeks.
+            # TODO: replace the four ditributions above by this single one (typhoidsim #28)
+            # dur_sympt2next=ss.lognorm_ex(mean=self.symp2next_dur_mean,
+            #                              stdev=self.symp2next_dur_std),     # Symptomatic (acute or subclinical duration), depends on age, expressed in weeks.
+            dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, stdev=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
             p_acute=ss.bernoulli(p=0.234),   # Prob of becoming acute (or symptomatic)
-            p_chro=ss.bernoulli(p=0.150),     # Prob of becoming chronic carrier from acute or clinical infection, average multiplicative factor, same for females and males.
-            p_death=ss.bernoulli(p=0.001),  # Probability of dying from acute, context dependent, and by default set to something zero or something very small
+            # Long-term stages
+            p_chro=ss.bernoulli(p=0.150),    # Prob of becoming chronic carrier from acute or clinical infection, average multiplicative factor, same for females and males.
+            p_death=ss.bernoulli(p=0.001),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
-            # Within-host parameters
+            # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Age-based exposure
             age_exposure_slope=1.0,
             # Infectiousness parameters
@@ -67,7 +86,7 @@ class TyphoidSimple(ss.Infection):
             tsri=0.8,    # Typhoid relative (to acute) subclinic infectiousness
             tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
 
-            # Environmental parameters - long-cycle CCVT
+            # ENVIRONMENT PARAMETERS
             tppi=0.99,   # Decrease in susceptibility per infection (exponential decrease)
             environment=ss.Pars(
                 beta=0.0,
@@ -150,9 +169,11 @@ class TyphoidSimple(ss.Infection):
         return
 
     def init_svs(self):
+        """
+        Initialise StateVariable objects
+        """
         npts = self.sim.npts
         self.sv += [typ.StateVariable(self.name, "env_cfu", npts, dtype=float),]
-
         return
 
     def init_env_pool(self, uids):
@@ -164,7 +185,7 @@ class TyphoidSimple(ss.Infection):
 
     def init_vals(self):
         """
-        Set initial values for states. This could involve passing in a full
+        Set initial values for states and new cases. This could involve passing in a full
         set of initial conditions, or using init_prev (initial prevalence), or other.
 
         Note that this is different to initialization of the Arr objects i.e.,
@@ -339,7 +360,7 @@ class TyphoidSimple(ss.Infection):
 
     # Methods that handle durations/duration pars that are dependent on other variables
     def get_prepatent_duration_by_exposure(self, uids):
-        """ TODO: TEMPORARY: Not random-number safe implementation """
+        """ TODO: TEMPORARY: Not random-number safe implementation ref #28"""
         mu, sigma = self.get_prepatent_duration_pars(uids)
         dur_prep_dist = sps.lognorm(s=sigma, scale=np.exp(mu))
         dur_prep = dur_prep_dist.rvs(uids.size)
@@ -347,7 +368,6 @@ class TyphoidSimple(ss.Infection):
 
     def get_acute_duration_by_age(self, uids):
         """
-        TODO: refactor in to a single function that returns both
         acute and subclinical durations?, though that would prevent
         further differentiating between those two stages (ie, if the
         if we wanted to change the 'threshold' age in one of the
@@ -358,14 +378,14 @@ class TyphoidSimple(ss.Infection):
 
         dur_acu = self.ti_acute[uids]
         # From the acute uids, who is under or over 30
-        under30 = np.isin(uids, (self.sim.people.age < 30.0).uids)
-        over30  = np.isin(uids, (self.sim.people.age >= 30.0).uids)
+        under_th = np.isin(uids, (self.sim.people.age < p.symp_dur_th_age).uids)
+        over_th  = np.isin(uids, (self.sim.people.age >= p.symp_dur_th_age).uids)
 
         # convert duration pars in weeks -> to days -> to timesteps
-        dur_acu[under30] += ((p.dur_acute2next_le30.rvs(uids[under30]) *
+        dur_acu[under_th] += ((p.dur_acute2next_le30.rvs(uids[under_th]) *
                                     tyd.days_per_week) / dt)
         # convert duration pars in weeks -> to days -> to timesteps
-        dur_acu[over30] += ((p.dur_acute2next_geq30.rvs(uids[over30]) *
+        dur_acu[over_th] += ((p.dur_acute2next_geq30.rvs(uids[over_th]) *
                                    tyd.days_per_week) / dt)  # in timesteps
         return dur_acu
 
@@ -375,23 +395,26 @@ class TyphoidSimple(ss.Infection):
 
         dur_scl = self.ti_subclinical[uids]
         # From the subclinical uids, who is under or over 30
-        under30 = np.isin(uids, (self.sim.people.age < 30.0).uids)
-        over30  = np.isin(uids, (self.sim.people.age >= 30.0).uids)
+        under_th = np.isin(uids, (self.sim.people.age < p.symp_dur_th_age).uids)
+        over_th  = np.isin(uids, (self.sim.people.age >= p.symp_dur_th_age).uids)
 
         # convert duration pars in weeks -> to days -> to timesteps
-        dur_scl[under30] += ((p.dur_subcl2next_le30.rvs(uids[under30]) *
+        dur_scl[under_th] += ((p.dur_subcl2next_le30.rvs(uids[under_th]) *
                                     tyd.days_per_week) / dt)
         # convert duration pars in weeks -> to days -> to timesteps
-        dur_scl[over30] += ((p.dur_subcl2next_geq30.rvs(uids[over30]) *
+        dur_scl[over_th] += ((p.dur_subcl2next_geq30.rvs(uids[over_th]) *
                                    tyd.days_per_week) / dt)  # in timesteps
         return dur_scl
 
     def get_prepatent_duration_pars(self, uids):
+        """
+        CFU dose-dependent prepatent duration
+        """
         th1 =  5_050_000
         th2 = 55_000_000
 
         # High-dose
-        mu = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_mean)
+        mu    = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_mean)
         sigma = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_std)
 
         # Medium dose
@@ -606,6 +629,30 @@ class TyphoidSimple(ss.Infection):
         p_resp = module.drc()
         p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
         return np.array(p_infc)
+
+    @staticmethod
+    def symp2next_dur_mean(module, sim, uids):
+        """
+        Age-dependent mean of the symp2next duration lognormal_ex distribution
+        TODO: test once bug in starsim has been fixed (issue #535)
+        """
+        th_age = module.pars.symp_dur_th_age
+        mean_arr = np.ones(len(uids))
+        mean_arr[sim.people.age[uids] < th_age]  = module.pars.symp_dur_mean_le
+        mean_arr[sim.people.age[uids] >= th_age] = module.pars.symp_dur_mean_geq
+        return mean_arr
+
+    @staticmethod
+    def symp2next_dur_std(module, sim, uids):
+        """
+        Age-dependent standard deviation of the symp2next lognormal_ex distribution
+        """
+        th_age = module.pars.symp_dur_th_age
+        std_arr = np.zeros(len(uids))
+        std_arr[sim.people.age[uids] < th_age]  = module.pars.sympy2next_std_le_th
+        std_arr[sim.people.age[uids] >= th_age] = module.pars.sympy2next_std_geq_th
+        return std_arr
+
 
     def update_immunity(self, uids):
         # TPPI: Typhoid Protection Per Infection
