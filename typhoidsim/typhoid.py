@@ -1,10 +1,11 @@
 """
-Typhoid model.
-
+Typhoid models.
 """
 
 import numpy as np
 import scipy.stats as sps
+
+import sciris as sc
 import starsim as ss
 
 import typhoidsim.utils as tyu
@@ -111,7 +112,7 @@ class TyphoidSimple(ss.Infection):
             ss.FloatArr("ti_prepatent"),
             ss.FloatArr("ti_subclinical"),
             ss.FloatArr("ti_acute"),
-            ss.FloatArr("ti_seek_treatment"),  # TODO: maybe move to treatment intervention
+            ss.FloatArr("ti_seek_trtmnt"),
             ss.FloatArr("ti_chronic"),
             ss.FloatArr("ti_recovered"),
             ss.FloatArr("ti_dead"),
@@ -145,15 +146,19 @@ class TyphoidSimple(ss.Infection):
             ss.Result(self.name, "cum_deaths", npts, dtype=int),
             ss.Result(self.name, "env_cfu", npts, dtype=float),
         ]
+        self.init_svs()
         return
 
-    def init_env_svs(self, uids):
+    def init_svs(self):
         npts = self.sim.npts
-        ti = self.sim.ti
         self.sv += [typ.StateVariable(self.name, "env_cfu", npts, dtype=float),]
 
+        return
+
+    def init_env_pool(self, uids):
         # TODO: confirm this way of initialising env cfu is ok
         # Estimate initial value of cfu doses in the environment
+        ti = self.sim.ti
         self.sv.env_cfu[ti] = self.pars.transmission.ppl2env_shedding_rate * self.infectiousness[uids].sum()
         return
 
@@ -184,8 +189,7 @@ class TyphoidSimple(ss.Infection):
             # Initial cases from environment-to-person transmission
             initial_cases_env = self.pars.environment.init_prev.filter((self.susceptible).uids)
             self.set_prognoses(initial_cases_env)
-            self.init_env_svs(initial_cases_env)
-
+            self.init_env_pool(initial_cases_env)
         return
 
     # Methods that are specific to a single stage of infection
@@ -509,8 +513,10 @@ class TyphoidSimple(ss.Infection):
         # Estimate duration of acute stage
         dur_acu = self.get_acute_duration_by_age(acute_uids)
 
-        # If treatment applied, this is when acute cases would seek treatment  -- this may need to be moved to the intervention
-        self.ti_seek_treatment[acute_uids] = dur_acu + p.dur_wait2treatment.rvs(acute_uids) / dt
+        # If treatment applied, this is when acute cases would seek treatment
+        # This variable captures human behaviour
+        self.ti_seek_trtmnt[acute_uids] = sc.randround(dur_acu +
+                                                          sc.randround(p.dur_wait2treatment.rvs(acute_uids) / dt))
 
         # Estimate duration of subclinical by age
         dur_scl = self.get_subclinical_duration_by_age(subcl_uids)
@@ -553,9 +559,7 @@ class TyphoidSimple(ss.Infection):
         """Add short-cycle transmission and long-cycle transmission transmission"""
         # Make new cases via person-to-person transmission
         super().make_new_cases()
-
         new_cases = self.make_new_cases_environmental_transmission()
-
         if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
         return
@@ -598,7 +602,6 @@ class TyphoidSimple(ss.Infection):
 
     @staticmethod
     def infection_prob_function(module, sim, uids):
-
         # Evoke an immunity-like response
         p_resp = module.drc()
         p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
@@ -613,9 +616,13 @@ class TyphoidSimple(ss.Infection):
         """
         The probability of infection is mediated by the dose-response curve (drc),
         taking in the contagion population as a value of colony-forming units (CFU)
-        and returning a probability of infection. Dose can be mediated by
-        seasonality factors described below. The function is a beta-binomial
-        curve fitted the historical challenge data by QMRA (Enger, 2013), where:
+        and returning a probability of infection.
+
+        The independent variable `cfu_doses` can be modulated by seasonality
+        factors.
+
+        The DRC is a beta-binomial curve fitted the historical challenge
+        data by QMRA (Enger, 2013), where:
 
         P(response) = 1- [1 + dose * (2^(1/ α)- 1)/N50] ^(-α)
 

@@ -20,9 +20,9 @@ pars = sc.objdict(
 
 my_product = ty.infectiousness_redux(multiplier=0.5)
 
-my_intervention = ss.BaseTreatment(
+my_intervention = ty.acute_treatment(
     prob=1.0,             # probability of seeking treatment when acute
-    product=my_product  # use basic treatment that reduces infectiousness
+    product=my_product,  # use basic treatment that reduces infectiousness
 )
 
 typhoid = ty.TyphoidSimple()
@@ -37,6 +37,7 @@ sim = ss.Sim(
     pars=pars,
     networks=network,
     diseases=typhoid,
+    interventions=my_intervention,
     )
 
 sim.run()
