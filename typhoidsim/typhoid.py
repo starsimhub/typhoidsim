@@ -410,22 +410,22 @@ class TyphoidSimple(ss.Infection):
         """
         CFU dose-dependent prepatent duration
         """
-        th1 =  5_050_000
-        th2 = 55_000_000
+        ppars = self.pars.prep_dur_pars
+        th1 = self.pars.cfu_lo_me
+        th2 = self.pars.cfu_me_hi
 
-        # High-dose
-        mu    = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_mean)
-        sigma = np.full_like(self.cfu_doses[uids], self.pars.prep_dur_std)
+        # High-dose by default
+        mu    = np.full_like(self.cfu_doses[uids], ppars["mean_dur"]["hi"])
+        sigma = np.full_like(self.cfu_doses[uids], ppars["std_dur"]["hi"])
 
         # Medium dose
-        mask = ((th1 > self.cfu_doses[uids]) &
-                (self.cfu_doses[uids] <= th2))
-        mu[mask] = 2.002
-        sigma[mask] = 0.706
+        mask = ((th1 > self.cfu_doses[uids]) & (self.cfu_doses[uids] <= th2))
+        mu[mask] = ppars["mean_dur"]["me"]
+        sigma[mask] = ppars["std_dur"]["me"]
 
         # Low-dose
-        mu[self.cfu_doses[uids] <= th1] = 2.235       # low dose
-        sigma[self.cfu_doses[uids] <= th1] = 0.4964   # low dose
+        mu[self.cfu_doses[uids] <= th1] = ppars["mean_dur"]["lo"]    # low dose
+        sigma[self.cfu_doses[uids] <= th1] = ppars["std_dur"]["lo"]   # low dose
 
         # From ss.lognormal_ex.convert_ex_to_im
         var   = sigma**2
