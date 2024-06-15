@@ -43,7 +43,7 @@ class acute_treatment(ss.Intervention):
          and previous candidates)
     """
 
-    def __init__(self, product=None, prob=None, eligibility=None, **kwargs):
+    def __init__(self, product=None, prob=1.0, eligibility=None, **kwargs):
         self.prob = sc.promotetoarray(prob)
         self.eligibility = eligibility
         self._parse_product(product)
@@ -93,6 +93,17 @@ class acute_treatment(ss.Intervention):
         under_treatment = (sim.people.acute_treatment.treated).uids
         patients = acute_uids.intersect(under_treatment)
         return new_candidates, patients
+
+
+#
+
+# - Products
+class infection_clearence(ss.Intervention):
+    """
+    Individual-targeted intervention immediately clears an infected individual’s
+    Typhoid infection (and expires).
+    """
+    pass
 
 
 class infectiousness_redux(ss.Product):

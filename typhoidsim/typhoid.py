@@ -8,9 +8,11 @@ import scipy.stats as sps
 import sciris as sc
 import starsim as ss
 
+import typhoidsim
 import typhoidsim.utils as tyu
 import typhoidsim.patterns as typ
 import typhoidsim.defaults as tyd
+import typhoidsim.utils_math as tyum
 
 __all__ = ["TyphoidSimple"]
 
@@ -73,8 +75,11 @@ class TyphoidSimple(ss.Infection):
             #                              stdev=self.symp2next_dur_std),     # Symptomatic (acute or subclinical duration), depends on age, expressed in weeks.
             dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, stdev=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
             p_acute=ss.bernoulli(p=0.234),   # Prob of becoming acute (or symptomatic)
+
             # Long-term stages
-            p_chro=ss.bernoulli(p=0.150),    # Prob of becoming chronic carrier from acute or clinical infection, average multiplicative factor, same for females and males.
+            p_chro=0.15,    # base prob of chronic carrier in the absence of gallstones
+            d_chro=ss.bernoulli(p=self.chronic_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection
+            p_gall=tyu.load_dataset("gallstone_probs"),  # Probability of having gallstones by age and sex
             p_death=ss.bernoulli(p=0.001),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
@@ -234,7 +239,7 @@ class TyphoidSimple(ss.Infection):
         max_age = 20.0  # TODO: make configurable?
         unexposed = (~self.susceptible).uids
         self.susceptible[unexposed] = ss.bernoulli(
-            p=tyu.sigmoid(
+            p=tyum.sigmoid(
                 self.sim.people.age[unexposed], max_age, self.pars.age_exposure_slope
             )
         )
@@ -448,16 +453,16 @@ class TyphoidSimple(ss.Infection):
         Currently, all infections from the Contact route are assumed to be
         a High dose prepatent duration.
         """
-        # TODO: parameterise?
-        th1 =  5_050_000
-        th2 = 55_000_000
+        mpars = module.pars
+        th1 = module.pars.cfu_lo_me
+        th2 = module.pars.cfu_me_hi
 
         mu = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_mean) # high-dose mean
         # replace elements where the condition is met
-        mu[module.cfu_doses[uids] <= th1] = 2.235     # low dose
+        mu[module.cfu_doses[uids] <= th1] = mpars.prep_dur_pars["mean_dur"]["lo"]    # low dose
         mask = ((th1 > module.cfu_doses[uids]) &
                 (module.cfu_doses[uids] <= th2))
-        mu[mask] = 2.002                             # medium dose
+        mu[mask] = mpars.prep_dur_pars["mean_dur"]["me"]                       # medium dose
         return mu
 
     @staticmethod
@@ -473,27 +478,35 @@ class TyphoidSimple(ss.Infection):
         Currently, all infections from the Contact route are assumed to be
         a High dose prepatent duration.
         """
-        # TODO: parameterise?
-        th1 =  5_050_000
-        th2 = 55_000_000
+        mpars = module.pars
+        th1 = mpars.cfu_lo_me
+        th2 = mpars.cfu_me_hi
 
         sigma = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_std)  # high-dose standard deviation
         # replace elements where the condition is met
-        sigma[module.cfu_doses[uids] <= th1] = 0.4964     # low dose
+        sigma[module.cfu_doses[uids] <= th1] = mpars.prep_dur_pars["std_dur"]["lo"] # low dose
         mask = ((th1 > module.cfu_doses[uids]) &
                 (module.cfu_doses[uids] <= th2))
-        sigma[mask] = 0.706                              # medium dose
+        sigma[mask] = mpars.prep_dur_pars["std_dur"]["me"]                           # medium dose
         return sigma
+
+    @staticmethod
+    def chronic_prob_function(module, sim, uids):
+        mpars = module.pars
+        if mpars.p_gall is not None:
+            age_ints = tyu.digitize_ages_1yr(sim.people.age[uids])
+            # Scale prob of becoming chronic using prob of having gallstones
+            # TODO: QUESTION: Is this operation ok, multiplying probabilities, or
+            # do we first evaluate whether the agent has gallstones, and then multiply
+            # by p_chro
+            p_chro = mpars.p_chro * mpars.p_gall[age_ints, sim.people.female[uids].astype(int)]
+        else:
+            p_chro = mpars.p_chro
+        return np.array(p_chro)
 
     def will_become_chronic_carrier(self, uids):
         """Determine who will become a chronic carrier"""
-        p = self.pars
-        if p.p_chro is not None:
-            # Use an "average" probability for everyone
-            return p.p_chro.filter(uids)
-
-        # Estimate by age and gender probabilities
-        # TODO: implement
+        return self.pars.d_chro.filter(uids)
 
     def set_prognoses(self, uids, source_uids=None):
         """
@@ -751,20 +764,3 @@ def make_children_susceptible(people, uids_aged_x, prop_susceptible):
     return people
 
 
-def age_sex_chronic_probs():
-     # Load probs from file
-     # Interpolate to get age_based prob in the range min max age?
-     # Get interpolant at initialisation and then evaluate by age and by sex
-     # Get array of probs that will be used with bernoulli
-     pass
-
-
-
-class Typhoid(ss.Infection):
-    """
-    Typhoid module that only includes the natural history of the disease in a human
-    agent. This module is expected to interact with other modules such as
-    Gallstones and Environment.
-    """
-
-    pass

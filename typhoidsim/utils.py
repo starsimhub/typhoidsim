@@ -11,10 +11,23 @@ import pandas as pd
 import sciris as sc
 import starsim as ss
 
-import typhoidsim as ty
+from . import defaults as tyd
+from . import settings as tys
 
 # Specify all externally visible things this file defines
-__all__ = ['get_data_home', 'load_dataset']
+__all__ = ['get_data_home', 'load_dataset', 'get_dataset_names']
+__all__ += ['digitize_ages_1yr']
+
+
+@nb.jit((nb.float64[:], ), cache=True, nopython=True)
+def digitize_ages_1yr(ages):
+    """
+    Return the indices of the 1-year bins to which each value in ages array belongs.
+    The bin index is used as an integer representation of the agent's age.
+    """
+    # Create age bins because ppl.age is a continous variable
+    age_cutoffs = np.arange(0, tyd.max_age)
+    return np.digitize(ages, age_cutoffs) - 1  # "rounds to the integer part of age"
 
 
 def get_data_home(data_home=None):
@@ -29,7 +42,7 @@ def get_data_home(data_home=None):
     """
 
     if data_home is None:
-        data_home = ty.options.data_home
+        data_home = tys.options.data_home
     data_home = os.path.expanduser(data_home)
     if not os.path.exists(data_home):
         os.makedirs(data_home)
@@ -88,7 +101,7 @@ def load_dataset(ds_name, data_home=None, **kwargs):
     data_path = os.path.join(data_home, filename)
 
     if not os.path.exists(data_path):
-        get_dataset_names()
+        get_dataset_names(data_home=data_home)
         raise ValueError(f"'{ds_name}' is not one of the existing datasets.")
 
     df = pd.read_csv(data_path, **kwargs)
@@ -97,22 +110,24 @@ def load_dataset(ds_name, data_home=None, **kwargs):
     match ds_name:
         case "gallstone_probs":
             # If age_lo and age_hi define an age bin > 1 year, then
-            # this bit inflates or expands to have a complete range of ages in 1yr bins.
+            # this bit inflates the dataset to have a complete range of ages in 1yr bins.
             # Then transforms the dataframe into an array that can be indexed with
             # an integer version of agent ages.
             complete_df = pd.DataFrame({
                 'age': np.concatenate(
-                    [np.arange(lo, hi if pd.notnull(hi) else ty.max_age) for lo, hi
+                    [np.arange(lo, hi if pd.notnull(hi) else tyd.max_age) for lo, hi
                      in df[['age_lo', 'age_hi']].values]),
                 'prob': np.repeat(df['prob'].values,
-                                 df['age_hi'].fillna(ty.max_age).sub(
+                                 df['age_hi'].fillna(tyd.max_age).sub(
                                      df['age_lo']).astype(int)),
                 'sex': np.repeat(df['sex'].values,
-                                 df['age_hi'].fillna(ty.max_age).sub(
+                                 df['age_hi'].fillna(tyd.max_age).sub(
                                      df['age_lo']).astype(int))
             })
 
-            arr = complete_df.pivot(index='age', columns='sex', values='prob').fillna(0)
+            arr = complete_df.pivot(index='age',
+                                    columns='sex',
+                                    values='prob').fillna(0).to_numpy()
 
             return arr
 
