@@ -29,11 +29,27 @@ def get_data_home(data_home=None):
     """
 
     if data_home is None:
-        data_home = os.environ.get("TYPHOID_DATA", ty.options.data_dir)
+        data_home = ty.options.data_home
     data_home = os.path.expanduser(data_home)
     if not os.path.exists(data_home):
         os.makedirs(data_home)
     return data_home
+
+
+def get_dataset_names(data_home=None):
+    """
+    Provides a list of available datasets in data_home
+    """
+    data_home = get_data_home(data_home)
+    dataset_names = os.listdir(data_home)
+    dataset_names = list(filter(None, dataset_names))
+
+    output = f"Available datasets in {data_home}:\n"
+    for name in dataset_names:
+        namestr = sc.colorize(f'  {name}\n', fg='yellow', output=True)
+        output += f"{namestr}"
+    print(output)
+    return
 
 
 def load_dataset(ds_name, data_home=None, **kwargs):
@@ -62,7 +78,49 @@ def load_dataset(ds_name, data_home=None, **kwargs):
        df(`pandas.DataFrame`): tabular data, with some preprocessing applied
        (depends on the dataset)
 
-    # Inspired by seaborn example datasets functionality
     """
 
-    pass
+    filename = f"{ds_name}.csv"
+
+    if data_home is None:
+        data_home = get_data_home()
+
+    data_path = os.path.join(data_home, filename)
+
+    if not os.path.exists(data_path):
+        get_dataset_names()
+        raise ValueError(f"'{ds_name}' is not one of the existing datasets.")
+
+    df = pd.read_csv(data_path, **kwargs)
+    df = remove_empty_rows(df)
+
+    match ds_name:
+        case "gallstone_probs":
+            # If age_lo and age_hi define an age bin > 1 year, then
+            # this bit inflates or expands to have a complete range of ages in 1yr bins.
+            # Then transforms the dataframe into an array that can be indexed with
+            # an integer version of agent ages.
+            complete_df = pd.DataFrame({
+                'age': np.concatenate(
+                    [np.arange(lo, hi if pd.notnull(hi) else ty.max_age) for lo, hi
+                     in df[['age_lo', 'age_hi']].values]),
+                'prob': np.repeat(df['prob'].values,
+                                 df['age_hi'].fillna(ty.max_age).sub(
+                                     df['age_lo']).astype(int)),
+                'sex': np.repeat(df['sex'].values,
+                                 df['age_hi'].fillna(ty.max_age).sub(
+                                     df['age_lo']).astype(int))
+            })
+
+            arr = complete_df.pivot(index='age', columns='sex', values='prob').fillna(0)
+
+            return arr
+
+    return
+
+
+def remove_empty_rows(df):
+    # Check for empty rows -- a rather common problem with csv files
+    if df.iloc[-1].isnull().all():
+        df = df.iloc[:-1]
+    return df
