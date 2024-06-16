@@ -105,7 +105,7 @@ class TyphoidSimple(ss.Infection):
                 ppl2env_shedding_rate=1.0,
                 # Probability of environmental transmission - filled out later
                 env2ppl_exposure_rate=ss.poisson(lam=10.0),
-                env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function)    ## updated later
+                env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function)
             ),
         )
         self.update_pars(pars, **kwargs)
@@ -114,7 +114,8 @@ class TyphoidSimple(ss.Infection):
         self.add_states(
             # Infection life cycle states
             # Susceptible & infected are added automatically, here we add the rest
-            ss.BoolArr("exposed"),
+            ss.BoolArr("exposed", False),
+            ss.BoolArr("immune", False),
             ss.BoolArr("prepatent"),
             ss.BoolArr("acute"),
             ss.BoolArr("subclinical"),
@@ -128,7 +129,7 @@ class TyphoidSimple(ss.Infection):
             ss.FloatArr("n_infections", 0),
             ss.FloatArr("infectiousness", 0),
             ss.FloatArr("p_chronic"),
-            ss.FloatArr("immunity"),
+            ss.FloatArr("immunity", 0),
 
             # States that track timing of events
             ss.FloatArr("ti_exposed"),
@@ -245,8 +246,15 @@ class TyphoidSimple(ss.Infection):
         )
 
     def make_impervious(self):
+        """
+        Individuals that are created through births in the model start out in a
+        fully immune state.
+        """
+
         self.exposed[self.susceptible.uids] = False
-        self.susceptible[self.susceptible.uids] = False
+        uids = (self.sim.people.age < 1).uids
+        self.immune[uids] = True
+        self.susceptible[uids] = False
 
     def update_death(self, uids):
         """Reset states for dead agents"""
@@ -630,9 +638,9 @@ class TyphoidSimple(ss.Infection):
     def make_new_cases_environmental_transmission(self):
         """
         TODO: this should move to a different module
-        1. infected individuals shed into the environment (contagion pool in environment grows)
+        1. infected individuals shed into the environment (environmental contagion pool grows ↑↑)
         2. individuals get exposed by the environment (increases their n_exposures)
-        3. contagion pool in environment decays.
+        3. Bacteria in the environment die at a specific rate (contagion pool in environment decays ↓↓)
         """
         trans_pars = self.pars.transmission
         env_pars = self.pars.environment
@@ -642,23 +650,25 @@ class TyphoidSimple(ss.Infection):
         # Infectious individuals shed contagion into both the CPs
         shedded_cfu = trans_pars.ppl2env_shedding_rate * self.infectiousness[self.infected].sum()
 
-        # Environmental Colony-forming units from the previous time step
+        # Environmental Colony-forming units (CFUs) from the previous time step
         cfu_tm1   = self.sv.env_cfu[ti - 1]
+        # CFU growth due to people shedding into the environment
         cfu_total = cfu_tm1 + shedded_cfu
 
-        # Net number of Colony-forming units at this time step (include growth due to shedded cfu, and decay)
-        self.sv.env_cfu[ti] = cfu_total * np.exp(-env_pars.decay_rate*(ti/dt))
+        # Decay CFUs and get net number of CFUS at this time step (include growth due to shedded cfu, and decay)
+        self.sv.env_cfu[ti] = cfu_total * np.exp(-env_pars.decay_rate*dt)
 
         # Increase cfu doses in susceptible people by exposing them to the environment
         self.expose_to_environment(cfu_total, ti, dt)
 
-        ## The distribution trans_pars.env2ppl_p_inf() calls self.drc() via
-        # infection_prob_function(). self.drc assesses the responses of the hosts
-        # due to a certain amount of exposure doses (cfu_doses). Then,
-        # infection_...() it estimates a probability of infection.
-
         # Determine who gets infected from environment
         susc_uids = (self.susceptible).uids
+
+        ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
+        # infection_prob_function(), which calls self.drc(). This assesses
+        # the immunity responses of the hosts due to a certain amount of
+        # exposure doses (cfu_doses). Then, infection_...() it estimates
+        # a probability of infection.
         got_infected = trans_pars.env2ppl_p_inf(susc_uids)
         new_cases = susc_uids[got_infected]
         return new_cases
@@ -695,6 +705,7 @@ class TyphoidSimple(ss.Infection):
 
 
     def update_immunity(self, uids):
+        """ Acquired immunity """
         # TPPI: Typhoid Protection Per Infection
         self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
         return
@@ -728,7 +739,7 @@ class TyphoidSimple(ss.Infection):
         """
         susc_uids = (self.susceptible).uids
         # TODO: check whether the multiplication by dt makes sense in particular if dt < 1
-        n_exp = self.pars.transmission.env2ppl_exposure_rate.rvs()*dt
+        n_exp = self.pars.transmission.env2ppl_exposure_rate.rvs() * dt
         self.n_exposures[susc_uids] += n_exp
         self.cfu_doses[susc_uids] += env_cfu_dose * n_exp
         return
