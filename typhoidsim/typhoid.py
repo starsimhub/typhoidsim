@@ -48,15 +48,18 @@ class TyphoidSimple(ss.Infection):
             init_prev=ss.bernoulli(0.005),
 
             # NATURAL HISTORY PARAMETERS
+            # From immune to susceptible
+            p_imm2sus_6m=ss.bernoulli(p=0.14),  # Proportion of immune population at 6 months that moves to susceptible state
+            p_imm2sus_3m=ss.bernoulli(p=0.29),  # Proportion of immune population at 3 years that moves to susceptible state
+            p_imm2sus_6y=ss.bernoulli(p=0.61),  # Proportion of immune population at 6 years that moves to susceptible state
+
             # Prepatent stage
-            prep_dur_pars={"mean_dur": {"lo": 2.235, "me": 2.002, "hi": 1.5487},
+            # TODO: the pars in this dictionary could be in a small dataset.
+            prep_dur_dpars={"mean_dur": {"lo": 2.235, "me": 2.002, "hi": 1.5487},
                            "std_dur": {"lo": 0.4964, "me": 0.706, "hi": 0.3442}},  # CFU dose-dependent duration parameters, in days.
 
-            prep_dur_mean=1.5487,  # 'High dose' prepatent duration mean, in days.
-            prep_dur_std=0.3442,   # 'High dose' prep. dur. std, in days.
-
-            cfu_lo_me=5_050_000,   # 'Low dose' prep. dur. if cfu_doses <= cfu_lo_me, 'medium dose' otherwise
-            cfu_me_hi=55_000_000,  # 'Medium dose' prep. dur. if cfu_doses > cfu_lo_me & <= cfu_me_hi, 'high_dose' otherwise
+            cfu_lo_me=5_050_000,   # Threshold cfu value that distinguishes whether to use the 'low dose' (for cfu_doses <= cfu_lo_me) or 'medium dose' mean/std duration (cfu_doses > cfu_lo_me).
+            cfu_me_hi=55_000_000,  # Threshold cfu value that distinguishes whether to use the 'medium dose' (for cfu_doses <= cfu_me_hi) or 'high dose' mean/std duration (cfu_doses > cfu_lo_me).
 
             # Symptomatic stage (acute and/or sublinical)
             # dur_prep2next=ss.lognorm_ex(mean=self.prepatent_duration_mean,
@@ -226,7 +229,7 @@ class TyphoidSimple(ss.Infection):
         their age.
 
         From Gauld et al. 2018:
-        'Our model assumes all individuals are born into an unexposed class
+        'Our model assumes all individuals are born into an unexposed/immune class
         and move to the susceptible class at probabilities for each age.
         Specifically, at each month of age a fitted curve determines the
         probability of an individual entering the susceptible class.
@@ -235,15 +238,45 @@ class TyphoidSimple(ss.Infection):
         20 years, with a free slope parameter (S) determining the concavity/shape
         of the function (Fig 2B).'
 
+        This is referred to as age-specific immunity.
         """
 
+        # General case?
         max_age = 20.0  # TODO: make configurable?
-        unexposed = (~self.susceptible).uids
-        self.susceptible[unexposed] = ss.bernoulli(
+        never_exposed = (self.immune).uids
+        self.susceptible[never_exposed] = ss.bernoulli(
             p=tyum.sigmoid(
-                self.sim.people.age[unexposed], max_age, self.pars.age_exposure_slope
+                self.sim.people.age[never_exposed], max_age, self.pars.age_exposure_slope
             )
         )
+
+        # Santiago case:
+        _6m = 0.5 * tyd.days_per_year  # in days
+        _3y = 3.0 * tyd.days_per_year  # in days
+        _6y = 6.0 * tyd.days_per_year  # in days
+
+        # Detect 'age' anniversaries
+        uids_6m = (
+                (self.sim.people.people.age >= _6m) & ((self.sim.people.age - self.sim.dt) < _6m)
+        ).uids
+
+        uids_3y = (
+                (self.sim.people.people.age >= _3y) & ((self.sim.people.age - self.sim.dt) < _3y)
+        ).uids
+
+        uids_6y = (
+                (self.sim.people.people.age >= _6y) & ((self.sim.people.age - self.sim.dt) < _6y)
+        ).uids
+
+        self.susceptible[uids_6m] = self.pars.p_imm2sus_6m.filter(uids_6m)
+        self.immune[uids_6m] = ~self.susceptible[uids_6m]
+
+        self.susceptible[uids_3y] = self.pars.p_imm2sus_6m.filter(uids_3y)
+        self.immune[uids_3y] = ~self.susceptible[uids_3y]
+
+        self.susceptible[uids_6y] = self.pars.p_imm2sus_6m.filter(uids_6y)
+        self.immune[uids_6y] = ~self.susceptible[uids_6y]
+        return
 
     def make_impervious(self):
         """
@@ -251,7 +284,7 @@ class TyphoidSimple(ss.Infection):
         fully immune state.
         """
 
-        self.exposed[self.susceptible.uids] = False
+        self.exposed[self.immune.uids] = False
         uids = (self.sim.people.age < 1).uids
         self.immune[uids] = True
         self.susceptible[uids] = False
@@ -420,37 +453,37 @@ class TyphoidSimple(ss.Infection):
                                    tyd.days_per_week) / dt)  # in timesteps
         return dur_scl
 
-    def get_prepatent_duration_pars(self, uids):
-        """
-        CFU dose-dependent prepatent duration
-        """
-        ppars = self.pars.prep_dur_pars
-        th1 = self.pars.cfu_lo_me
-        th2 = self.pars.cfu_me_hi
-
-        # High-dose by default
-        mu    = np.full_like(self.cfu_doses[uids], ppars["mean_dur"]["hi"])
-        sigma = np.full_like(self.cfu_doses[uids], ppars["std_dur"]["hi"])
-
-        # Medium dose
-        mask = ((th1 > self.cfu_doses[uids]) & (self.cfu_doses[uids] <= th2))
-        mu[mask] = ppars["mean_dur"]["me"]
-        sigma[mask] = ppars["std_dur"]["me"]
-
-        # Low-dose
-        mu[self.cfu_doses[uids] <= th1] = ppars["mean_dur"]["lo"]    # low dose
-        sigma[self.cfu_doses[uids] <= th1] = ppars["std_dur"]["lo"]   # low dose
-
-        # From ss.lognormal_ex.convert_ex_to_im
-        var   = sigma**2
-        mean2 = mu**2
-        sigma_im = np.sqrt(np.log(var/mean2 + 1))  # Computes stdev for the underlying normal distribution
-        mean_im  = np.log(mean2 / np.sqrt(var + mean2))
-
-        return mean_im, sigma_im
+    # def get_prepatent_duration_pars(self, uids):
+    #     """
+    #     CFU dose-dependent prepatent duration
+    #     """
+    #     ppars = self.pars.prep_dur_dpars
+    #     th1 = self.pars.cfu_lo_me
+    #     th2 = self.pars.cfu_me_hi
+    #
+    #     # High-dose by default
+    #     mu    = np.full_like(self.cfu_doses[uids], ppars["mean_dur"]["hi"])
+    #     sigma = np.full_like(self.cfu_doses[uids], ppars["std_dur"]["hi"])
+    #
+    #     # Medium dose
+    #     mask = ((th1 > self.cfu_doses[uids]) & (self.cfu_doses[uids] <= th2))
+    #     mu[mask] = ppars["mean_dur"]["me"]
+    #     sigma[mask] = ppars["std_dur"]["me"]
+    #
+    #     # Low-dose
+    #     mu[self.cfu_doses[uids] <= th1] = ppars["mean_dur"]["lo"]    # low dose
+    #     sigma[self.cfu_doses[uids] <= th1] = ppars["std_dur"]["lo"]   # low dose
+    #
+    #     # From ss.lognormal_ex.convert_ex_to_im
+    #     var   = sigma**2
+    #     mean2 = mu**2
+    #     sigma_im = np.sqrt(np.log(var/mean2 + 1))  # Computes stdev for the underlying normal distribution
+    #     mean_im  = np.log(mean2 / np.sqrt(var + mean2))
+    #
+    #     return mean_im, sigma_im
 
     def get_prepatent_duration_distpars(self, uids):
-        ppars = self.pars.prep_dur_pars
+        ppars = self.pars.prep_dur_dpars
         th1 = self.pars.cfu_lo_me
         th2 = self.pars.cfu_me_hi
 
@@ -475,55 +508,55 @@ class TyphoidSimple(ss.Infection):
         mean_im  = np.log(mean2 / np.sqrt(var + mean2))
         return mean_im, sigma_im
 
-    @staticmethod
-    def prepatent_duration_mean(module, sim, uids):
-        """
-        Choose mu of the lognormal distribution used to determine an individual’s
-        prepatent stage duration.
+    # @staticmethod
+    # def prepatent_duration_mean(module, sim, uids):
+    #     """
+    #     Choose mu of the lognormal distribution used to determine an individual’s
+    #     prepatent stage duration.
+    #
+    #     The mu value is is selected based on the "quantization" of the
+    #     exposure amount (cfu_dose) into one of three buckets using various
+    #     thresholds. (Glynn et al., 1995).
+    #
+    #     Currently, all infections from the Contact route are assumed to be
+    #     a High dose prepatent duration.
+    #     """
+    #     mpars = module.pars
+    #     th1 = module.pars.cfu_lo_me
+    #     th2 = module.pars.cfu_me_hi
+    #
+    #     mu = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_mean) # high-dose mean
+    #     # replace elements where the condition is met
+    #     mu[module.cfu_doses[uids] <= th1] = mpars.prep_dur_pars["mean_dur"]["lo"]    # low dose
+    #     mask = ((th1 > module.cfu_doses[uids]) &
+    #             (module.cfu_doses[uids] <= th2))
+    #     mu[mask] = mpars.prep_dur_pars["mean_dur"]["me"]                       # medium dose
+    #     return mu
 
-        The mu value is is selected based on the "quantization" of the
-        exposure amount (cfu_dose) into one of three buckets using various
-        thresholds. (Glynn et al., 1995).
-
-        Currently, all infections from the Contact route are assumed to be
-        a High dose prepatent duration.
-        """
-        mpars = module.pars
-        th1 = module.pars.cfu_lo_me
-        th2 = module.pars.cfu_me_hi
-
-        mu = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_mean) # high-dose mean
-        # replace elements where the condition is met
-        mu[module.cfu_doses[uids] <= th1] = mpars.prep_dur_pars["mean_dur"]["lo"]    # low dose
-        mask = ((th1 > module.cfu_doses[uids]) &
-                (module.cfu_doses[uids] <= th2))
-        mu[mask] = mpars.prep_dur_pars["mean_dur"]["me"]                       # medium dose
-        return mu
-
-    @staticmethod
-    def prepatent_duration_std(module, sim, uids):
-        """
-        Choose mu of the lognormal distribution used to determine an individual’s
-        prepatent stage duration.
-
-        The sigma value is is selected based on the "quantization" of the
-        exposure amount (cfu_dose) into one of three buckets using various
-        thresholds. (Glynn et al., 1995).
-
-        Currently, all infections from the Contact route are assumed to be
-        a High dose prepatent duration.
-        """
-        mpars = module.pars
-        th1 = mpars.cfu_lo_me
-        th2 = mpars.cfu_me_hi
-
-        sigma = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_std)  # high-dose standard deviation
-        # replace elements where the condition is met
-        sigma[module.cfu_doses[uids] <= th1] = mpars.prep_dur_pars["std_dur"]["lo"] # low dose
-        mask = ((th1 > module.cfu_doses[uids]) &
-                (module.cfu_doses[uids] <= th2))
-        sigma[mask] = mpars.prep_dur_pars["std_dur"]["me"]                           # medium dose
-        return sigma
+    # @staticmethod
+    # def prepatent_duration_std(module, sim, uids):
+    #     """
+    #     Choose mu of the lognormal distribution used to determine an individual’s
+    #     prepatent stage duration.
+    #
+    #     The sigma value is is selected based on the "quantization" of the
+    #     exposure amount (cfu_dose) into one of three buckets using various
+    #     thresholds. (Glynn et al., 1995).
+    #
+    #     Currently, all infections from the Contact route are assumed to be
+    #     a High dose prepatent duration.
+    #     """
+    #     mpars = module.pars
+    #     th1 = mpars.cfu_lo_me
+    #     th2 = mpars.cfu_me_hi
+    #
+    #     sigma = np.full_like(module.cfu_doses[uids], module.pars.prep_dur_std)  # high-dose standard deviation
+    #     # replace elements where the condition is met
+    #     sigma[module.cfu_doses[uids] <= th1] = mpars.prep_dur_pars["std_dur"]["lo"] # low dose
+    #     mask = ((th1 > module.cfu_doses[uids]) &
+    #             (module.cfu_doses[uids] <= th2))
+    #     sigma[mask] = mpars.prep_dur_pars["std_dur"]["me"]                           # medium dose
+    #     return sigma
 
     @staticmethod
     def chronic_prob_function(module, sim, uids):
