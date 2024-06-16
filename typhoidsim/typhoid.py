@@ -238,6 +238,14 @@ class TyphoidSimple(ss.Infection):
         20 years, with a free slope parameter (S) determining the concavity/shape
         of the function (Fig 2B).'
 
+
+        From:
+        https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/SusceptibilityTyphoid.cpp
+
+        NOTE:
+        Fraction of children that become susceptible upon raching a certain
+        age threhsold.
+
         This is referred to as age-specific immunity.
         """
 
@@ -789,49 +797,3 @@ class TyphoidSimple(ss.Infection):
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
         res.cum_deaths[ti] = np.sum(res.new_deaths[: ti + 1])
         return
-
-
-def update_susceptible_children_pop(people, dt):
-    """
-    From:
-    https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/SusceptibilityTyphoid.cpp
-
-    NOTE:
-        Fraction of children that become susceptible upon raching a certain
-        age threhsold are dummy values and hardcoded until we know if we want
-        this functionality or not
-    """
-
-    age_boundary_6m = 0.5 * tyd.days_per_year  # in days
-    age_boundary_3y = 3.0 * tyd.days_per_year  # in days
-    age_boundary_6y = 6.0 * tyd.days_per_year  # in days
-
-    p_6m = ss.bernoulli(0.1).initialize()
-    p_3y = ss.bernoulli(0.1).initialize()
-    p_6y = ss.bernoulli(0.1).initialize()
-
-    uids_6m = (
-        (people.age >= age_boundary_6m) & ((people.age - dt) < age_boundary_6m)
-    ).uids
-
-    uids_3y = (
-        (people.age >= age_boundary_3y) & ((people.age - dt) < age_boundary_3y)
-    ).uids
-
-    uids_6y = (
-        (people.age >= age_boundary_6y) & ((people.age - dt) < age_boundary_6y)
-    ).uids
-
-    people = make_children_susceptible(people, uids_6m, p_6m)
-    people = make_children_susceptible(people, uids_3y, p_3y)
-    people = make_children_susceptible(people, uids_6y, p_6y)
-
-    return people
-
-
-def make_children_susceptible(people, uids_aged_x, prop_susceptible):
-    new_susc = prop_susceptible.filter(people.uid[uids_aged_x])
-    people.typhoid.susceptible[new_susc] = True
-    return people
-
-
