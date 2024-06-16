@@ -123,10 +123,10 @@ class TyphoidSimple(ss.Infection):
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
-            ss.FloatArr("n_exposures"),
-            ss.FloatArr("cfu_doses"),
-            ss.FloatArr("n_infections"),
-            ss.FloatArr("infectiousness"),
+            ss.FloatArr("n_exposures", 0),
+            ss.FloatArr("cfu_doses", 0),
+            ss.FloatArr("n_infections", 0),
+            ss.FloatArr("infectiousness", 0),
             ss.FloatArr("p_chronic"),
             ss.FloatArr("immunity"),
 
@@ -366,7 +366,8 @@ class TyphoidSimple(ss.Infection):
     # Methods that handle durations/duration pars that are dependent on other variables
     def get_prepatent_duration_by_exposure(self, uids):
         """ TODO: TEMPORARY: Not random-number safe implementation ref #28"""
-        mu, sigma = self.get_prepatent_duration_pars(uids)
+
+        mu, sigma = self.get_prepatent_duration_distpars(uids)
         dur_prep_dist = sps.lognorm(s=sigma, scale=np.exp(mu))
         dur_prep = dur_prep_dist.rvs(uids.size)
         return dur_prep
@@ -438,6 +439,32 @@ class TyphoidSimple(ss.Infection):
         sigma_im = np.sqrt(np.log(var/mean2 + 1))  # Computes stdev for the underlying normal distribution
         mean_im  = np.log(mean2 / np.sqrt(var + mean2))
 
+        return mean_im, sigma_im
+
+    def get_prepatent_duration_distpars(self, uids):
+        ppars = self.pars.prep_dur_pars
+        th1 = self.pars.cfu_lo_me
+        th2 = self.pars.cfu_me_hi
+
+        mu = tyum.double_sigmoid_tanh(self.cfu_doses[uids],
+                                      ppars["mean_dur"]["lo"],
+                                      ppars["mean_dur"]["me"],
+                                      ppars["mean_dur"]["hi"],
+                                      th1, th2)
+
+        sigma = tyum.double_sigmoid_tanh(
+                                    self.cfu_doses[uids],
+                                     ppars["std_dur"]["lo"],
+                                     ppars["std_dur"]["me"],
+                                     ppars["std_dur"]["hi"],
+                                     th1, th2)
+
+
+        # From ss.lognormal_ex.convert_ex_to_im
+        var   = sigma**2
+        mean2 = mu**2
+        sigma_im = np.sqrt(np.log(var/mean2 + 1))  # Computes stdev for the underlying normal distribution
+        mean_im  = np.log(mean2 / np.sqrt(var + mean2))
         return mean_im, sigma_im
 
     @staticmethod
