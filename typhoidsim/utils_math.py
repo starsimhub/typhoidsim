@@ -37,11 +37,64 @@ def sigmoid(x, max_x, slope):
     return 1.0 - (max_x - x) / (x * slope + max_x)
 
 
-def double_sigmoid():
+def double_sigmoid_exp(x, l1, l2, l3, x_12, x_23, s12, s23):
     """
-    A stair-like function but built with sigmoid functions.
+    Calculate a stair-like function with 3 steps using two exponential
+    sigmoid functions.
+
+    This function simulates a stair-like characteristic with 3 steps
+    (l1, l2, l3). The transition from l1 to l2 occurs around the
+    point x_12, and from l2 to l3 around point x_23.
+
+    The steepness between any two levels is governed independently
+    by s12 and s23 respectively.
+
+    Arguments:
+        x (float or numpy.array): Input data.
+        l1, l2, l3 (float): y-levels for each step.
+        x_12, x_23 (float): x-points that indicate halfway between two levels.
+        s12, s23 (float): Steepness of the curve between l1 and l2, and l2 and l3,
+        respectively. The larger s_ij is, the closer to a step-like
+        stair function we get.
+
+    Returns:
+        float or numpy.array: the function evaluated at x
     """
-    pass
+
+    y = l1 + (l2 / (1.0 + np.exp(-s12 * (x - x_12))) +
+              l3 / (1.0 + np.exp(-s23 * (x - x_23))))
+
+    return y
+
+
+def double_sigmoid_tanh(x, l1, l2, l3, x_12, x_23, s=1.0):
+    """
+    This function simulates a stair-like function with 3 steps
+    (l1, l2, l3), using a single specified steepness value (s) for
+    the hyperbolic tangent.
+
+    l1> l2 > l3 or l1 < l2 < l3
+
+    Arguments:
+        x (float or numpy.array): Input data.
+        l1, l2, l3 (float): y-levels for each step.
+        x_12, x_23 (float): x-points that indicate halfway between two levels.
+        s (float): Steepness of the curve between two levels. The larger s is,
+            the closer to a step-like stair function we get.
+
+    Returns:
+        float or numpy.array: y-values.
+
+    Example:
+        >>> import numpy as np
+        >>> import typhoidsim.utils_math as tyum
+        >>> x = np.arange(1_000_000, 60_000_000, 1024)
+        >>> tyum.double_sigmoid_tanh(x, 2.235, 2.002, 1.5487, 5_050_000, 55_000_000, 1)
+    """
+
+    y = l1 + ((l2 - l1) * ((np.tanh(s * (x-x_12)) + 1)/2) +
+              (l3 - l2) * ((np.tanh(s * (x-x_23)) + 1)/2))
+    return y
 
 
 def gompertz(x, a, b, c):
@@ -79,10 +132,10 @@ def gompertz_dfun(x, a, b, c):
     f'(x) = a * b * c * exp(-(b / exp(c * x)) - c * x)
 
     Arguments
-    x (array-like): The array of x values at which the function is evaluated
-    a (float): The asymptote of the Gompertz function as x approaches infinity.
-    b (float): Displacement along the x-axis
-    c (float): The growth rate
+        x (array-like): The array of x values at which the function is evaluated
+        a (float): The asymptote of the Gompertz function as x approaches infinity.
+        b (float): Displacement along the x-axis
+        c (float): The growth rate
 
     Returns:
        (ndarray): An array of derivative values corresponding to the input x values.
