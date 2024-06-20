@@ -130,7 +130,9 @@ def load_dataset(ds_name, data_home=None, **kwargs):
                                     values='prob').fillna(0).to_numpy()
 
             return arr
-
+        case "prepatent_dur_dist_pars":
+            complete_df = df.set_index('parameter').T.to_dict()
+            return complete_df
     return
 
 
