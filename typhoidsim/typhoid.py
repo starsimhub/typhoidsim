@@ -130,11 +130,11 @@ class TyphoidSimple(ss.Infection):
             # States that track immunity-related quantities or variables
             # and depend on infection states
             ss.FloatArr("n_exposures", 0),
-            ss.FloatArr("cfu_doses", 0),       # exposure amount (acquisition phase)
-            ss.FloatArr("infectiousness", 0),  # average number of cfu during different stages of the disease (infected phase)
-            ss.FloatArr("n_infections", 0),
-            ss.FloatArr("p_chronic"),
-            ss.FloatArr("immunity", 0),        # value betweemn 0 and 1
+            ss.FloatArr("cfu_doses", 0),       # exposure amount (acquisition phase, outside host)
+            ss.FloatArr("infectiousness", 0),  # average number of cfu during different stages of the disease (infected phase, within host)
+            ss.FloatArr("n_infections", 0),    # number of infections over the lifespan of this agent
+            ss.FloatArr("p_chronic"),                       # probability of becoming chronic
+            ss.FloatArr("immunity", 0),        # Overall level of immunity to typhoid, value between 0 (no immunity) and 1 (completely immune)
 
             # States that track timing of events
             ss.FloatArr("ti_exposed"),
@@ -197,7 +197,6 @@ class TyphoidSimple(ss.Infection):
             ss.Result(self.name, "new_chronic", npts, dtype=int),
             ss.Result(self.name, "new_recovered", npts, dtype=int),
             ss.Result(self.name, "new_deaths", npts, dtype=int),
-            ss.Result(self.name, "cum_deaths", npts, dtype=int),
             ss.Result(self.name, "env_cfu", npts, dtype=float),
         ]
         self.init_svs()
@@ -728,6 +727,12 @@ class TyphoidSimple(ss.Infection):
         super().update_results()
         res = self.results
         ti = self.sim.ti
+        res.new_susceptible[ti] = np.count_nonzero(self.ti_susceptible == ti)
+        res.new_prepatent[ti] = np.count_nonzero(self.ti_prepatent == ti)
+        res.new_acute[ti] = np.count_nonzero(self.ti_acute == ti)
+        res.new_subclinical[ti] = np.count_nonzero(self.ti_subclinical == ti)
+        res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
-        res.cum_deaths[ti] = np.sum(res.new_deaths[: ti + 1])
+        res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
+        res.env_cfu[ti] = self.sv.env_cfu[ti]
         return
