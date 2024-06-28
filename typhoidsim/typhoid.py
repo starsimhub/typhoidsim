@@ -54,14 +54,13 @@ class TyphoidSimple(ss.Infection):
             p_imm2sus_6y=ss.bernoulli(p=0.61),  # Proportion of immune population at 6 years that moves to susceptible state
 
             # Prepatent stage
-            # TODO: the pars in this dictionary could be in a small dataset.
-            prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),  # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
+            prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),   # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
             prep_dur_fun=tyum.double_sigmoid_tanh,                        # Function to represent the 3 levels of each prepatent duration distribution parameter as s continous function
 
             cfu_lo_me=5_050_000,   # Threshold cfu value that distinguishes whether to use the 'low dose' (for cfu_doses <= cfu_lo_me) or 'medium dose' mean/std duration (cfu_doses > cfu_lo_me).
             cfu_me_hi=55_000_000,  # Threshold cfu value that distinguishes whether to use the 'medium dose' (for cfu_doses <= cfu_me_hi) or 'high dose' mean/std duration (cfu_doses > cfu_lo_me).
 
-        # Symptomatic stage (acute and/or sublinical)
+            # Symptomatic stage (acute and/or sublinical)
             # dur_prep2next=ss.lognorm_ex(mean=self.prepatent_duration_mean,
             #                             stdev=self.prepatent_duration_std),
             symp_dur_th_age=30.0,        # Symptomatic duration age threshold.
@@ -191,6 +190,12 @@ class TyphoidSimple(ss.Infection):
         super().init_results()
         npts = self.sim.npts
         self.results += [
+            ss.Result(self.name, "new_susceptible", npts, dtype=int),
+            ss.Result(self.name, "new_prepatent", npts, dtype=int),
+            ss.Result(self.name, "new_acute", npts, dtype=int),
+            ss.Result(self.name, "new_subclinical", npts, dtype=int),
+            ss.Result(self.name, "new_chronic", npts, dtype=int),
+            ss.Result(self.name, "new_recovered", npts, dtype=int),
             ss.Result(self.name, "new_deaths", npts, dtype=int),
             ss.Result(self.name, "cum_deaths", npts, dtype=int),
             ss.Result(self.name, "env_cfu", npts, dtype=float),
