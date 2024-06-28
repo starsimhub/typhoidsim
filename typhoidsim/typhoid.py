@@ -404,6 +404,9 @@ class TyphoidSimple(ss.Infection):
         sub2chro = (self.subclinical & (self.ti_chronic <= ti)).uids
         self.chronic[sub2chro] = True
         self.subclinical[sub2chro] = False
+        # TODO: verify this assumption about chronic (from subclinical) infectiousness is correct
+        self.infectiousness[sub2chro] = self.pars.tai * self.pars.tsri * self.pars.tcri
+
 
     def progress_to_dead(self, ti):
         # Trigger deaths
@@ -428,6 +431,7 @@ class TyphoidSimple(ss.Infection):
         self.recovered[sub2rec] = True
         self.subclinical[sub2rec] = False
         self.infected[sub2rec] = False
+        self.exposed[sub2rec] = False
         self.infectiousness[sub2rec] = 0.0
 
     def progress_to_susceptible(self, ti):
@@ -440,11 +444,12 @@ class TyphoidSimple(ss.Infection):
     # Methods that handle durations/duration pars that are dependent on other variables
     def get_prepatent_duration_by_exposure(self, uids):
         """ TODO: TEMPORARY: Not random-number safe implementation ref #28"""
-
+        dt = self.sim.dt
         mu, sigma = self.get_prepatent_duration_distpars(uids)
         dur_prep_dist = sps.lognorm(s=sigma, scale=np.exp(mu))
         dur_prep = dur_prep_dist.rvs(uids.size)
-        return dur_prep
+        # Return in number of timesteps with units (1 timestep / day)
+        return sc.randround(dur_prep/dt)
 
     def get_acute_duration_by_age(self, uids):
         """
@@ -467,7 +472,8 @@ class TyphoidSimple(ss.Infection):
         # convert duration pars in weeks -> to days -> to timesteps
         dur_acu[over_th] += ((p.dur_acute2next_geq30.rvs(uids[over_th]) *
                                    tyd.days_per_week) / dt)  # in timesteps
-        return dur_acu
+        # Return durations in number of timesteps
+        return sc.randround(dur_acu)
 
     def get_subclinical_duration_by_age(self, uids):
         p = self.pars
@@ -484,7 +490,7 @@ class TyphoidSimple(ss.Infection):
         # convert duration pars in weeks -> to days -> to timesteps
         dur_scl[over_th] += ((p.dur_subcl2next_geq30.rvs(uids[over_th]) *
                                    tyd.days_per_week) / dt)  # in timesteps
-        return dur_scl
+        return sc.randround(dur_scl)
 
 
     def get_prepatent_duration_distpars(self, uids):
@@ -543,7 +549,7 @@ class TyphoidSimple(ss.Infection):
 
         # Set duration of prepatent state, by defining when they will
         # progress to the next state (either acute or sublinical)
-        dur_pre = ti + self.get_prepatent_duration_by_exposure(uids) / dt
+        dur_pre = ti + self.get_prepatent_duration_by_exposure(uids)
 
         # Determine who will become acute and who will become subclinical
         acu_scl = p.p_acute.filter(uids, both=True)
@@ -568,6 +574,9 @@ class TyphoidSimple(ss.Infection):
 
         # Determine who becomes a (chronic) carrier (from acute and sublclinical)
         carrier_uids = self.will_become_chronic_carrier(acute_uids.concat(subcl_uids))
+
+        # TODO: track timing when people become carriers, may need to split tracking between
+        #acute and subclinical.
 
         # From the acute cases, determine who can die because they don't become carriers
         can_die_uids = np.setdiff1d(acute_uids, carrier_uids)
@@ -595,7 +604,6 @@ class TyphoidSimple(ss.Infection):
             self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu[np.isin(acute_uids, dead_uids)]
 
         self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1.0  # recover in the next time step, just to make things tidy
-
         return
 
     #  Transmission-realated methods - interaction between agents and "else" (other agents)
