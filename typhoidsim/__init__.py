@@ -3,6 +3,7 @@ from .utils import *
 from .utils_math import *
 from .defaults import *
 from .patterns import *
+from .analyzers import *
 from .typhoid import *
 from .treatments import *
 from .settings import *
