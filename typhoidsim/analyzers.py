@@ -43,9 +43,10 @@ class states_consistency(ss.Analyzer):
             raise ValueError('States Symptomatic and Asymptomatic should be mutually exclusive but are not.')
 
         # Collectively ehaustive
-        coll_exh = (typ.immune | typ.susceptible | typ.exposed | typ.prepatent | typ.acute | typ.subclinical | typ.chronic | typ.recovered).all()
+        coll_exh = (typ.immune | typ.susceptible | typ.exposed | typ.prepatent | typ.acute | typ.subclinical | typ.chronic | typ.recovered | sim.people.dead).all()
 
         if not coll_exh:
+            breakpoint()
             raise ValueError('Invidividual Boolean States should be collectively exhaustive but are not.')
 
         checkall = np.array([mut_exc_1, mut_exc_2, mut_exc_3, coll_exh])
