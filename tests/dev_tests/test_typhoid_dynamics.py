@@ -9,9 +9,10 @@ import starsim as ss
 import typhoidsim as ty
 
 # Define the parameters
+n_years = 0.5  # Number of years to simulate
 pars = sc.objdict(
     start=2000,  # Starting year
-    n_years=2*ty.days_per_year,  # Number of years to simulate
+    n_years=n_years*ty.days_per_year,
     dt=1.0,       # Timestep (assumed to be in days for typhoid)
     verbose=0,    # Don't print details of the run
     rand_seed=21,  # Set a non-default seed

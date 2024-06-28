@@ -44,7 +44,7 @@ class TyphoidSimple(ss.Infection):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=1.0,  # Placeholder value
+            beta=0.01,  # Placeholder value
             init_prev=ss.bernoulli(0.005),
 
             # NATURAL HISTORY PARAMETERS
@@ -81,7 +81,7 @@ class TyphoidSimple(ss.Infection):
             # Long-term stages
             p_chro=0.15,    # base prob of chronic carrier in the absence of gallstones
             d_chro=ss.bernoulli(p=self.chronic_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection
-            p_gall=tyu.load_dataset("gallstone_probs"),  # Probability of having gallstones by age and sex
+            p_gall=None, #tyu.load_dataset("gallstone_probs"),  # Probability of having gallstones by age and sex
             p_death=ss.bernoulli(p=0.001),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
@@ -507,7 +507,7 @@ class TyphoidSimple(ss.Infection):
             # Scale prob of becoming chronic using prob of having gallstones
             # TODO: QUESTION: Is this operation ok, multiplying probabilities, or
             # do we first evaluate whether the agent has gallstones, and then multiply
-            # by p_chro
+            # the state by p_chro
             p_chro = mpars.p_chro * mpars.p_gall[age_ints, sim.people.female[uids].astype(int)]
         else:
             p_chro = mpars.p_chro
@@ -630,7 +630,7 @@ class TyphoidSimple(ss.Infection):
         cfu_total = cfu_tm1 + shedded_cfu
 
         # Decay CFUs and get net number of CFUS at this time step (include growth due to shedded cfu, and decay)
-        self.sv.env_cfu[ti] = cfu_total * np.exp(-env_pars.decay_rate*dt)
+        self.sv.env_cfu[ti] = cfu_tm1 * np.exp(-env_pars.decay_rate*dt)
 
         # Increase cfu doses in susceptible people by exposing them to the environment
         self.expose_to_environment(cfu_total, ti, dt)
@@ -720,7 +720,7 @@ class TyphoidSimple(ss.Infection):
 
     def expose_to_contacts(self, dt):
         # For person-to-person transmission
-        #self.n_exposures += self.pars.transmision.p2p_exposure_rate.rvs()*dt
+        #self.n_exposures += self.pars.transmission.p2p_exposure_rate.rvs()*dt
         pass
 
     def update_results(self):
