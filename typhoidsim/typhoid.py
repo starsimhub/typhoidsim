@@ -135,7 +135,7 @@ class TyphoidSimple(ss.Infection):
             ss.FloatArr("infectiousness", 0),  # average number of cfu during different stages of the disease (infected phase)
             ss.FloatArr("n_infections", 0),
             ss.FloatArr("p_chronic"),
-            ss.FloatArr("immunity", 0),
+            ss.FloatArr("immunity", 0),        # value betweemn 0 and 1
 
             # States that track timing of events
             ss.FloatArr("ti_exposed"),
@@ -159,17 +159,17 @@ class TyphoidSimple(ss.Infection):
 
         th1 = self.pars.cfu_lo_me
         th2 = self.pars.cfu_me_hi
-        ppars = self.pars.prep_dur_dpars
+        pdpars = self.pars.prep_dur_dpars
 
         return (partial(self.pars.prep_dur_fun,
-                        l1=ppars["mean_dur"]["lo"],
-                        l2=ppars["mean_dur"]["me"],
-                        l3=ppars["mean_dur"]["hi"],
+                        l1=pdpars["mean_dur"]["lo"],
+                        l2=pdpars["mean_dur"]["me"],
+                        l3=pdpars["mean_dur"]["hi"],
                         x_12=th1, x_23=th2),
                 partial(self.pars.prep_dur_fun,
-                        l1=ppars["std_dur"]["lo"],
-                        l2=ppars["std_dur"]["me"],
-                        l3=ppars["std_dur"]["hi"],
+                        l1=pdpars["std_dur"]["lo"],
+                        l2=pdpars["std_dur"]["me"],
+                        l3=pdpars["std_dur"]["hi"],
                         x_12=th1, x_23=th2))
 
     @property
