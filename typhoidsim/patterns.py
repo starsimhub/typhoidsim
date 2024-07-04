@@ -307,7 +307,7 @@ class StateVariables(ss.ndict):
 #     def evaluate(self, var):
 #         """
 #         Generate a discrete representation of the equation for the domain
-#         represented by ``var``.
+#         represented by ``var`` (or x).
 #
 #         The argument ``var`` can represent time, or age. It can be be a
 #         single number, a numpy.ndarray or pandas series???
@@ -325,6 +325,9 @@ class StateVariables(ss.ndict):
 #     self.pars = {
 #     my_parameter=ss.Linear()
 #     }
+#
+#      my_parameter.evaluate(ti) or my_parameter(ti)
+#      my_parameter.evaluate(age) or my_parameter(age)
 #
 #     """
 #
