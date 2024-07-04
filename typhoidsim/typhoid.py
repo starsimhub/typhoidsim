@@ -350,7 +350,7 @@ class TyphoidSimple(ss.Infection):
         ti = self.sim.ti  # current timestep
 
         # Check who becomes susceptible in this timestep age 0-20
-        self.make_susceptible()
+        #self.make_susceptible()
 
         # Age-based susceptibility in chidldren <= 6 years old
         # self.increase_childhood_susceptibility()
