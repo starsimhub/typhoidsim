@@ -44,7 +44,7 @@ class TyphoidSimple(ss.Infection):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=0.01,  # Placeholder value
+            beta=0.005,  # Placeholder value
             init_prev=ss.bernoulli(0.005),
 
             # NATURAL HISTORY PARAMETERS
@@ -81,7 +81,7 @@ class TyphoidSimple(ss.Infection):
             # Long-term stages
             p_chro=0.15,    # base prob of chronic carrier in the absence of gallstones
             d_chro=ss.bernoulli(p=self.chronic_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection
-            p_gall=None, #tyu.load_dataset("gallstone_probs"),  # Probability of having gallstones by age and sex
+            p_gall=tyu.load_dataset("gallstone_probs"),  # Probability of having gallstones by age and sex
             p_death=ss.bernoulli(p=0.001),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
@@ -546,12 +546,12 @@ class TyphoidSimple(ss.Infection):
         self.ti_prepatent[uids] = ti
         self.ti_infected[uids] = ti
 
-
+        # Durations returned by functions are in units of "number of timesteps"
         # Set duration of prepatent state, by defining when they will
         # progress to the next state (either acute or sublinical)
         dur_pre = ti + self.get_prepatent_duration_by_exposure(uids)
 
-        # Determine who will become acute and who will become subclinical
+        # Acute and Subclinical stages: Determine who will become acute and who will become subclinical
         acu_scl = p.p_acute.filter(uids, both=True)
         acute_uids, subcl_uids = acu_scl
 
@@ -561,47 +561,47 @@ class TyphoidSimple(ss.Infection):
         # Set prepatent duration of those who will become subclinical
         self.ti_subclinical[subcl_uids] = ti + dur_pre[np.isin(uids, subcl_uids)]
 
-        # Estimate duration of acute stage
-        dur_acu = self.get_acute_duration_by_age(acute_uids)
+        # If treatment applied, this is when acute cases would seek treatment, relative
+        # to the onset of acute stage. This variable captures human behaviour
+        dur_wait = sc.randround(p.dur_wait2treatment.rvs(acute_uids) / dt)
+        self.ti_seek_trtmnt[acute_uids] = self.ti_acute[acute_uids] + dur_wait
 
-        # If treatment applied, this is when acute cases would seek treatment
-        # This variable captures human behaviour
-        self.ti_seek_trtmnt[acute_uids] = sc.randround(dur_acu +
-                                                          sc.randround(p.dur_wait2treatment.rvs(acute_uids) / dt))
+        # Chronic/carrier stage: Determine who becomes a (chronic) carrier from acute and sublclinical
+        acu2chro_uids = self.will_become_chronic_carrier(acute_uids)
+        scl2chro_uids = self.will_become_chronic_carrier(subcl_uids)
+        carrier_uids = acu2chro_uids.concat(scl2chro_uids)
 
-        # Estimate duration of subclinical by age
-        dur_scl = self.get_subclinical_duration_by_age(subcl_uids)
+        dur_acu = self.get_acute_duration_by_age(acu2chro_uids)
+        self.ti_chronic[acu2chro_uids] = self.ti_acute[acu2chro_uids] + dur_acu
+        dur_scl = self.get_subclinical_duration_by_age(scl2chro_uids)
+        self.ti_chronic[scl2chro_uids] = self.ti_subclinical[scl2chro_uids] + dur_scl
 
-        # Determine who becomes a (chronic) carrier (from acute and sublclinical)
-        carrier_uids = self.will_become_chronic_carrier(acute_uids.concat(subcl_uids))
-
-        # TODO: track timing when people become carriers, may need to split tracking between
-        #acute and subclinical.
-
-        # From the acute cases, determine who can die because they don't become carriers
-        can_die_uids = np.setdiff1d(acute_uids, carrier_uids)
+        # Death: From the acute cases, determine who can die because they don't become carriers
+        can_die_uids = np.setdiff1d(acute_uids, acu2chro_uids)
 
         # From the acutes who do not become carriers, determine who recovers and who dies
         will_die = p.p_death.rvs(can_die_uids)
         dead_uids = can_die_uids[will_die]
-        rec_from_acu_uids = can_die_uids[~will_die]
+        acu2rec_uids = can_die_uids[~will_die]
 
-        # Get sublinical cases that recover because they won't become carriers
-        rec_from_subcl_uids = np.setdiff1d(subcl_uids, carrier_uids)
-
-        will_recover_uids = rec_from_acu_uids.concat(rec_from_subcl_uids)
+        # Recovery: Get sublinical cases that recover because they won't become carriers
+        scl2rec_uids = np.setdiff1d(subcl_uids, scl2chro_uids)
+        will_recover_uids = acu2rec_uids.concat(scl2rec_uids)
 
         # Determine when non-carriers recover and become susceptible again,
         # NOTE: we do not have to track a recovered state, we can simply output results
         # that track the 'concept' of a recovered state
-        self.ti_recovered[rec_from_subcl_uids] = self.ti_subclinical[rec_from_subcl_uids] + dur_scl[np.isin(subcl_uids, rec_from_subcl_uids)]
-        self.ti_recovered[rec_from_acu_uids]   = self.ti_acute[rec_from_acu_uids]         + dur_acu[np.isin(acute_uids, rec_from_acu_uids)]
+        dur_acu = self.get_acute_duration_by_age(acu2rec_uids)
+        dur_scl = self.get_subclinical_duration_by_age(scl2rec_uids)
+        self.ti_recovered[acu2rec_uids] = self.ti_acute[acu2rec_uids]       + dur_acu
+        self.ti_recovered[scl2rec_uids] = self.ti_subclinical[scl2rec_uids] + dur_scl
 
         # NOTE: typhoid can get very low mortality (in particular with treatment),
         # so there is a high chance of getting empty dead_uids. If that happens,
-        # the line below may seg fault. Just in case check first.
+        # the line below may seg fault . Just in case check first.
         if dead_uids.size:
-            self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu[np.isin(acute_uids, dead_uids)]
+            dur_acu = self.get_acute_duration_by_age(dead_uids)
+            self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu
 
         self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1.0  # recover in the next time step, just to make things tidy
         return
