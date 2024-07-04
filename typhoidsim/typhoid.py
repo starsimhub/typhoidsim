@@ -82,7 +82,7 @@ class TyphoidSimple(ss.Infection):
             p_chro=0.15,    # base prob of chronic carrier in the absence of gallstones
             d_chro=ss.bernoulli(p=self.chronic_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection
             p_gall=tyu.load_dataset("gallstone_probs"),  # Probability of having gallstones by age and sex
-            p_death=ss.bernoulli(p=0.001),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
+            p_death=ss.bernoulli(p=0.0),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Age-based exposure
@@ -297,17 +297,18 @@ class TyphoidSimple(ss.Infection):
                 (self.sim.people.age >= _3y) & ((self.sim.people.age - self.sim.dt) < _3y)
         ).uids
 
-        uids_6y = (
-                (self.sim.people.age >= _6y) & ((self.sim.people.age - self.sim.dt) < _6y)
-        ).uids
 
-        self.susceptible[uids_6m] = self.pars.p_imm2sus_6m.filter(uids_6m)
+        uids_6y = (
+                    (self.sim.people.age >= _6y) & ((self.sim.people.age - self.sim.dt) < _6y)
+            ).uids
+
+        self.susceptible[uids_6m] = self.pars.p_imm2sus_6m(uids_6m)
         self.immune[uids_6m] = ~self.susceptible[uids_6m]
 
-        self.susceptible[uids_3y] = self.pars.p_imm2sus_6m.filter(uids_3y)
+        self.susceptible[uids_3y] = self.pars.p_imm2sus_6m(uids_3y)
         self.immune[uids_3y] = ~self.susceptible[uids_3y]
 
-        self.susceptible[uids_6y] = self.pars.p_imm2sus_6m.filter(uids_6y)
+        self.susceptible[uids_6y] = self.pars.p_imm2sus_6m(uids_6y)
         self.immune[uids_6y] = ~self.susceptible[uids_6y]
         return
 
@@ -648,7 +649,7 @@ class TyphoidSimple(ss.Infection):
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
-        # the immunity responses of the hosts due to a certain amount of
+        # the immunity responses of the hosts (drc) due to a certain amount of
         # exposure doses (cfu_doses). Then, infection_...() it estimates
         # a probability of infection.
         got_infected = trans_pars.env2ppl_p_inf(susc_uids)
@@ -658,8 +659,11 @@ class TyphoidSimple(ss.Infection):
     @staticmethod
     def infection_prob_function(module, sim, uids):
         # Evoke an immunity-like response
-        p_resp = module.drc()
-        p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
+        try:
+            p_resp = module.drc()
+            p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
+        except IndexError:
+            breakpoint()
         return np.array(p_infc)
 
     @staticmethod
@@ -709,7 +713,7 @@ class TyphoidSimple(ss.Infection):
         # TODO: parameterise this function via pars. Also this function could
         be user-defined if the environment was a separate module.
         """
-        p_response = 1.0 - (1.0 + self.cfu_doses * ((2.0**(1.0/alpha) - 1.0)/n50))**-alpha
+        p_response = 1.0 - (1.0 + self.cfu_doses * ((2.0**(1.0/alpha) - 1.0)/n50))**(-alpha)
         return p_response
 
     def expose_to_environment(self, env_cfu_dose, ti, dt):
@@ -735,6 +739,7 @@ class TyphoidSimple(ss.Infection):
         super().update_results()
         res = self.results
         ti = self.sim.ti
+        res.new_susceptible[ti] = np.count_nonzero(self.immune.sum())
         res.new_susceptible[ti] = np.count_nonzero(self.ti_susceptible == ti)
         res.new_prepatent[ti] = np.count_nonzero(self.ti_prepatent == ti)
         res.new_acute[ti] = np.count_nonzero(self.ti_acute == ti)
