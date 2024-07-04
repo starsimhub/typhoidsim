@@ -120,31 +120,31 @@ class TyphoidSimple(ss.Infection):
         self.add_states(
             # Infection life cycle states
             # Susceptible & infected are added automatically, here we add the rest
-            ss.BoolArr("immune", True),
-            ss.BoolArr("prepatent"),  # Also known as exposed state (incubation stage)
-            ss.BoolArr("acute"),
-            ss.BoolArr("subclinical"),
-            ss.BoolArr("chronic"),
-            ss.BoolArr("recovered"),
+            ss.BoolArr("immune", True, label="Never Exposed"),
+            ss.BoolArr("prepatent", label="Prepatent"),  # Also known as exposed state (incubation stage)
+            ss.BoolArr("acute", label="Acute"),
+            ss.BoolArr("subclinical", label="Subclinical"),
+            ss.BoolArr("chronic", label="Chronic"),
+            ss.BoolArr("recovered", label="Recovered"),
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
-            ss.FloatArr("n_exposures", 0),
-            ss.FloatArr("cfu_doses", 0),       # exposure amount (acquisition phase, "doses" of bacteria that the host takes as input)
-            ss.FloatArr("infectiousness", 0),  # average number of cfu during different stages of the disease (infected phase, within host)
-            ss.FloatArr("n_infections", 0),    # number of infections over the lifespan of this agent
-            ss.FloatArr("p_chronic"),                       # probability of becoming chronic
-            ss.FloatArr("immunity", 0),        # Overall level of immunity to typhoid, value between 0 (no immunity) and 1 (completely immune)
+            ss.FloatArr("n_exposures", 0, label="Number of Exposures"),
+            ss.FloatArr("cfu_doses", 0, label="Exposure amount (CFUs)"),   # exposure amount (acquisition phase, "doses" of bacteria that the host takes as input)
+            ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of cfu during different stages of the disease (infected phase, within host)
+            ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
+            ss.FloatArr("p_chronic", label="p(chronic)"),                         # probability of becoming chronic
+            ss.FloatArr("immunity", 0, label="Immunity Level"),            # Overall level of immunity to typhoid, value between 0 (no immunity) and 1 (completely immune)
 
             # States that track timing of events
-            ss.FloatArr("ti_susceptible"),
-            ss.FloatArr("ti_prepatent"),
-            ss.FloatArr("ti_subclinical"),
-            ss.FloatArr("ti_acute"),
-            ss.FloatArr("ti_seek_trtmnt"),
-            ss.FloatArr("ti_chronic"),
-            ss.FloatArr("ti_recovered"),
-            ss.FloatArr("ti_dead"),
+            ss.FloatArr("ti_susceptible", label="Start of susceptible state"),
+            ss.FloatArr("ti_prepatent", label="Start of prepatent stage"),
+            ss.FloatArr("ti_subclinical", label="Start of subclinical stage"),
+            ss.FloatArr("ti_acute", label="Start of acute stage"),
+            ss.FloatArr("ti_seek_trtmnt", label="Time to seek treatment"),
+            ss.FloatArr("ti_chronic", label="Start of chronic stage"),
+            ss.FloatArr("ti_recovered", label="Time of recovery"),
+            ss.FloatArr("ti_dead", label="Time of death"),
         )
 
         # Track a variable that does not belong to individual agents
