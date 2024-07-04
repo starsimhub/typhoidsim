@@ -18,8 +18,11 @@ pars = sc.objdict(
     rand_seed=21,  # Set a non-default seed
 )
 
+# Explicitly set demographics to be constant (ie, no births or deaths)
+births = ss.Births({'birth_rate': 0.0})
+deaths = ss.Deaths({'death_rate': 0.0})
 
-# Disease
+# Diseas
 typhoid = ty.TyphoidSimple()
 
 # Population
@@ -30,6 +33,7 @@ network = ss.RandomNet()
 
 sim = ss.Sim(
     pars=pars,
+    demographics=[births, deaths],
     networks=network,
     diseases=typhoid,
     analyzers=ty.analyzers.states_consistency()
