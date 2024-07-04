@@ -28,7 +28,7 @@ body:
       label: Version
       description: What version of our software are you running?
       options:
-        - 0.1.0-dev
+        - version 0.1.0-dev
         - main branch
         - Other (eg, feature branch)
       default: 0
@@ -41,9 +41,9 @@ body:
 
   - type: input
     attributes:
-      label: Platform
-      description: Which platform do you experience this bug on?
-      placeholder: Windows 11, Ubuntu LTS 22.04
+      label: Environment
+      description: Which environment do you experience this bug on?
+      placeholder: Provide most relevant, eg OS Windows 11, Ubuntu LTS 22.04, python version or starsim version
     validations:
       required: true
 
