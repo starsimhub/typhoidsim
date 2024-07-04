@@ -217,7 +217,7 @@ class TyphoidSimple(ss.Infection):
         self.sv.env_cfu[ti] = self.pars.transmission.ppl2env_shedding_rate * self.infectiousness[uids].sum()
         return
 
-    def init_vals(self):
+    def init_post(self):
         """
         Set initial values for states and new cases. This could involve passing in a full
         set of initial conditions, or using init_prev (initial prevalence), or other.
@@ -250,13 +250,10 @@ class TyphoidSimple(ss.Infection):
     # Methods that are specific to a single stage of infection
     def make_susceptible(self):
         """
-        Placeholder function to make agent susceptible as a function of
-        their age.
-
         From Gauld et al. 2018:
         'Our model assumes all individuals are born into an unexposed/immune class
         and move to the susceptible class at probabilities for each age.
-        Specifically, at each month of age a fitted curve determines the
+        Specifically, at each *month of age* a fitted curve determines the
         probability of an individual entering the susceptible class.
 
         The curve is anchored at 0% exposure at birth, and 100% exposure at age
@@ -268,7 +265,7 @@ class TyphoidSimple(ss.Infection):
         https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/SusceptibilityTyphoid.cpp
 
         NOTE:
-        Fraction of children that become susceptible upon raching a certain
+        Fraction of children that become susceptible upon reaching a certain
         age threhsold.
 
         This is referred to as age-specific immunity.
@@ -318,10 +315,10 @@ class TyphoidSimple(ss.Infection):
         fully immune state.
         """
 
-        self.exposed[self.immune.uids] = False
-        uids = (self.sim.people.age < 1).uids
-        self.immune[uids] = True
-        self.susceptible[uids] = False
+        #self.exposed[self.immune.uids] = False
+        #newborns_uids = (self.sim.people.age <= self.sim.dt).uids
+        self.immune[self.susceptible.uids] = True
+        self.susceptible[self.immune.uids] = False
 
     def update_death(self, uids):
         """Reset states for dead agents"""
