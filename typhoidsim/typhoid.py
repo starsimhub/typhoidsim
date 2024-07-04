@@ -48,10 +48,13 @@ class TyphoidSimple(ss.Infection):
             init_prev=ss.bernoulli(0.005),
 
             # NATURAL HISTORY PARAMETERS
-            # From immune to susceptible
+            # From immune (never exposed) to susceptible
             p_imm2sus_6m=ss.bernoulli(p=0.14),  # Proportion of immune population at 6 months that moves to susceptible state
             p_imm2sus_3m=ss.bernoulli(p=0.29),  # Proportion of immune population at 3 years that moves to susceptible state
             p_imm2sus_6y=ss.bernoulli(p=0.61),  # Proportion of immune population at 6 years that moves to susceptible state
+            p_imm2sus=ss.bernoulli(p=self.susceptibility_prob_function),
+            sus_saturation_age=20.0,  # Age (years) after which agents are 100% susceptible
+            sus_age_exposure_slope=1.0,
 
             # Prepatent stage
             prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),   # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
@@ -85,8 +88,6 @@ class TyphoidSimple(ss.Infection):
             p_death=ss.bernoulli(p=0.0),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
-            # Age-based exposure
-            age_exposure_slope=1.0,
             # Infectiousness parameters
             tai=40_000,  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi
             tpri=0.4,    # Typhoid relative (to acute) prepatent infectiousness
@@ -119,9 +120,8 @@ class TyphoidSimple(ss.Infection):
         self.add_states(
             # Infection life cycle states
             # Susceptible & infected are added automatically, here we add the rest
-            ss.BoolArr("exposed", False),
-            ss.BoolArr("immune", False),
-            ss.BoolArr("prepatent"),
+            ss.BoolArr("immune", True),
+            ss.BoolArr("prepatent"),  # Also known as exposed state (incubation stage)
             ss.BoolArr("acute"),
             ss.BoolArr("subclinical"),
             ss.BoolArr("chronic"),
@@ -130,14 +130,13 @@ class TyphoidSimple(ss.Infection):
             # States that track immunity-related quantities or variables
             # and depend on infection states
             ss.FloatArr("n_exposures", 0),
-            ss.FloatArr("cfu_doses", 0),       # exposure amount (acquisition phase, outside host)
+            ss.FloatArr("cfu_doses", 0),       # exposure amount (acquisition phase, "doses" of bacteria that the host takes as input)
             ss.FloatArr("infectiousness", 0),  # average number of cfu during different stages of the disease (infected phase, within host)
             ss.FloatArr("n_infections", 0),    # number of infections over the lifespan of this agent
             ss.FloatArr("p_chronic"),                       # probability of becoming chronic
             ss.FloatArr("immunity", 0),        # Overall level of immunity to typhoid, value between 0 (no immunity) and 1 (completely immune)
 
             # States that track timing of events
-            ss.FloatArr("ti_exposed"),
             ss.FloatArr("ti_susceptible"),
             ss.FloatArr("ti_prepatent"),
             ss.FloatArr("ti_subclinical"),
@@ -271,15 +270,12 @@ class TyphoidSimple(ss.Infection):
         This is referred to as age-specific immunity.
         """
 
-        # General case?
-        max_age = 20.0  # TODO: make configurable?
         never_exposed = (self.immune).uids
-        self.susceptible[never_exposed] = ss.bernoulli(
-            p=tyum.sigmoid(
-                self.sim.people.age[never_exposed], max_age, self.pars.age_exposure_slope
-            )
-        )
+        self.susceptible[never_exposed] = self.pars.p_imm2sus.rvs(never_exposed)
+        self.immune[never_exposed] = ~self.susceptible[never_exposed]
+        return
 
+    def increase_childhood_susceptibility(self):
         # Santiago case:
         _6m = 0.5 * tyd.days_per_year  # in days
         _3y = 3.0 * tyd.days_per_year  # in days
@@ -307,7 +303,14 @@ class TyphoidSimple(ss.Infection):
 
         self.susceptible[uids_6y] = self.pars.p_imm2sus_6m(uids_6y)
         self.immune[uids_6y] = ~self.susceptible[uids_6y]
-        return
+        pass
+
+    @staticmethod
+    def susceptibility_prob_function(module, sim, uids):
+        mpars = module.pars
+        p_sus = tyum.sigmoid(sim.people.age[uids], mpars.sus_saturation_age,
+                             mpars.sus_age_exposure_slope)
+        return np.array(p_sus)
 
     def make_impervious(self):
         """
@@ -315,7 +318,6 @@ class TyphoidSimple(ss.Infection):
         fully immune state.
         """
 
-        #self.exposed[self.immune.uids] = False
         #newborns_uids = (self.sim.people.age <= self.sim.dt).uids
         self.immune[self.susceptible.uids] = True
         self.susceptible[self.immune.uids] = False
@@ -324,7 +326,6 @@ class TyphoidSimple(ss.Infection):
         """Reset states for dead agents"""
         for state in [
             "susceptible",
-            "exposed",
             "infected",
             "prepatent",
             "acute",
@@ -345,11 +346,10 @@ class TyphoidSimple(ss.Infection):
         """
 
         ti = self.sim.ti  # current timestep
-
         # Check who becomes susceptible in this timestep age 0-20
-        #self.make_susceptible()
+        self.make_susceptible()
 
-        # Age-based susceptibility in chidldren <= 6 years old
+        # Age-based susceptibility in children <= 6 years old
         # self.increase_childhood_susceptibility()
 
         # The infection life cycle or natural history flow
@@ -364,9 +364,9 @@ class TyphoidSimple(ss.Infection):
 
     # Methods that handle transitions
     def progress_to_prepatent(self, ti):
-        infected = (self.exposed & (self.ti_infected <= ti)).uids
-        self.infected[infected] = True
-        self.prepatent[infected] = True
+        susc2prep = (self.prepatent & (self.ti_prepatent <= ti)).uids
+        self.immune[susc2prep] = False
+        self.susceptible[susc2prep] = False
 
         # N_i: number of prior infections,
         # used to determine the probability of becoming
@@ -375,11 +375,11 @@ class TyphoidSimple(ss.Infection):
         # in hyper-endemic settings,
         # but we may want to incorporate a mechanism
         # to wane naturally acquired immunity.
-        self.n_infections[infected] += 1.0
-        self.infectiousness[infected] = self.pars.tai * self.pars.tpri
+        self.n_infections[susc2prep] += 1.0
+        self.infectiousness[susc2prep] = self.pars.tai * self.pars.tpri
 
     def progress_to_diseased(self, ti):
-        # Progress pretatent -> acute
+        # Progress prepatent -> acute
         prep2acute = (self.prepatent & (self.ti_acute <= ti)).uids
         self.acute[prep2acute] = True
         self.prepatent[prep2acute] = False
@@ -419,7 +419,6 @@ class TyphoidSimple(ss.Infection):
         self.recovered[acu2rec] = True
         self.acute[acu2rec] = False
         self.infected[acu2rec] = False
-        self.exposed[acu2rec] = False
         self.infectiousness[acu2rec] = 0.0
 
         # handle subclinical pathway
@@ -429,7 +428,6 @@ class TyphoidSimple(ss.Infection):
         self.recovered[sub2rec] = True
         self.subclinical[sub2rec] = False
         self.infected[sub2rec] = False
-        self.exposed[sub2rec] = False
         self.infectiousness[sub2rec] = 0.0
 
     def progress_to_susceptible(self, ti):
@@ -524,7 +522,8 @@ class TyphoidSimple(ss.Infection):
     def set_prognoses(self, uids, source_uids=None):
         """
         Here we define the whole natural history for every agent
-        that has been infected. The progression of this natural
+        that has been infected, specifically when agents transition from
+        one stage (state) to the next. The progression of this natural
         history can be altered by the environment, interventions, or
         other diseases.
         """
@@ -538,8 +537,8 @@ class TyphoidSimple(ss.Infection):
 
         # Set value of states associated to being infected, and record events
         self.susceptible[uids] = False
+        self.immune[uids] = False
         self.infected[uids] = True
-        self.exposed[uids] = True
         self.prepatent[uids] = True
         self.ti_prepatent[uids] = ti
         self.ti_infected[uids] = ti
@@ -656,11 +655,8 @@ class TyphoidSimple(ss.Infection):
     @staticmethod
     def infection_prob_function(module, sim, uids):
         # Evoke an immunity-like response
-        try:
-            p_resp = module.drc()
-            p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
-        except IndexError:
-            breakpoint()
+        p_resp = module.drc()
+        p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
         return np.array(p_infc)
 
     @staticmethod
@@ -691,6 +687,7 @@ class TyphoidSimple(ss.Infection):
         """ Acquired immunity """
         # TPPI: Typhoid Protection Per Infection
         self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
+        # NOTE: We could add a mechanisms for immunity waning here
         return
 
     def drc(self, alpha=0.175, n50=1.16e6):
