@@ -415,7 +415,7 @@ class TyphoidSimple(ss.Infection):
 
     def progress_to_recovered(self, ti):
         # handle acute pathway
-        acu2rec = (self.acute & (self.ti_recovered <= ti) & (self.ti_dead <= ti)).uids
+        acu2rec = (self.acute & (self.ti_recovered <= ti)).uids
         self.recovered[acu2rec] = True
         self.acute[acu2rec] = False
         self.infected[acu2rec] = False
@@ -423,8 +423,7 @@ class TyphoidSimple(ss.Infection):
 
         # handle subclinical pathway
         sub2rec = (
-            self.subclinical & (self.ti_recovered <= ti) & (self.ti_dead <= ti)
-        ).uids
+            self.subclinical & (self.ti_recovered <= ti)).uids
         self.recovered[sub2rec] = True
         self.subclinical[sub2rec] = False
         self.infected[sub2rec] = False
@@ -566,7 +565,6 @@ class TyphoidSimple(ss.Infection):
         # Chronic/carrier stage: Determine who becomes a (chronic) carrier from acute and sublclinical
         acu2chro_uids = self.will_become_chronic_carrier(acute_uids)
         scl2chro_uids = self.will_become_chronic_carrier(subcl_uids)
-        carrier_uids = acu2chro_uids.concat(scl2chro_uids)
 
         dur_acu = self.get_acute_duration_by_age(acu2chro_uids)
         self.ti_chronic[acu2chro_uids] = self.ti_acute[acu2chro_uids] + dur_acu
@@ -733,13 +731,12 @@ class TyphoidSimple(ss.Infection):
         super().update_results()
         res = self.results
         ti = self.sim.ti
-        res.new_susceptible[ti] = np.count_nonzero(self.immune.sum())
         res.new_susceptible[ti] = np.count_nonzero(self.ti_susceptible == ti)
         res.new_prepatent[ti] = np.count_nonzero(self.ti_prepatent == ti)
         res.new_acute[ti] = np.count_nonzero(self.ti_acute == ti)
         res.new_subclinical[ti] = np.count_nonzero(self.ti_subclinical == ti)
         res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
-        res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
+        #res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
         res.env_cfu[ti] = self.sv.env_cfu[ti]
         return
