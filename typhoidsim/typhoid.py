@@ -526,10 +526,6 @@ class TyphoidSimple(ss.Infection):
         history can be altered by the environment, interventions, or
         other diseases.
         """
-        if len(uids) > len(np.unique(uids)):
-            UserWarning('Removing duplicated uids')
-            uids = np.unique(uids)
-        super().set_prognoses(uids, source_uids)
         p = self.pars
         ti = self.sim.ti
         dt = self.sim.dt
@@ -736,7 +732,6 @@ class TyphoidSimple(ss.Infection):
         res.new_acute[ti] = np.count_nonzero(self.ti_acute == ti)
         res.new_subclinical[ti] = np.count_nonzero(self.ti_subclinical == ti)
         res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
-        #res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
         res.env_cfu[ti] = self.sv.env_cfu[ti]
         return
