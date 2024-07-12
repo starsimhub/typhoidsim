@@ -368,7 +368,6 @@ class TyphoidSimple(ss.Infection):
         susc2prep = (self.prepatent & (self.ti_prepatent <= ti)).uids
         self.immune[susc2prep] = False
         self.susceptible[susc2prep] = False
-
         # N_i: number of prior infections,
         # used to determine the probability of becoming
         # infected upon exposure (1-P)**N_i,
@@ -607,7 +606,7 @@ class TyphoidSimple(ss.Infection):
         new_cases = self.make_new_cases_environmental_transmission()
         if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
-            self.progress_to_prepatent(new_cases)
+            self.progress_to_prepatent(self.sim.ti)
         return
 
     def make_new_cases_environmental_transmission(self):
