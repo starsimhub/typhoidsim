@@ -50,7 +50,7 @@ class TyphoidSimple(ss.Infection):
             # NATURAL HISTORY PARAMETERS
             # From immune (never exposed) to susceptible
             p_imm2sus_6m=ss.bernoulli(p=0.14),  # Proportion of immune population at 6 months that moves to susceptible state
-            p_imm2sus_3m=ss.bernoulli(p=0.29),  # Proportion of immune population at 3 years that moves to susceptible state
+            p_imm2sus_3y=ss.bernoulli(p=0.29),  # Proportion of immune population at 3 years that moves to susceptible state
             p_imm2sus_6y=ss.bernoulli(p=0.61),  # Proportion of immune population at 6 years that moves to susceptible state
             p_imm2sus=ss.bernoulli(p=self.susceptibility_prob_function),
             sus_saturation_age=20.0,  # Age (years) after which agents are 100% susceptible
@@ -98,7 +98,8 @@ class TyphoidSimple(ss.Infection):
             tppi=0.99,   # Decrease in susceptibility per infection (exponential decrease)
             environment=ss.Pars(
                 beta=0.0,
-                init_prev=ss.bernoulli(0.0),
+                init_prev=ss.bernoulli(0.0),  # Initial prevalence due to environment
+                init_cfu=0,                   # Initial level of CFUs in the environment
                 decay_rate=0.3,
             ),
             # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
@@ -213,7 +214,7 @@ class TyphoidSimple(ss.Infection):
         # TODO: confirm this way of initialising env cfu is ok
         # Estimate initial value of cfu doses in the environment
         ti = self.sim.ti
-        self.sv.env_cfu[ti] = self.pars.transmission.ppl2env_shedding_rate * self.infectiousness[uids].sum()
+        self.sv.env_cfu[ti] = self.pars.environment.init_cfu + self.pars.transmission.ppl2env_shedding_rate * self.infectiousness[uids].sum()
         return
 
     def init_post(self):
@@ -290,7 +291,6 @@ class TyphoidSimple(ss.Infection):
                 (self.sim.people.age >= _3y) & ((self.sim.people.age - self.sim.dt) < _3y)
         ).uids
 
-
         uids_6y = (
                     (self.sim.people.age >= _6y) & ((self.sim.people.age - self.sim.dt) < _6y)
             ).uids
@@ -298,10 +298,10 @@ class TyphoidSimple(ss.Infection):
         self.susceptible[uids_6m] = self.pars.p_imm2sus_6m(uids_6m)
         self.immune[uids_6m] = ~self.susceptible[uids_6m]
 
-        self.susceptible[uids_3y] = self.pars.p_imm2sus_6m(uids_3y)
+        self.susceptible[uids_3y] = self.pars.p_imm2sus_3y(uids_3y)
         self.immune[uids_3y] = ~self.susceptible[uids_3y]
 
-        self.susceptible[uids_6y] = self.pars.p_imm2sus_6m(uids_6y)
+        self.susceptible[uids_6y] = self.pars.p_imm2sus_6y(uids_6y)
         self.immune[uids_6y] = ~self.susceptible[uids_6y]
         pass
 
