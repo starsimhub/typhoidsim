@@ -135,7 +135,7 @@ class TyphoidSimple(ss.Infection):
             ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of cfu during different stages of the disease (infected phase, within host)
             ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
             ss.FloatArr("p_chronic", label="p(chronic)"),                      # probability of becoming chronic
-            ss.FloatArr("immunity", 0, label="Immunity Level"),            # Overall level of immunity to typhoid, value between 0 (no immunity) and 1 (completely immune)
+            ss.FloatArr("immunity", 1, label="Immunity Level"),            # Attenuation factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable)
 
             # States that track timing of events
             ss.FloatArr("ti_susceptible", label="Start of susceptible state"),
@@ -608,7 +608,6 @@ class TyphoidSimple(ss.Infection):
         if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
             self.progress_to_prepatent(new_cases)
-            breakpoint()
         return
 
     def make_new_cases_environmental_transmission(self):
@@ -681,7 +680,11 @@ class TyphoidSimple(ss.Infection):
         return std_arr
 
     def update_immunity(self, uids):
-        """ Acquired immunity """
+        """
+        Acquired immunity. Note that the more infections, the lower the number
+        immunity associated with immunity -- this number acts as an
+        attenuation factor.
+        """
         # TPPI: Typhoid Protection Per Infection
         self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
         # NOTE: We could add a mechanisms for immunity waning here
