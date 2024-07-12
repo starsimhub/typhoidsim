@@ -210,11 +210,9 @@ class TyphoidSimple(ss.Infection):
         self.sv += [typ.StateVariable(self.name, "env_cfu", npts, dtype=float),]
         return
 
-    def init_env_pool(self, uids):
-        # TODO: confirm this way of initialising env cfu is ok
-        # Estimate initial value of cfu doses in the environment
-        ti = self.sim.ti
-        self.sv.env_cfu[ti] = self.pars.environment.init_cfu + self.pars.transmission.ppl2env_shedding_rate * self.infectiousness[uids].sum()
+    def init_env_pool(self):
+        ti = 0  # initial time step
+        self.sv.env_cfu[ti-1] = self.pars.environment.init_cfu
         return
 
     def init_post(self):
@@ -244,7 +242,9 @@ class TyphoidSimple(ss.Infection):
             # Initial cases from environment-to-person transmission
             initial_cases_env = self.pars.environment.init_prev.filter((self.susceptible).uids)
             self.set_prognoses(initial_cases_env)
-            self.init_env_pool(initial_cases_env)
+
+        self.progress_to_prepatent(self.sim.ti)   # Set the infectiousness of initial cases
+        self.init_env_pool()  # Initialise the environmental pool of contagion at t-1
         return
 
     # Methods that are specific to a single stage of infection
@@ -283,17 +283,14 @@ class TyphoidSimple(ss.Infection):
         _6y = 6.0 * tyd.days_per_year  # in days
 
         # Detect 'age' anniversaries
-        uids_6m = (
-                (self.sim.people.age >= _6m) & ((self.sim.people.age - self.sim.dt) < _6m)
-        ).uids
+        uids_6m = ((self.sim.people.age >= _6m) &
+                  ((self.sim.people.age - self.sim.dt) < _6m)).uids
 
-        uids_3y = (
-                (self.sim.people.age >= _3y) & ((self.sim.people.age - self.sim.dt) < _3y)
-        ).uids
+        uids_3y = ((self.sim.people.age >= _3y) &
+                   ((self.sim.people.age - self.sim.dt) < _3y)).uids
 
-        uids_6y = (
-                    (self.sim.people.age >= _6y) & ((self.sim.people.age - self.sim.dt) < _6y)
-            ).uids
+        uids_6y = ((self.sim.people.age >= _6y) &
+                   ((self.sim.people.age - self.sim.dt) < _6y)).uids
 
         self.susceptible[uids_6m] = self.pars.p_imm2sus_6m(uids_6m)
         self.immune[uids_6m] = ~self.susceptible[uids_6m]
@@ -303,7 +300,7 @@ class TyphoidSimple(ss.Infection):
 
         self.susceptible[uids_6y] = self.pars.p_imm2sus_6y(uids_6y)
         self.immune[uids_6y] = ~self.susceptible[uids_6y]
-        pass
+        return
 
     @staticmethod
     def susceptibility_prob_function(module, sim, uids):
@@ -409,7 +406,6 @@ class TyphoidSimple(ss.Infection):
         # TODO: verify this assumption about chronic (from subclinical) infectiousness is correct
         self.infectiousness[sub2chro] = self.pars.tai * self.pars.tsri * self.pars.tcri
 
-
     def progress_to_dead(self, ti):
         # Trigger deaths
         deaths = (self.ti_dead <= ti).uids
@@ -491,7 +487,6 @@ class TyphoidSimple(ss.Infection):
                                    tyd.days_per_week) / dt)  # in timesteps
         return sc.randround(dur_scl)
 
-
     def get_prepatent_duration_distpars(self, uids):
 
         mu    = self.partial_prep_dur_mean(self.cfu_doses[uids])
@@ -512,7 +507,9 @@ class TyphoidSimple(ss.Infection):
             # Scale prob of becoming chronic using prob of having gallstones
             # TODO: QUESTION: Is this operation ok, multiplying probabilities, or
             # do we first evaluate whether the agent has gallstones, and then multiply
-            # the state by p_chro
+            # the state by p_chro, multiplying these probs, makes the effective probability of becoming
+            # chronic given gallstones, incredibly small, compared to the default probability of becoming
+            # chronic (mpars.p_chro), without assuming the presence of gallstones.
             p_chro = mpars.p_chro * mpars.p_gall[age_ints, sim.people.female[uids].astype(int)]
         else:
             p_chro = mpars.p_chro
@@ -629,11 +626,12 @@ class TyphoidSimple(ss.Infection):
 
         # Environmental Colony-forming units (CFUs) from the previous time step
         cfu_tm1   = self.sv.env_cfu[ti - 1]
+
         # CFU growth due to people shedding into the environment
         cfu_total = cfu_tm1 + shedded_cfu
 
         # Decay CFUs and get net number of CFUS at this time step (include growth due to shedded cfu, and decay)
-        self.sv.env_cfu[ti] = cfu_tm1 * np.exp(-env_pars.decay_rate*dt)
+        self.sv.env_cfu[ti] = cfu_total * np.exp(-env_pars.decay_rate*dt)
 
         # Increase cfu doses in susceptible people by exposing them to the environment
         self.expose_to_environment(cfu_total, ti, dt)
@@ -737,5 +735,6 @@ class TyphoidSimple(ss.Infection):
         res.new_subclinical[ti] = np.count_nonzero(self.ti_subclinical == ti)
         res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
+        res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
         res.env_cfu[ti] = self.sv.env_cfu[ti]
         return
