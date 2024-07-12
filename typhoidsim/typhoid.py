@@ -44,8 +44,8 @@ class TyphoidSimple(ss.Infection):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=0.005,  # Placeholder value
-            init_prev=ss.bernoulli(0.005),
+            beta=0.001,  # Placeholder value
+            init_prev=ss.bernoulli(0.000),
 
             # NATURAL HISTORY PARAMETERS
             # From immune (never exposed) to susceptible
@@ -60,8 +60,8 @@ class TyphoidSimple(ss.Infection):
             prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),   # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
             prep_dur_fun=tyum.double_sigmoid_tanh,                        # Function to represent the 3 levels of each prepatent duration distribution parameter as s continous function
 
-            cfu_lo_me=5_050_000,   # Threshold cfu value that distinguishes whether to use the 'low dose' (for cfu_doses <= cfu_lo_me) or 'medium dose' mean/std duration (cfu_doses > cfu_lo_me).
-            cfu_me_hi=55_000_000,  # Threshold cfu value that distinguishes whether to use the 'medium dose' (for cfu_doses <= cfu_me_hi) or 'high dose' mean/std duration (cfu_doses > cfu_lo_me).
+            cfu_lo_me=5_050_000,   # Threshold cfu value that distinguishes whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose' mean/std duration (cfu_dose > cfu_lo_me).
+            cfu_me_hi=55_000_000,  # Threshold cfu value that distinguishes whether to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' mean/std duration (cfu_dose > cfu_lo_me).
 
             # Symptomatic stage (acute and/or sublinical)
             # dur_prep2next=ss.lognorm_ex(mean=self.prepatent_duration_mean,
@@ -99,14 +99,14 @@ class TyphoidSimple(ss.Infection):
             environment=ss.Pars(
                 beta=0.0,
                 init_prev=ss.bernoulli(0.0),  # Initial prevalence due to environment
-                init_cfu=0,                   # Initial level of CFUs in the environment
+                init_cfu=1_000_000,           # Initial level of CFUs in the environment
                 decay_rate=0.3,
             ),
             # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
             transmission=ss.Pars(
                 # Interaction parameters between people and environment
                 # Rate at which infectious people shed colony-forming units to the environment (per day),
-                ppl2env_shedding_rate=1.0,
+                ppl2env_shedding_rate=0.1,
                 # Probability of environmental transmission - filled out later
                 env2ppl_exposure_rate=ss.poisson(lam=10.0),
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function)
@@ -131,10 +131,10 @@ class TyphoidSimple(ss.Infection):
             # States that track immunity-related quantities or variables
             # and depend on infection states
             ss.FloatArr("n_exposures", 0, label="Number of Exposures"),
-            ss.FloatArr("cfu_doses", 0, label="Exposure amount (CFUs)"),   # exposure amount (acquisition phase, "doses" of bacteria that the host takes as input)
+            ss.FloatArr("cfu_dose", 0, label="Exposure amount (CFUs)"),   # exposure amount (acquisition phase, "doses" of bacteria that the host takes as input)
             ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of cfu during different stages of the disease (infected phase, within host)
             ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
-            ss.FloatArr("p_chronic", label="p(chronic)"),                         # probability of becoming chronic
+            ss.FloatArr("p_chronic", label="p(chronic)"),                      # probability of becoming chronic
             ss.FloatArr("immunity", 0, label="Immunity Level"),            # Overall level of immunity to typhoid, value between 0 (no immunity) and 1 (completely immune)
 
             # States that track timing of events
@@ -489,8 +489,8 @@ class TyphoidSimple(ss.Infection):
 
     def get_prepatent_duration_distpars(self, uids):
 
-        mu    = self.partial_prep_dur_mean(self.cfu_doses[uids])
-        sigma = self.partial_prep_dur_std(self.cfu_doses[uids])
+        mu    = self.partial_prep_dur_mean(self.cfu_dose[uids])
+        sigma = self.partial_prep_dur_std(self.cfu_dose[uids])
 
         # From ss.lognormal_ex.convert_ex_to_im
         var   = sigma**2
@@ -607,6 +607,8 @@ class TyphoidSimple(ss.Infection):
         new_cases = self.make_new_cases_environmental_transmission()
         if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
+            self.progress_to_prepatent(new_cases)
+            breakpoint()
         return
 
     def make_new_cases_environmental_transmission(self):
@@ -642,7 +644,7 @@ class TyphoidSimple(ss.Infection):
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
         # the immunity responses of the hosts (drc) due to a certain amount of
-        # exposure doses (cfu_doses). Then, infection_...() it estimates
+        # exposure doses (cfu_dose). Then, infection_...() it estimates
         # a probability of infection.
         got_infected = trans_pars.env2ppl_p_inf(susc_uids)
         new_cases = susc_uids[got_infected]
@@ -652,7 +654,7 @@ class TyphoidSimple(ss.Infection):
     def infection_prob_function(module, sim, uids):
         # Evoke an immunity-like response
         p_resp = module.drc()
-        p_infc = 1.0 - (1.0 + module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
+        p_infc = 1.0 - (1.0 - module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
         return np.array(p_infc)
 
     @staticmethod
@@ -678,7 +680,6 @@ class TyphoidSimple(ss.Infection):
         std_arr[sim.people.age[uids] >= th_age] = module.pars.sympy2next_std_geq_th
         return std_arr
 
-
     def update_immunity(self, uids):
         """ Acquired immunity """
         # TPPI: Typhoid Protection Per Infection
@@ -686,13 +687,13 @@ class TyphoidSimple(ss.Infection):
         # NOTE: We could add a mechanisms for immunity waning here
         return
 
-    def drc(self, alpha=0.175, n50=1.16e6):
+    def drc(self, alpha=0.175, n50=1.11e6):
         """
         The probability of infection is mediated by the dose-response curve (drc),
         taking in the contagion population as a value of colony-forming units (CFU)
         and returning a probability of infection.
 
-        The independent variable `cfu_doses` can be modulated by seasonality
+        The independent variable `cfu_dose` can be modulated by seasonality
         factors.
 
         The DRC is a beta-binomial curve fitted the historical challenge
@@ -703,7 +704,7 @@ class TyphoidSimple(ss.Infection):
         # TODO: parameterise this function via pars. Also this function could
         be user-defined if the environment was a separate module.
         """
-        p_response = 1.0 - (1.0 + self.cfu_doses * ((2.0**(1.0/alpha) - 1.0)/n50))**(-alpha)
+        p_response = 1.0 - (1.0 + self.cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**(-alpha)
         return p_response
 
     def expose_to_environment(self, env_cfu_dose, ti, dt):
@@ -717,7 +718,7 @@ class TyphoidSimple(ss.Infection):
         # TODO: check whether the multiplication by dt makes sense in particular if dt < 1
         n_exp = self.pars.transmission.env2ppl_exposure_rate.rvs() * dt
         self.n_exposures[susc_uids] += n_exp
-        self.cfu_doses[susc_uids] += env_cfu_dose * n_exp
+        self.cfu_dose[susc_uids] += env_cfu_dose * n_exp
         return
 
     def expose_to_contacts(self, dt):
