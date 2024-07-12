@@ -189,14 +189,14 @@ class TyphoidSimple(ss.Infection):
         super().init_results()
         npts = self.sim.npts
         self.results += [
-            ss.Result(self.name, "new_susceptible", npts, dtype=int),
-            ss.Result(self.name, "new_prepatent", npts, dtype=int),
-            ss.Result(self.name, "new_acute", npts, dtype=int),
-            ss.Result(self.name, "new_subclinical", npts, dtype=int),
-            ss.Result(self.name, "new_chronic", npts, dtype=int),
-            ss.Result(self.name, "new_recovered", npts, dtype=int),
-            ss.Result(self.name, "new_deaths", npts, dtype=int),
-            ss.Result(self.name, "env_cfu", npts, dtype=float),
+            ss.Result(self.name, "new_susceptible", npts, dtype=int, label="New Susceptible"),
+            ss.Result(self.name, "new_prepatent", npts, dtype=int, label="New Prepatent"),
+            ss.Result(self.name, "new_acute", npts, dtype=int, label="New Acute"),
+            ss.Result(self.name, "new_subclinical", npts, dtype=int, label="New Subclinical"),
+            ss.Result(self.name, "new_chronic", npts, dtype=int, label="New Chronic"),
+            ss.Result(self.name, "new_recovered", npts, dtype=int, label="New Recovered"),
+            ss.Result(self.name, "new_deaths", npts, dtype=int, label="New Dead"),
+            ss.Result(self.name, "env_cfu", npts, dtype=float, label="Current Environmental CFU"),
         ]
         self.init_svs()
         return
@@ -572,7 +572,6 @@ class TyphoidSimple(ss.Infection):
 
         # From the acutes who do not become carriers, determine who recovers and who dies
         will_die = p.p_death.rvs(can_die_uids)
-        dead_uids = can_die_uids[will_die]
         acu2rec_uids = can_die_uids[~will_die]
 
         # Recovery: Get sublinical cases that recover because they won't become carriers
@@ -590,11 +589,12 @@ class TyphoidSimple(ss.Infection):
         # NOTE: typhoid can get very low mortality (in particular with treatment),
         # so there is a high chance of getting empty dead_uids. If that happens,
         # the line below may seg fault . Just in case check first.
+        dead_uids = can_die_uids[will_die]
         if dead_uids.size:
             dur_acu = self.get_acute_duration_by_age(dead_uids)
             self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu
 
-        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1.0  # recover in the next time step, just to make things tidy
+        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1  # recover in the next time step, just to make things tidy
         return
 
     #  Transmission-realated methods - interaction between agents and "else" (other agents)
