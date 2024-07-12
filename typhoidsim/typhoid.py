@@ -307,6 +307,9 @@ class TyphoidSimple(ss.Infection):
 
     @staticmethod
     def susceptibility_prob_function(module, sim, uids):
+        """
+        Estimate the age-dependent probability of becoming susceptible
+        """
         mpars = module.pars
         p_sus = tyum.sigmoid(sim.people.age[uids], mpars.sus_saturation_age,
                              mpars.sus_age_exposure_slope)
@@ -314,11 +317,12 @@ class TyphoidSimple(ss.Infection):
 
     def make_impervious(self):
         """
-        Individuals that are created through births in the model start out in a
+        Individuals that are created through births in the model should start out in a
         fully immune state.
+        #TODO: This may not be needed any more if Typhoid is derived directly
+        from starsim.Disease rather than from Infection, which by default
+        assumes every agent starts in a susceptible state.
         """
-
-        #newborns_uids = (self.sim.people.age <= self.sim.dt).uids
         self.immune[self.susceptible.uids] = True
         self.susceptible[self.immune.uids] = False
 
