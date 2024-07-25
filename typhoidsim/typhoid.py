@@ -7,8 +7,8 @@ import scipy.stats as sps
 
 import sciris as sc
 import starsim as ss
+from starsim.diseases.sir import SIR
 
-import typhoidsim
 import typhoidsim.utils as tyu
 import typhoidsim.patterns as typ
 import typhoidsim.defaults as tyd
@@ -85,7 +85,7 @@ class TyphoidSimple(ss.Infection):
             p_chro=0.15,    # base prob of chronic carrier in the absence of gallstones
             d_chro=ss.bernoulli(p=self.chronic_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection
             p_gall=tyu.load_dataset("gallstone_probs"),  # Probability of having gallstones by age and sex
-            p_death=ss.bernoulli(p=0.0),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
+            p_death=ss.bernoulli(p=0.2),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Infectiousness parameters
@@ -99,7 +99,7 @@ class TyphoidSimple(ss.Infection):
             environment=ss.Pars(
                 beta=0.0,
                 init_prev=ss.bernoulli(0.0),  # Initial prevalence due to environment
-                init_cfu=1_000_000,           # Initial level of CFUs in the environment
+                init_cfu=10_000,              # Initial level of CFUs in the environment.
                 decay_rate=0.3,
             ),
             # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
@@ -132,10 +132,10 @@ class TyphoidSimple(ss.Infection):
             # and depend on infection states
             ss.FloatArr("n_exposures", 0, label="Number of Exposures"),
             ss.FloatArr("cfu_dose", 0, label="Exposure amount (CFUs)"),   # exposure amount (acquisition phase, "doses" of bacteria that the host takes as input)
-            ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of cfu during different stages of the disease (infected phase, within host)
-            ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
+            ss.FloatArr("infectiousness", 0, label="Infectiousness"),     # average number of cfu during different stages of the disease (infected phase, within host)
+            ss.FloatArr("n_infections", 0, label="Number of Infections"), # number of infections over the lifespan of this agent
             ss.FloatArr("p_chronic", label="p(chronic)"),                      # probability of becoming chronic
-            ss.FloatArr("immunity", 1, label="Immunity Level"),            # Attenuation factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable)
+            ss.FloatArr("immunity", 1, label="Immunity Level"),           # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
 
             # States that track timing of events
             ss.FloatArr("ti_susceptible", label="Start of susceptible state"),
@@ -335,6 +335,7 @@ class TyphoidSimple(ss.Infection):
             "recovered",
         ]:
             self.statesdict[state][uids] = False
+        self.statesdict["immune"][uids] = True
         return
 
     # Update progression of disease, handle transitions
@@ -358,9 +359,9 @@ class TyphoidSimple(ss.Infection):
         self.progress_to_prepatent(ti)  # Incubation period
         self.progress_to_diseased(ti)   # Both acute and subclinical
         self.progress_to_chronic(ti)
-        self.progress_to_dead(ti)
         self.progress_to_recovered(ti)
         self.progress_to_susceptible(ti)
+        self.progress_to_dead(ti)
         return
 
     # Methods that handle transitions
@@ -576,6 +577,7 @@ class TyphoidSimple(ss.Infection):
 
         # Recovery: Get sublinical cases that recover because they won't become carriers
         scl2rec_uids = np.setdiff1d(subcl_uids, scl2chro_uids)
+        scl2rec_uids = np.setdiff1d(subcl_uids, scl2chro_uids)
         will_recover_uids = acu2rec_uids.concat(scl2rec_uids)
 
         # Determine when non-carriers recover and become susceptible again,
@@ -606,7 +608,7 @@ class TyphoidSimple(ss.Infection):
         new_cases = self.make_new_cases_environmental_transmission()
         if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
-            self.progress_to_prepatent(self.sim.ti)
+            #self.progress_to_prepatent(self.sim.ti)
         return
 
     def make_new_cases_environmental_transmission(self):
@@ -651,8 +653,8 @@ class TyphoidSimple(ss.Infection):
     @staticmethod
     def infection_prob_function(module, sim, uids):
         # Evoke an immunity-like response
-        p_resp = module.drc()
-        p_infc = 1.0 - (1.0 - module.immunity[uids] * p_resp[uids]) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
+        p_resp = module.drc(module.cfu_dose[uids])
+        p_infc = 1.0 - (1.0 - module.immunity[uids] * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
         return np.array(p_infc)
 
     @staticmethod
@@ -689,7 +691,7 @@ class TyphoidSimple(ss.Infection):
         # NOTE: We could add a mechanisms for immunity waning here
         return
 
-    def drc(self, alpha=0.175, n50=1.11e6):
+    def drc(self, cfu_dose, alpha=0.175, n50=1.11e6):
         """
         The probability of infection is mediated by the dose-response curve (drc),
         taking in the contagion population as a value of colony-forming units (CFU)
@@ -701,12 +703,12 @@ class TyphoidSimple(ss.Infection):
         The DRC is a beta-binomial curve fitted the historical challenge
         data by QMRA (Enger, 2013), where:
 
-        P(response) = 1- [1 + dose * (2^(1/ α)- 1)/N50] ^(-α)
+        P(response) = 1- [1 + cfu_dose * (2^(1/ α)- 1)/N50] ^(-α)
 
         # TODO: parameterise this function via pars. Also this function could
         be user-defined if the environment was a separate module.
         """
-        p_response = 1.0 - (1.0 + self.cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**(-alpha)
+        p_response = 1.0 - (1.0 + cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**(-alpha)
         return p_response
 
     def expose_to_environment(self, env_cfu_dose, ti, dt):
