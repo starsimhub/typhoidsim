@@ -56,16 +56,16 @@ class TyphoidSimple(ss.Infection):
             sus_saturation_age=20.0,  # Age (years) after which agents are 100% susceptible
             sus_age_exposure_slope=1.0,
 
-            # Prepatent stage
+            # Prepatent stage, the parameters of the distribution of durations is CFU-dose dependent
             prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),   # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
             prep_dur_fun=tyum.double_sigmoid_tanh,                        # Function to represent the 3 levels of each prepatent duration distribution parameter as s continous function
+            dur_prep_dist=ss.lognorm_ex(mean=self.prepatent_mean_dur_function,
+                                        stdev=self.prepatent_std_dur_function),
 
             cfu_lo_me=5_050_000,   # Threshold cfu value that distinguishes whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose' mean/std duration (cfu_dose > cfu_lo_me).
             cfu_me_hi=55_000_000,  # Threshold cfu value that distinguishes whether to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' mean/std duration (cfu_dose > cfu_lo_me).
 
             # Symptomatic stage (acute and/or sublinical)
-            # dur_prep2next=ss.lognorm_ex(mean=self.prepatent_duration_mean,
-            #                             stdev=self.prepatent_duration_std),
             symp_dur_th_age=30.0,        # Symptomatic duration age threshold.
             symp_dur_mean_le_th=1.172,   # Symptomatic duration mean if age < age_threshold, in weeks.
             symp_dur_std_le_th=0.483,    # Symptomatic duration std  if age < age_threshold, in weeks.
@@ -154,6 +154,10 @@ class TyphoidSimple(ss.Infection):
         return
 
     def prepare_partial_prep_funs(self):
+        """
+        Partially evaluate functions that return parameters (mean and std) of
+        the distribution of prepatatent durations.
+        """
         from functools import partial
 
         th1 = self.pars.cfu_lo_me
@@ -247,6 +251,17 @@ class TyphoidSimple(ss.Infection):
         self.init_env_pool()  # Initialise the environmental pool of contagion at t-1
         return
 
+    def make_impervious(self):
+        """
+        Individuals that are created through births in the model should start out in a
+        fully immune state.
+        #TODO: This may not be needed any more if Typhoid is derived directly
+        from starsim.Disease rather than from Infection, which by default
+        assumes every agent starts in a susceptible state.
+        """
+        self.immune[self.susceptible.uids] = True
+        self.susceptible[self.immune.uids] = False
+
     # Methods that are specific to a single stage of infection
     def make_susceptible(self):
         """
@@ -277,6 +292,10 @@ class TyphoidSimple(ss.Infection):
         return
 
     def increase_childhood_susceptibility(self):
+        """
+        Age-based susceptiblity used in the Santiago de Chile case.
+        Not currently used by default
+        """
         # Santiago case:
         _6m = 0.5 * tyd.days_per_year  # in days
         _3y = 3.0 * tyd.days_per_year  # in days
@@ -301,27 +320,6 @@ class TyphoidSimple(ss.Infection):
         self.susceptible[uids_6y] = self.pars.p_imm2sus_6y(uids_6y)
         self.immune[uids_6y] = ~self.susceptible[uids_6y]
         return
-
-    @staticmethod
-    def susceptibility_prob_function(module, sim, uids):
-        """
-        Estimate the age-dependent probability of becoming susceptible
-        """
-        mpars = module.pars
-        p_sus = tyum.sigmoid(sim.people.age[uids], mpars.sus_saturation_age,
-                             mpars.sus_age_exposure_slope)
-        return np.array(p_sus)
-
-    def make_impervious(self):
-        """
-        Individuals that are created through births in the model should start out in a
-        fully immune state.
-        #TODO: This may not be needed any more if Typhoid is derived directly
-        from starsim.Disease rather than from Infection, which by default
-        assumes every agent starts in a susceptible state.
-        """
-        self.immune[self.susceptible.uids] = True
-        self.susceptible[self.immune.uids] = False
 
     def update_death(self, uids):
         """Reset states for dead agents"""
@@ -364,7 +362,7 @@ class TyphoidSimple(ss.Infection):
         self.progress_to_dead(ti)
         return
 
-    # Methods that handle transitions
+    # Methods that handle transitions between states
     def progress_to_prepatent(self, ti):
         susc2prep = (self.prepatent & (self.ti_prepatent <= ti)).uids
         self.immune[susc2prep] = False
@@ -436,13 +434,16 @@ class TyphoidSimple(ss.Infection):
         self.recovered[rec2suc] = False
         self.update_immunity(rec2suc)
 
-    # Methods that handle durations/duration pars that are dependent on other variables
+    # Methods that handle durations/duration pars that are dependent on other variables/states
     def get_prepatent_duration_by_exposure(self, uids):
-        """ TODO: TEMPORARY: Not random-number safe implementation ref #28"""
+        """ """
         dt = self.sim.dt
-        mu, sigma = self.get_prepatent_duration_distpars(uids)
-        dur_prep_dist = sps.lognorm(s=sigma, scale=np.exp(mu))
-        dur_prep = dur_prep_dist.rvs(uids.size)
+        #mu, sigma = self.get_prepatent_duration_distpars(uids)
+        breakpoint()
+        dur_prep = self.pars.dur_prep_dist.rvs(uids.size)
+
+        #dur_prep_dist = sps.lognorm(s=sigma, scale=np.exp(mu))
+        dur_prep = self.pars.dur_prep_dist.rvs(uids.size)
         # Return in number of timesteps with units (1 timestep / day)
         return sc.randround(dur_prep/dt)
 
@@ -487,17 +488,49 @@ class TyphoidSimple(ss.Infection):
                                    tyd.days_per_week) / dt)  # in timesteps
         return sc.randround(dur_scl)
 
-    def get_prepatent_duration_distpars(self, uids):
+    # def get_prepatent_duration_distpars(self, uids):
+    #
+    #     mu    = self.partial_prep_dur_mean(self.cfu_dose[uids])
+    #     sigma = self.partial_prep_dur_std(self.cfu_dose[uids])
+    #
+    #     # From ss.lognormal_ex.convert_ex_to_im
+    #     var   = sigma**2
+    #     mean2 = mu**2
+    #     sigma_im = np.sqrt(np.log(var/mean2 + 1))  # Computes stdev for the underlying normal distribution
+    #     mean_im  = np.log(mean2 / np.sqrt(var + mean2))
+    #     return mean_im, sigma_im
 
-        mu    = self.partial_prep_dur_mean(self.cfu_dose[uids])
-        sigma = self.partial_prep_dur_std(self.cfu_dose[uids])
 
-        # From ss.lognormal_ex.convert_ex_to_im
-        var   = sigma**2
-        mean2 = mu**2
-        sigma_im = np.sqrt(np.log(var/mean2 + 1))  # Computes stdev for the underlying normal distribution
-        mean_im  = np.log(mean2 / np.sqrt(var + mean2))
-        return mean_im, sigma_im
+    @staticmethod
+    def prepatent_mean_dur_function(module, sim, uids):
+        """
+        Returns a mean duration parameter for every agent based on the cfu_dose,
+        they have been exposed to. Assumes the parameter will be used by a
+        lognormal_ex distribution.
+        """
+        mu = module.partial_prep_dur_mean(module.cfu_dose[uids])
+        return np.array(mu)
+
+
+    @staticmethod
+    def prepatent_std_dur_function(module, sim, uids):
+        """
+        Returns a stdev duration parameter for every agent based on the cfu_dose,
+        they have been exposed to. Assumes the parameter will be used by a
+        lognormal_ex distribution.
+        """
+        std =  module.partial_prep_dur_std(module.cfu_dose[uids])
+        return np.array(std)
+
+    @staticmethod
+    def susceptibility_prob_function(module, sim, uids):
+        """
+        Estimate the age-dependent probability of becoming susceptible
+        """
+        mpars = module.pars
+        p_sus = tyum.sigmoid(sim.people.age[uids], mpars.sus_saturation_age,
+                             mpars.sus_age_exposure_slope)
+        return np.array(p_sus)
 
     @staticmethod
     def chronic_prob_function(module, sim, uids):
@@ -608,7 +641,7 @@ class TyphoidSimple(ss.Infection):
         new_cases = self.make_new_cases_environmental_transmission()
         if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
-            #self.progress_to_prepatent(self.sim.ti)
+            self.progress_to_prepatent(self.sim.ti)
         return
 
     def make_new_cases_environmental_transmission(self):
