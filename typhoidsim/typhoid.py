@@ -601,7 +601,7 @@ class TyphoidSimple(ss.Infection):
     def make_new_cases(self):
         """Add short-cycle transmission and long-cycle transmission transmission"""
         # Make new cases via person-to-person transmission
-        #super().make_new_cases()
+        super().make_new_cases()
         # new_cases = self.make_new_cases_environmental_transmission()
         # if len(new_cases):
         #     self.set_prognoses(new_cases, source_uids=None)
