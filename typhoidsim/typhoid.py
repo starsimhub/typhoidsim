@@ -44,8 +44,8 @@ class TyphoidSimple(ss.Infection):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=0.001,  # Placeholder value
-            init_prev=ss.bernoulli(0.000),
+            beta=0.0,  # Placeholder value
+            init_prev=ss.bernoulli(0.001),
 
             # NATURAL HISTORY PARAMETERS
             # From immune (never exposed) to susceptible
@@ -601,11 +601,11 @@ class TyphoidSimple(ss.Infection):
     def make_new_cases(self):
         """Add short-cycle transmission and long-cycle transmission transmission"""
         # Make new cases via person-to-person transmission
-        super().make_new_cases()
-        new_cases = self.make_new_cases_environmental_transmission()
-        if len(new_cases):
-            self.set_prognoses(new_cases, source_uids=None)
-            self.progress_to_prepatent(self.sim.ti)
+        #super().make_new_cases()
+        # new_cases = self.make_new_cases_environmental_transmission()
+        # if len(new_cases):
+        #     self.set_prognoses(new_cases, source_uids=None)
+        #     self.progress_to_prepatent(self.sim.ti)
         return
 
     def make_new_cases_environmental_transmission(self):
