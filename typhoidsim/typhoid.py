@@ -75,7 +75,6 @@ class TyphoidSimple(ss.Infection):
             # For people aged threshold value and over
             symp_dur_mean_geq=1.172,  # Symptomatic duration mean if age >= age_threshold, in weeks.
             symp_dur_std_geq=0.788,   # Symptomatic duration std if age  >= age_threshold, in weeks.
-            # TODO: replace the four ditributions above by this single one (typhoidsim #28)
             dur_symp_dist=ss.lognorm_ex(mean=self.symp_dur_mean,
                                         stdev=self.symp_dur_std),     # Symptomatic (acute or subclinical duration), depends on age, expressed in weeks.
             dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, stdev=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
@@ -84,7 +83,7 @@ class TyphoidSimple(ss.Infection):
             p_chro=0.15,    # base prob of chronic carrier in the absence of gallstones
             d_chro=ss.bernoulli(p=self.chronic_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection
             p_gall=tyu.load_dataset("gallstone_probs"),  # Probability of having gallstones by age and sex
-            p_death=ss.bernoulli(p=0.2),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
+            p_death=ss.bernoulli(p=0.01),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Infectiousness parameters
@@ -98,7 +97,7 @@ class TyphoidSimple(ss.Infection):
             environment=ss.Pars(
                 beta=0.0,
                 init_prev=ss.bernoulli(0.0),  # Initial prevalence due to environment
-                init_cfu=10_000,              # Initial level of CFUs in the environment.
+                init_cfu=0,              # Initial level of CFUs in the environment.
                 decay_rate=0.3,
             ),
             # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
@@ -120,7 +119,7 @@ class TyphoidSimple(ss.Infection):
         self.add_states(
             # Infection life cycle states
             # Susceptible & infected are added automatically, here we add the rest
-            ss.BoolArr("immune", True, label="Never Exposed"),
+            ss.BoolArr("immune", True, label="Completely Immune"),
             ss.BoolArr("prepatent", label="Prepatent"),  # Also known as exposed state (incubation stage)
             ss.BoolArr("acute", label="Acute"),
             ss.BoolArr("subclinical", label="Subclinical"),
