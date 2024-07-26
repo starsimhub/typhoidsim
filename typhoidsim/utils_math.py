@@ -141,11 +141,3 @@ def gompertz_dfun(x, a, b, c):
        (ndarray): An array of derivative values corresponding to the input x values.
     """
     return a*b*c*np.exp(-(b/np.exp(c*x)) - c*x)
-
-
-def cfu_dependent_mean_dur():
-    pass
-
-
-def cfu_dependent_std_dur():
-    pass
