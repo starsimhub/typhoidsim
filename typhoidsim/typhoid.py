@@ -44,7 +44,7 @@ class TyphoidSimple(ss.Infection):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=0.0,  # Placeholder value
+            beta=1.0,
             init_prev=ss.bernoulli(0.001),
 
             # NATURAL HISTORY PARAMETERS
@@ -104,8 +104,7 @@ class TyphoidSimple(ss.Infection):
             transmission=ss.Pars(
                 beta=0.0,  # Beta environment
                 # Interaction parameters between people and environment
-                # Rate at which infectious people shed colony-forming units to the environment (per day),
-                ppl2env_shedding_rate=0.1,
+                ppl2env_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day), NOTE: This value will be used to set self.rel_trans
                 # Probability of environmental transmission - filled out later
                 env2ppl_exposure_rate=ss.poisson(lam=10.0),
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function)
@@ -601,6 +600,9 @@ class TyphoidSimple(ss.Infection):
     #  or the environment
     def make_new_cases(self):
         """Add short-cycle transmission and long-cycle transmission transmission"""
+
+        # Relative transmissibility
+        self.rel_trans[self.sim.people.alive] = self.infectiousness[self.sim.people.alive] * self.pars.transmission.ppl2env_shedding_rate
         # Make new cases via person-to-person transmission
         super().make_new_cases()
         new_cases = self.make_new_cases_environmental_transmission()
@@ -611,7 +613,7 @@ class TyphoidSimple(ss.Infection):
 
     def make_new_cases_environmental_transmission(self):
         """
-        TODO: this should move to a different module
+        TODO: this should move to a different module or network
         1. infected individuals shed into the environment (environmental contagion pool grows ↑↑)
         2. individuals get exposed by the environment (increases their n_exposures)
         3. Bacteria in the environment die at a specific rate (contagion pool in environment decays ↓↓)
@@ -698,6 +700,7 @@ class TyphoidSimple(ss.Infection):
         # TPPI: Typhoid Protection Per Infection
         self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
         # NOTE: We could add a mechanisms for immunity waning here
+        ppl2env_shedding_rate = 0.1,
         return
 
     def drc(self, cfu_dose, alpha=0.175, n50=1.11e6):
