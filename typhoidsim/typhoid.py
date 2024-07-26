@@ -73,12 +73,8 @@ class TyphoidSimple(ss.Infection):
             symp_dur_mean_le=1.172,   # Symptomatic duration mean if age < age_threshold, in weeks.
             symp_dur_std_le=0.483,    # Symptomatic duration std  if age < age_threshold, in weeks.
             # For people aged threshold value and over
-            symp_dur_mean_geq_th=1.172,  # Symptomatic duration mean if age >= age_threshold, in weeks.
-            symp_dur_std_geq_th=0.788,   # Symptomatic duration std if age  >= age_threshold, in weeks.
-            # dur_acute2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Acute duration for under (<) 30 yo, in weeks.
-            # dur_acute2next_geq30=ss.lognorm_ex(mean=1.258, stdev=0.788),  # Acute duration for over (>=) 30 yo, in weeks.
-            # dur_subcl2next_le30=ss.lognorm_ex(mean=1.172, stdev=0.483),   # Subclinical duration for under (<) 30 yo, in weeks.
-            # dur_subcl2next_geq30=ss.lognorm_ex(mean=1.172, stdev=0.788),  # Subclinical duration for over (>=) 30 yo, in weeks.
+            symp_dur_mean_geq=1.172,  # Symptomatic duration mean if age >= age_threshold, in weeks.
+            symp_dur_std_geq=0.788,   # Symptomatic duration std if age  >= age_threshold, in weeks.
             # TODO: replace the four ditributions above by this single one (typhoidsim #28)
             dur_symp_dist=ss.lognorm_ex(mean=self.symp_dur_mean,
                                         stdev=self.symp_dur_std),     # Symptomatic (acute or subclinical duration), depends on age, expressed in weeks.
@@ -455,18 +451,6 @@ class TyphoidSimple(ss.Infection):
         p = self.pars
         dt = self.sim.dt
         dur_acu = p.dur_symp_dist.rvs(uids.size)
-
-        # From the acute uids, who is under or over 30
-        # under_th = np.isin(uids, (self.sim.people.age < p.symp_dur_th_age).uids)
-        # over_th  = np.isin(uids, (self.sim.people.age >= p.symp_dur_th_age).uids)
-        #
-        # # convert duration pars in weeks -> to days -> to timesteps
-        # dur_acu[under_th] += ((p.dur_acute2next_le30.rvs(uids[under_th]) *
-        #                             tyd.days_per_week) / dt)
-        # # convert duration pars in weeks -> to days -> to timesteps
-        # dur_acu[over_th] += ((p.dur_acute2next_geq30.rvs(uids[over_th]) *
-        #                            tyd.days_per_week) / dt)  # in timesteps
-        # Return durations in number of timesteps
         return sc.randround(dur_acu * (tyd.days_per_week / dt))
 
     def get_subclinical_duration_by_age(self, uids):
@@ -474,16 +458,6 @@ class TyphoidSimple(ss.Infection):
         dt = self.sim.dt
 
         dur_scl = p.dur_symp_dist.rvs(uids.size)
-        # # From the subclinical uids, who is under or over 30
-        # under_th = np.isin(uids, (self.sim.people.age < p.symp_dur_th_age).uids)
-        # over_th  = np.isin(uids, (self.sim.people.age >= p.symp_dur_th_age).uids)
-        #
-        # # convert duration pars in weeks -> to days -> to timesteps
-        # dur_scl[under_th] += ((p.dur_subcl2next_le30.rvs(uids[under_th]) *
-        #                             tyd.days_per_week) / dt)
-        # # convert duration pars in weeks -> to days -> to timesteps
-        # dur_scl[over_th] += ((p.dur_subcl2next_geq30.rvs(uids[over_th]) *
-        #                            tyd.days_per_week) / dt)  # in timesteps
         return sc.randround(dur_scl * (tyd.days_per_week / dt))
 
     @staticmethod
@@ -691,7 +665,7 @@ class TyphoidSimple(ss.Infection):
             mean_arr = np.array([])
         else:
             th_age = module.pars.symp_dur_th_age
-            mean_arr = np.ones(len(uids))
+            mean_arr = np.ones(1 if isinstance(uids, int) else uids.size)
             mean_arr[sim.people.age[uids] < th_age]  = module.pars.symp_dur_mean_le
             mean_arr[sim.people.age[uids] >= th_age] = module.pars.symp_dur_mean_geq
         return mean_arr
@@ -706,7 +680,7 @@ class TyphoidSimple(ss.Infection):
             std_arr = np.array([])
         else:
             th_age = module.pars.symp_dur_th_age
-            std_arr = np.zeros(len(uids))
+            std_arr = np.zeros(1 if isinstance(uids, int) else uids.size)
             std_arr[sim.people.age[uids] < th_age]  = module.pars.symp_dur_std_le
             std_arr[sim.people.age[uids] >= th_age] = module.pars.symp_dur_std_geq
         return std_arr
