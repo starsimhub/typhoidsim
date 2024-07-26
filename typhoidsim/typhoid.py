@@ -100,13 +100,13 @@ class TyphoidSimple(ss.Infection):
                 init_cfu=0,                   # Initial level of CFUs in the environment.
                 decay_rate=0.3,               # Decay rate of environmental CFUs in 1/day
             ),
-            # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
+            # Tranmission parameters, temporary living here, until we move environment somwhere else
             transmission=ss.Pars(
                 beta=0.0,  # Beta environment
                 # Interaction parameters between people and environment
                 ppl2env_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day), NOTE: This value will be used to set self.rel_trans
-                # Probability of environmental transmission - filled out later
-                env2ppl_exposure_rate=ss.poisson(lam=10.0),
+                ppl2ppl_exposure_rate=ss.poisson(lam=0.18),  # Poisson rate determining the daily number of exposures for contact route
+                env2ppl_exposure_rate=ss.poisson(lam=10.0),  # Poisson rate determining the daily number of exposures for environment route
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function)
             ),
         )
@@ -602,6 +602,7 @@ class TyphoidSimple(ss.Infection):
         """Add short-cycle transmission and long-cycle transmission transmission"""
 
         # Relative transmissibility
+        # TODO: confirm this way of using rel_trans is ok
         self.rel_trans[self.sim.people.alive] = self.infectiousness[self.sim.people.alive] * self.pars.transmission.ppl2env_shedding_rate
         # Make new cases via person-to-person transmission
         super().make_new_cases()
@@ -639,11 +640,13 @@ class TyphoidSimple(ss.Infection):
         if trans_pars.beta == 0:
             return []
 
-        # Increase cfu doses in susceptible people by exposing them to the environment
-        self.expose_to_environment(cfu_total, ti, dt)
-
         # Determine who gets infected from environment
         susc_uids = (self.susceptible).uids
+
+        # Increase cfu doses in susceptible people by exposing them to the environment
+        # TODO: check whether the multiplication by dt makes sense, I think it does in particular if dt < 1 day
+        self.n_exposures[susc_uids] = trans_pars.env2ppl_exposure_rate.rvs(susc_uids.size) * dt
+        self.cfu_dose[susc_uids] = cfu_total * self.n_exposures[susc_uids]
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
@@ -723,23 +726,18 @@ class TyphoidSimple(ss.Infection):
         p_response = 1.0 - (1.0 + cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**(-alpha)
         return p_response
 
-    def expose_to_environment(self, env_cfu_dose, ti, dt):
+    def expose_contact(self, dt):
         """
-        The exposures aren’t completely independent: since exposure is done
-        through one route before the other each time, if the first has a high
-        contagion population (or rate) exposure will skew to that
-        transmission route.
+        Currently, all infections from the Contact route are assumed to be a
+        high dose prepatent duration, meaning that the characteristic dose
+        has to be set to be at least self.pars.cfu_me_hi + 1
+
+        route_cfu_dose is the characteristic dose of a given transmission route
         """
         susc_uids = (self.susceptible).uids
-        # TODO: check whether the multiplication by dt makes sense in particular if dt < 1
-        n_exp = self.pars.transmission.env2ppl_exposure_rate.rvs() * dt
-        self.n_exposures[susc_uids] += n_exp
-        self.cfu_dose[susc_uids] += env_cfu_dose * n_exp
-        return
-
-    def expose_to_contacts(self, dt):
         # For person-to-person transmission
-        #self.n_exposures += self.pars.transmission.p2p_exposure_rate.rvs()*dt
+        self.n_exposures[susc_uids] = self.pars.transmission.ppl2ppl_exposure_rate.rvs(susc_uids.size)*dt
+        self.cfu_dose[susc_uids] = (self.pars.cfu_me_hi + 1) * self.n_exposures[susc_uids]
         pass
 
     def update_results(self):
