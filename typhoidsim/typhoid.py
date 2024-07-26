@@ -91,17 +91,18 @@ class TyphoidSimple(ss.Infection):
             tpri=0.4,    # Typhoid relative (to acute) prepatent infectiousness
             tsri=0.8,    # Typhoid relative (to acute) subclinic infectiousness
             tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
+            tppi=0.99,   # Decrease in susceptibility per infection (exponential decrease)
 
             # ENVIRONMENT PARAMETERS
-            tppi=0.99,   # Decrease in susceptibility per infection (exponential decrease)
+            # State of the environment, environment dynamics and init prevalence due to environment
             environment=ss.Pars(
-                beta=0.0,
                 init_prev=ss.bernoulli(0.0),  # Initial prevalence due to environment
-                init_cfu=0,              # Initial level of CFUs in the environment.
-                decay_rate=0.3,
+                init_cfu=0,                   # Initial level of CFUs in the environment.
+                decay_rate=0.3,               # Decay rate of environmental CFUs in 1/day
             ),
             # Environmental tranmission parameters, temporary living here, until we move environment somwhere else
             transmission=ss.Pars(
+                beta=0.0,  # Beta environment
                 # Interaction parameters between people and environment
                 # Rate at which infectious people shed colony-forming units to the environment (per day),
                 ppl2env_shedding_rate=0.1,
@@ -631,6 +632,10 @@ class TyphoidSimple(ss.Infection):
 
         # Decay CFUs and get net number of CFUS at this time step (include growth due to shedded cfu, and decay)
         self.sv.env_cfu[ti] = cfu_total * np.exp(-env_pars.decay_rate*dt)
+
+        # Skip if there is not tranmission
+        if trans_pars.beta == 0:
+            return []
 
         # Increase cfu doses in susceptible people by exposing them to the environment
         self.expose_to_environment(cfu_total, ti, dt)
