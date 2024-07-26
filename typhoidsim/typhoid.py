@@ -439,11 +439,10 @@ class TyphoidSimple(ss.Infection):
         """ """
         dt = self.sim.dt
         #mu, sigma = self.get_prepatent_duration_distpars(uids)
-        breakpoint()
         dur_prep = self.pars.dur_prep_dist.rvs(uids.size)
 
         #dur_prep_dist = sps.lognorm(s=sigma, scale=np.exp(mu))
-        dur_prep = self.pars.dur_prep_dist.rvs(uids.size)
+        #dur_prep = self.pars.dur_prep_dist.rvs(uids.size)
         # Return in number of timesteps with units (1 timestep / day)
         return sc.randround(dur_prep/dt)
 
@@ -508,7 +507,12 @@ class TyphoidSimple(ss.Infection):
         they have been exposed to. Assumes the parameter will be used by a
         lognormal_ex distribution.
         """
-        mu = module.partial_prep_dur_mean(module.cfu_dose[uids])
+        # NOTE: this check is necesary other wise lognorm_ex fails at initialisation
+        # when the module has not been initialised and uids are None
+        if uids is None:
+            mu = []
+        else:
+            mu = module.partial_prep_dur_mean(module.cfu_dose[uids])
         return np.array(mu)
 
 
@@ -519,7 +523,11 @@ class TyphoidSimple(ss.Infection):
         they have been exposed to. Assumes the parameter will be used by a
         lognormal_ex distribution.
         """
-        std =  module.partial_prep_dur_std(module.cfu_dose[uids])
+        if uids is None:
+            std = []
+            std = []
+        else:
+            std = module.partial_prep_dur_std(module.cfu_dose[uids])
         return np.array(std)
 
     @staticmethod
