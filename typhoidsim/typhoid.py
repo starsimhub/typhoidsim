@@ -104,10 +104,11 @@ class TyphoidSimple(ss.Infection):
             transmission=ss.Pars(
                 beta=0.0,  # Beta environment
                 # Interaction parameters between people and environment
-                ppl2env_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day), NOTE: This value will be used to set self.rel_trans
-                ppl2ppl_exposure_rate=ss.poisson(lam=0.18),  # Poisson rate determining the daily number of exposures for contact route
+                ppl2pool_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day)
                 env2ppl_exposure_rate=ss.poisson(lam=10.0),  # Poisson rate determining the daily number of exposures for environment route
-                env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function)
+                env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
+                ppl2ppl_exposure_rate=ss.poisson(lam=0.18),
+                ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
             ),
         )
         self.update_pars(pars, **kwargs)
@@ -455,7 +456,6 @@ class TyphoidSimple(ss.Infection):
     def get_subclinical_duration_by_age(self, uids):
         p = self.pars
         dt = self.sim.dt
-
         dur_scl = p.dur_symp_dist.rvs(uids.size)
         return sc.randround(dur_scl * (tyd.days_per_week / dt))
 
@@ -600,19 +600,16 @@ class TyphoidSimple(ss.Infection):
     #  or the environment
     def make_new_cases(self):
         """Add short-cycle transmission and long-cycle transmission transmission"""
-
-        # Relative transmissibility
-        # TODO: confirm this way of using rel_trans is ok
-        self.rel_trans[self.sim.people.alive] = self.infectiousness[self.sim.people.alive] * self.pars.transmission.ppl2env_shedding_rate
         # Make new cases via person-to-person transmission
         super().make_new_cases()
-        new_cases = self.make_new_cases_environmental_transmission()
-        if len(new_cases):
-            self.set_prognoses(new_cases, source_uids=None)
-            self.progress_to_prepatent(self.sim.ti)
+        #new_cases_c = self.make_new_cases_contact()
+        new_cases_e = self.make_new_cases_environmental()
+        if len(new_cases_e):
+            self.set_prognoses(new_cases_e, source_uids=None)
+        self.progress_to_prepatent(self.sim.ti)
         return
 
-    def make_new_cases_environmental_transmission(self):
+    def make_new_cases_environmental(self):
         """
         TODO: this should move to a different module or network
         1. infected individuals shed into the environment (environmental contagion pool grows ↑↑)
@@ -625,7 +622,7 @@ class TyphoidSimple(ss.Infection):
         dt = self.sim.dt
 
         # Infectious individuals shed contagion into both the CPs
-        shedded_cfu = trans_pars.ppl2env_shedding_rate * self.infectiousness[self.infected].sum()
+        shedded_cfu = trans_pars.ppl2pool_shedding_rate * self.infectiousness[self.infected].sum()
 
         # Environmental Colony-forming units (CFUs) from the previous time step
         cfu_tm1   = self.sv.env_cfu[ti - 1]
@@ -636,7 +633,8 @@ class TyphoidSimple(ss.Infection):
         # Decay CFUs and get net number of CFUS at this time step (include growth due to shedded cfu, and decay)
         self.sv.env_cfu[ti] = cfu_total * np.exp(-env_pars.decay_rate*dt)
 
-        # Skip if there is not tranmission
+        # Skip if there is no tranmission,
+        # TODO: if environmental transmission is 0, then this parameter should also scale shedding?
         if trans_pars.beta == 0:
             return []
 
@@ -644,7 +642,7 @@ class TyphoidSimple(ss.Infection):
         susc_uids = (self.susceptible).uids
 
         # Increase cfu doses in susceptible people by exposing them to the environment
-        # TODO: check whether the multiplication by dt makes sense, I think it does in particular if dt < 1 day
+        # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
         self.n_exposures[susc_uids] = trans_pars.env2ppl_exposure_rate.rvs(susc_uids.size) * dt
         self.cfu_dose[susc_uids] = cfu_total * self.n_exposures[susc_uids]
 
@@ -726,7 +724,7 @@ class TyphoidSimple(ss.Infection):
         p_response = 1.0 - (1.0 + cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**(-alpha)
         return p_response
 
-    def expose_contact(self, dt):
+    def expose_contact(self, uids, dt):
         """
         Currently, all infections from the Contact route are assumed to be a
         high dose prepatent duration, meaning that the characteristic dose
@@ -734,10 +732,9 @@ class TyphoidSimple(ss.Infection):
 
         route_cfu_dose is the characteristic dose of a given transmission route
         """
-        susc_uids = (self.susceptible).uids
-        # For person-to-person transmission
-        self.n_exposures[susc_uids] = self.pars.transmission.ppl2ppl_exposure_rate.rvs(susc_uids.size)*dt
-        self.cfu_dose[susc_uids] = (self.pars.cfu_me_hi + 1) * self.n_exposures[susc_uids]
+        # For person-to-person transmission, n_exposures would be the number of contacts in a day
+        self.n_exposures[uids] = self.pars.transmission.ppl2ppl_exposure_rate.rvs(uids.size)*dt
+        self.cfu_dose[uids] = (self.pars.cfu_me_hi + 1) * self.n_exposures[uids]
         pass
 
     def update_results(self):
