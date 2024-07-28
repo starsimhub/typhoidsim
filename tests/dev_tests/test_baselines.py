@@ -31,9 +31,10 @@ pars = sc.objdict(
 #my_intervention = ty.base_test()
 
 efficacy_pattern = ty.Pattern("average_efficacy + amp * cos((2*pi/period)*var)",
-                              pars={'average_efficacy': 0.5, 'amp': 0.25, 'period': ty.days_per_year/4, 'pi': 3.141592653589793})
+                              pars={'average_efficacy': 0.9, 'amp': 0.1, 'period': ty.days_per_year/4, 'pi': 3.141592653589793})
 
-my_intervention = ty.environmental_intervention(pattern=efficacy_pattern)
+my_intervention = ty.environmental_intervention(pattern=efficacy_pattern,
+                                                target_factor="env2ppl_exposure_rate")
 
 typhoid = ty.Typhoid()
 
@@ -41,7 +42,7 @@ typhoid = ty.Typhoid()
 ppl = ss.People(10000)
 
 # This example runs on one static networks + the maternal network
-network = ss.RandomNet({'n_contacts': ss.poisson(lam=10)})
+network = ss.RandomNet({'n_contacts': ss.poisson(lam=0.18)})
 
 sim = ss.Sim(
     pars=pars,
@@ -52,5 +53,4 @@ sim = ss.Sim(
 
 sim.run()
 sim.plot()
-breakpoint()
 plt.show()
