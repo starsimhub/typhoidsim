@@ -29,11 +29,10 @@ typhoid = ty.TyphoidSimple()
 ppl = ss.People(10000)
 
 # Person-to-person interactions
-network = ss.RandomNet()
+network = ss.RandomNet({'n_contacts': ss.poisson(lam=0.18)})
 
 sim = ss.Sim(
     pars=pars,
-    demographics=[births, deaths],
     networks=network,
     diseases=typhoid,
     analyzers=ty.analyzers.states_consistency()
