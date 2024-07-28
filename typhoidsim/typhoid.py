@@ -42,7 +42,7 @@ class Typhoid(ss.Infection):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=0.0,
+            beta=1.0,
             init_prev=ss.bernoulli(0.001),
 
             # NATURAL HISTORY PARAMETERS
@@ -102,7 +102,7 @@ class Typhoid(ss.Infection):
             transmission=ss.Pars(
                 beta=1.0,  # Beta environment
                 # Interaction parameters between people and environment
-                ppl2pool_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day)
+                ppl2pool_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day), scaled by individual rel_trans
                 env2ppl_exposure_rate=ss.poisson(lam=10.0),  # Poisson rate determining the daily number of exposures for environment route
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
                 ppl2ppl_exposure_rate=ss.poisson(lam=0.18),
@@ -632,7 +632,7 @@ class Typhoid(ss.Infection):
         dt = self.sim.dt
 
         # Infectious individuals shed contagion into the contagion pool
-        shedded_cfu = trans_pars.ppl2pool_shedding_rate * self.infectiousness[self.infected].sum()
+        shedded_cfu = trans_pars.ppl2pool_shedding_rate * (self.rel_trans[self.infected]*self.infectiousness[self.infected]).sum()
 
         # Environmental Colony-forming units (CFUs) from the previous time step
         cfu_tm1   = self.sv.env_cfu[ti - 1]
@@ -655,7 +655,7 @@ class Typhoid(ss.Infection):
         # Increase cfu doses in susceptible people by exposing them to the environment
         # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
         self.n_exposures[susc_uids] = trans_pars.env2ppl_exposure_rate.rvs(susc_uids.size) * dt
-        self.cfu_dose[susc_uids] = cfu_total * self.n_exposures[susc_uids]
+        self.cfu_dose[susc_uids] = cfu_total * self.n_exposures[susc_uids]  # beta us used to simulate reduction in exposure amount due to behavioural changes
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
