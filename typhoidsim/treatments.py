@@ -8,7 +8,7 @@ import sciris as sc
 import starsim as ss
 
 # Interventions
-__all__ = ['acute_treatment', 'infection_clearence', 'test_for_chronic']
+__all__ = ['acute_treatment', 'infection_clearence', 'base_test']
 
 # Products
 __all__ += ['infectiousness_redux', 'infectiousness_clearence']
@@ -192,9 +192,11 @@ class infection_clearence(ss.Intervention):
         return new_patients, old_patients
 
 
-class test_for_chronic(ss.Intervention):
+class base_test(ss.Intervention):
     """
-    Find who is a chronic typhoid carrier
+    By default, Finds who is a chronic typhoid carrier. But if eligibility is not
+    None (default) it will count those uids as 'screened'.
+
     Args:
          product        (Product)       : the diagnostic to use
          prob           (float/arr)     : probability of eligible people (chronic) receiving a positive diagnostic
@@ -220,13 +222,17 @@ class test_for_chronic(ss.Intervention):
     def apply(self, sim):
         """
         """
-        eligible_uids = self.check_eligibility(sim)  # Check eligibility
+        if self.eligibility is None:
+            eligible_uids = self.check_eligibility(sim)  # Check eligibility
+        else:
+            eligible_uids = self.eligibility() if callable(self.eligibility) else self.eligibility
         self.coverage_dist.set(p=self.prob)
         tested_uids = self.coverage_dist.filter(eligible_uids)
         self.screened[tested_uids] = True
         self.screens[tested_uids] += 1
         self.ti_screened[tested_uids] = sim.ti
         self.results['n_screened'][sim.ti] = len(tested_uids)
+        return tested_uids
 
     def check_eligibility(self, sim):
         chronic_uids = (sim.people.typhoidsimple.chronic).uids
