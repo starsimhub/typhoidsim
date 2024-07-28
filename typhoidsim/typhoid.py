@@ -12,10 +12,10 @@ import typhoidsim.patterns as typ
 import typhoidsim.defaults as tyd
 import typhoidsim.utils_math as tyum
 
-__all__ = ["TyphoidSimple"]
+__all__ = ["Typhoid"]
 
 
-class TyphoidSimple(ss.Infection):
+class Typhoid(ss.Infection):
     """
     Typhoid module that includes the natural history of the disease in a human
     agent and also environmental 'state' variables and parameters that
@@ -678,7 +678,7 @@ class TyphoidSimple(ss.Infection):
 
     @staticmethod
     def symp_dur_mean(module, sim, uids):
-        """
+        """_
         Age-dependent mean of the distribution of durations of the
         symptomatic stage. Assumes a lognormal_ex distribution.
         """

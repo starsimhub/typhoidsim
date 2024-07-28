@@ -23,7 +23,7 @@ births = ss.Births({'birth_rate': 0.0})
 deaths = ss.Deaths({'death_rate': 0.0})
 
 # Diseas
-typhoid = ty.TyphoidSimple()
+typhoid = ty.Typhoid()
 
 # Population
 ppl = ss.People(10000)

@@ -75,9 +75,9 @@ class acute_treatment(ss.Intervention):
         """
         # TODO: use self.eligibility
         # Only agents experience the acute stage of infection
-        acute_uids = (sim.people.typhoidsimple.acute).uids
+        acute_uids = (sim.people.typhoid.acute).uids
         # Those who would seek treatment today
-        seeks_treatment = (sim.people.typhoidsimple.ti_seek_trtmnt == sim.ti).uids
+        seeks_treatment = (sim.people.typhoid.ti_seek_trtmnt == sim.ti).uids
         new_candidates = acute_uids.intersect(seeks_treatment)
         return new_candidates
 
@@ -132,10 +132,10 @@ class infection_clearence(ss.Intervention):
 
         # Check if infectiousness was cleared in this timestep
         treated = ss.uids.cat(new_patients, under_treatment)
-        cleared_uids = (sim.people.typhoidsimple.infectiousness[treated] <= 0.0).uids
+        cleared_uids = (sim.people.typhoid.infectiousness[treated] <= 0.0).uids
         if len(cleared_uids):
             # Reset infectiousness
-            sim.people.typhoidsimple.infectiousness[cleared_uids] = 0.0
+            sim.people.typhoid.infectiousness[cleared_uids] = 0.0
 
             # Reset infected states
             for state in [
@@ -144,7 +144,7 @@ class infection_clearence(ss.Intervention):
                 "subclinical",
                 "chronic",
             ]:
-               sim.people.typhoidsimple.statesdict[state][cleared_uids] = False
+               sim.people.typhoid.statesdict[state][cleared_uids] = False
 
             # Reset time of death if this patient was supposed die
             for state in [
@@ -155,11 +155,11 @@ class infection_clearence(ss.Intervention):
                 "ti_chronic",
                 "ti_dead",
             ]:
-                sim.people.typhoidsimple.statesdict[state][cleared_uids] = np.nan
+                sim.people.typhoid.statesdict[state][cleared_uids] = np.nan
 
             # Set recovered state and when this agent becomes susceptible
-            sim.people.typhoidsimple.statesdict["recovered"][cleared_uids] = True
-            sim.people.typhoidsimple.statesdict["ti_susceptible"][cleared_uids] = sim.ti + 1
+            sim.people.typhoid.statesdict["recovered"][cleared_uids] = True
+            sim.people.typhoid.statesdict["ti_susceptible"][cleared_uids] = sim.ti + 1
 
         return
 
@@ -170,7 +170,7 @@ class infection_clearence(ss.Intervention):
         """
         # TODO: use self.eligibility
         # Only agents experience the acute stage of infection
-        infected_uids = (sim.people.typhoidsimple.infected).uids
+        infected_uids = (sim.people.typhoid.infected).uids
 
         # Those who are under treatment
         under_treatment = (sim.people.infection_clearence.treated).uids
@@ -223,7 +223,7 @@ class base_test(ss.Intervention):
         return tested_uids
 
     def check_eligibility(self, sim):
-        chronic_uids = (sim.people.typhoidsimple.chronic).uids
+        chronic_uids = (sim.people.typhoid.chronic).uids
         return chronic_uids
 
 
@@ -266,8 +266,8 @@ class environmental_intervention(ss.Intervention):
         if sim.year >= self.start_day and len(self.time):
             efficacy = self.pattern(self.time[0])
             self.time = self.time[1:]
-            new_val = np.max([0, (1.0 - efficacy) * sim.diseases['typhoidsimple'].pars.transmission[self.target_factor]])
-            sim.diseases['typhoidsimple'].pars.transmission[self.target_factor] = new_val
+            new_val = np.max([0, (1.0 - efficacy) * sim.diseases['typhoid'].pars.transmission[self.target_factor]])
+            sim.diseases['typhoid'].pars.transmission[self.target_factor] = new_val
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
 
@@ -288,7 +288,7 @@ class infectiousness_redux(ss.Product):
         return
 
     def administer(self, people, uids):
-        people.typhoidsimple.infectiousness[uids] *= self.pars.multiplier
+        people.typhoid.infectiousness[uids] *= self.pars.multiplier
         return
 
 
@@ -311,15 +311,15 @@ class infectiousness_clearence(ss.Product):
         return
 
     def administer(self, people, uids):
-        clearence = people.typhoidsimple.infectiousness[uids] * self.pars.clearence_rate * self.pars.dt   # multiply by dt for cases when dt < 1
-        people.typhoidsimple.infectiousness[uids] -= clearence
+        clearence = people.typhoid.infectiousness[uids] * self.pars.clearence_rate * self.pars.dt   # multiply by dt for cases when dt < 1
+        people.typhoid.infectiousness[uids] -= clearence
         return
 
 
 class blocking_vax(ss.Product):
     """
     An Acquisition Blocking vaccine that impacts the overall probability of infection after exposure,
-    by modifying the 'susceptibility level' state (typhoidsimple.immunity). If the level is 0, then
+    by modifying the 'susceptibility level' state (typhoid.immunity). If the level is 0, then
     the agen can't acquire an infection, if the level is, it can acquire the infection -- also
     depends on other factors
     """
@@ -332,5 +332,5 @@ class blocking_vax(ss.Product):
 
     def administer(self, people, uids):
         """ Apply the vaccine to the requested uids. """
-        people.typhoidsimple.immunity[uids] -= self.pars.efficacy * people.typhoidsimple.immunity[uids]
+        people.typhoid.immunity[uids] -= self.pars.efficacy * people.typhoid.immunity[uids]
         return

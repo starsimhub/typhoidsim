@@ -35,7 +35,7 @@ efficacy_pattern = ty.Pattern("average_efficacy + amp * cos((2*pi/period)*var)",
 
 my_intervention = ty.environmental_intervention(pattern=efficacy_pattern)
 
-typhoid = ty.TyphoidSimple()
+typhoid = ty.Typhoid()
 
 
 ppl = ss.People(10000)
