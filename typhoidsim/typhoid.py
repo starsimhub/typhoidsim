@@ -649,7 +649,8 @@ class TyphoidSimple(ss.Infection):
             return []
 
         # Determine who gets infected from environment. Multiply by rel_sus, as many interventions will target this parameter
-        susc_uids = (self.susceptible * self.rel_sus).uids
+        susc = self.susceptible.asnew(self.susceptible * self.rel_sus)
+        susc_uids = (susc).uids
 
         # Increase cfu doses in susceptible people by exposing them to the environment
         # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
