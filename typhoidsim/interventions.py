@@ -266,8 +266,18 @@ class environmental_intervention(ss.Intervention):
         if sim.year >= self.start_day and len(self.time):
             efficacy = self.pattern(self.time[0])
             self.time = self.time[1:]
-            new_val = np.max([0, (1.0 - efficacy) * sim.diseases['typhoid'].pars.transmission[self.target_factor]])
-            sim.diseases['typhoid'].pars.transmission[self.target_factor] = new_val
+            reduction = 1.0 - efficacy
+            target_factor = sim.diseases['typhoid'].pars.transmission[self.target_factor]
+            if sc.isnumber(target_factor):
+                val = target_factor
+                sim.diseases['typhoid'].pars.transmission[self.target_factor] = np.max([0, reduction * val])
+            elif isinstance(target_factor, (ss.poisson,)):
+                val = target_factor.pars["lam"]
+                sim.diseases['typhoid'].pars.transmission[self.target_factor].pars["lam"] = np.max([0, reduction * val])
+            else:
+                errmsg = f"target_factor must be either a number or a Poisson distribution (ss.poisson), not {type(target_factor)}"
+                TypeError(errmsg)
+
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
 
