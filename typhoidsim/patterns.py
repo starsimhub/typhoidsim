@@ -20,7 +20,8 @@ __all__ = ["Pattern", "StateVariable"]
 class Pattern:
     """
     Base class for evaluating a function as a function of an independent
-    variable like age or time, or 'agent-space'.
+    variable like age or time, or 'agent-space'. Based on starsim's Distribution class
+    can be expanded in functionality.
 
     Args:
         equation (str): required; a simple string the defines the pattern
@@ -58,8 +59,6 @@ class Pattern:
 
         # History and random state
         self.trace = None  # The path of this object within the parent
-        self.called = 0  # The number of times the distribution has been called
-        self.history = []  # Previous states
         self.ready = True
         self.initialized = False
         self.initialize()
@@ -92,7 +91,6 @@ class Pattern:
         keys = [
             "pars",
             "equation",
-            "called",
             "ready",
         ]
         data = {key: getattr(self, key) for key in keys}
@@ -104,8 +102,6 @@ class Pattern:
         else:
             print(s)
             return
-
-
 
     def validate_equation(self):
         # TODO: perform some basic checks that the equation is well formed?
@@ -140,7 +136,7 @@ class Pattern:
 
         if (
             self.initialized is True and not force
-        ):  # Don't warn if we have a partially initialized distribution
+        ):  # Don't warn if we have a partially initialized class
             msg = (
                 f"Pattern {self} is already initialized, use force=True if intentional"
             )
@@ -174,9 +170,9 @@ class Pattern:
         The argument ``var`` can represent time, or age. It can be be a
         single number, a numpy.ndarray or pandas series???
         """
-        self._pars = sc.cp(self.pars)
+        self._pars = sc.cp(self.pars['pars'])
         self._pars['var'] = var
-        return ne.evaluate(self.equation, global_dict=self._pars)
+        return ne.evaluate(self.equation, local_dict=self._pars)
 
     def generate_data(self, vmin=0, vmax=100, step=None):
         """
@@ -193,11 +189,10 @@ class Pattern:
         y = self.evaluate(var)
         return var.flat, y.flat
 
-    def plot(self, step=1, fig_kw=None, hist_kw=None):
-        """Plot the current state of the RNG as a histogram"""
+    def plot(self, data_kw=None, fig_kw=None, hist_kw=None):
+        """Plot the pattern"""
         pl.figure(**sc.mergedicts(fig_kw))
-        x, y = self.generate_data()
-
+        x, y = self.generate_data(**sc.mergedicts(data_kw))
         pl.plot(x, y)
         pl.title(str(self))
         pl.xlabel("Var")
