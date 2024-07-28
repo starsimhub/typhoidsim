@@ -7,8 +7,11 @@ import numpy as np
 import sciris as sc
 import starsim as ss
 
-__all__ = ['acute_treatment', 'infectiousness_redux']
+# Interventions
+__all__ = ['acute_treatment', 'infection_clearence', 'test_for_chronic']
 
+# Products
+__all__ += ['infectiousness_redux', 'infectiousness_clearence']
 
 class ViVax(ss.Vx):
     """ Vaccine product """
@@ -187,6 +190,47 @@ class infection_clearence(ss.Intervention):
         old_patients = infected_uids.intersect(under_treatment)
         new_patients = infected_uids.intersect(~under_treatment)
         return new_patients, old_patients
+
+
+class test_for_chronic(ss.Intervention):
+    """
+    Find who is a chronic typhoid carrier
+    Args:
+         product        (Product)       : the diagnostic to use
+         prob           (float/arr)     : probability of eligible people (chronic) receiving a positive diagnostic
+         eligibility    (inds/callable) : indices OR callable that returns inds
+         kwargs         (dict)          : passed to Intervention()
+    """
+
+    def __init__(self, prob=1.0, eligibility=None, **kwargs):
+        super().__init__(**kwargs)
+        self.prob = sc.promotetoarray(prob)
+        self.eligibility = eligibility
+        self.coverage_dist = ss.bernoulli(p=self.prob)
+        self.screened = ss.BoolArr('screened')
+        self.screens = ss.FloatArr('screens', default=0)
+        self.ti_screened = ss.FloatArr('ti_screened')
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.results += ss.Result(self.name, 'n_screened', sim.npts, dtype=int)  # count how many were treated today, includes new and old patients
+        return
+
+    def apply(self, sim):
+        """
+        """
+        eligible_uids = self.check_eligibility(sim)  # Check eligibility
+        self.coverage_dist.set(p=self.prob)
+        tested_uids = self.coverage_dist.filter(eligible_uids)
+        self.screened[tested_uids] = True
+        self.screens[tested_uids] += 1
+        self.ti_screened[tested_uids] = sim.ti
+        self.results['n_screened'][sim.ti] = len(tested_uids)
+
+    def check_eligibility(self, sim):
+        chronic_uids = (sim.people.typhoidsimple.chronic).uids
+        return chronic_uids
 
 
 class environmental_intervention(ss.Intervention):
