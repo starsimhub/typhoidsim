@@ -8,22 +8,10 @@ import sciris as sc
 import starsim as ss
 
 # Interventions
-__all__ = ['acute_treatment', 'infection_clearence', 'base_test']
+__all__ = ['acute_treatment', 'infection_clearence', 'base_test', 'environmental_intervention']
 
 # Products
-__all__ += ['infectiousness_redux', 'infectiousness_clearence']
-
-class ViVax(ss.Vx):
-    """ Vaccine product """
-
-    def __init__(self, diseases=None, pars=None, *args, **kwargs):
-        super().__init__(pars, *args, **kwargs)
-        self.diseases = sc.tolist(diseases)
-        return
-
-    def administer(self, people, uids):
-        """ Apply the vaccine to the requested uids. """
-        pass
+__all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vax']
 
 
 class acute_treatment(ss.Intervention):
@@ -241,10 +229,49 @@ class base_test(ss.Intervention):
 
 class environmental_intervention(ss.Intervention):
     """
-    An environmental intervention that targets number of (CFU) doses
-    could impact the number of times the exposure could happen.
+    An environmental intervention that targets one of three different
+    factors in transmission. Interventions can impact:
+     - shedding into the contagion population,
+     - CFU dose,
+     - and frequency of exposures (lambda in the poisson distribution that produces number of exposures).
+
+    Assumes the intervention is applied over an interval of (continuous) time.
     """
-    pass
+
+    def __init__(self, start_day=None, dur_days=None, pattern=None, target_factor=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start_day = start_day
+        self.dur_days = dur_days
+        self.pattern = pattern  # pattern of efficacy of intervention
+        self.end_day = None
+        self.time = None
+        self.target_factor = target_factor if target_factor is not None else 'ppl2pool_shedding_rate'
+        self.ti = 0
+        return
+
+    def init_pre(self, sim):
+        # starsim base time units are in years, but the base unit of typhpoid is days
+        if self.start_day is None:
+            self.start_day = sim.pars['start']
+        if self.dur_days is None:
+            self.dur_days = sim.pars['end'] - sim.pars['start']
+
+        # This is the "time" variable that will be evaluated
+        self.time = sc.inclusiverange(0, self.dur_days, sim.dt)
+        self.results += ss.Result(self.name, 'efficacy', len(self.time), dtype=float)  # count how many were treated today, includes new and old patients
+
+        return
+
+    def apply(self, sim):
+        if sim.year >= self.start_day and len(self.time):
+            efficacy = self.pattern(self.time[0])
+            self.time = self.time[1:]
+            new_val = np.max([0, (1.0 - efficacy) * sim.diseases['typhoidsimple'].pars.transmission[self.target_factor]])
+            sim.diseases['typhoidsimple'].pars.transmission[self.target_factor] = new_val
+            self.results['efficacy'][self.ti] = efficacy
+            self.ti += 1
+
+        return
 
 
 # - Products
@@ -286,4 +313,24 @@ class infectiousness_clearence(ss.Product):
     def administer(self, people, uids):
         clearence = people.typhoidsimple.infectiousness[uids] * self.pars.clearence_rate * self.pars.dt   # multiply by dt for cases when dt < 1
         people.typhoidsimple.infectiousness[uids] -= clearence
+        return
+
+
+class blocking_vax(ss.Product):
+    """
+    An Acquisition Blocking vaccine that impacts the overall probability of infection after exposure,
+    by modifying the 'susceptibility level' state (typhoidsimple.immunity). If the level is 0, then
+    the agen can't acquire an infection, if the level is, it can acquire the infection -- also
+    depends on other factors
+    """
+
+    def __init__(self, pars=None, *args, **kwargs):
+        super().__init__()
+        self.default_pars(efficacy=1.0)
+        self.update_pars(pars, **kwargs)
+        return
+
+    def administer(self, people, uids):
+        """ Apply the vaccine to the requested uids. """
+        people.typhoidsimple.immunity[uids] -= self.pars.efficacy * people.typhoidsimple.immunity[uids]
         return
