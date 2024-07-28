@@ -5,5 +5,5 @@ from .defaults import *
 from .patterns import *
 from .analyzers import *
 from .typhoid import *
-from .treatments import *
+from .interventions import *
 from .settings import *
