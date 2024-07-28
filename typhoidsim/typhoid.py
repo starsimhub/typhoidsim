@@ -1,13 +1,11 @@
 """
-Typhoid models.
+Typhoid model.
 """
 
 import numpy as np
-import scipy.stats as sps
 
 import sciris as sc
 import starsim as ss
-from starsim.diseases.sir import SIR
 
 import typhoidsim.utils as tyu
 import typhoidsim.patterns as typ
@@ -44,7 +42,7 @@ class TyphoidSimple(ss.Infection):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=1.0,
+            beta=0.0,
             init_prev=ss.bernoulli(0.001),
 
             # NATURAL HISTORY PARAMETERS
@@ -102,7 +100,7 @@ class TyphoidSimple(ss.Infection):
             ),
             # Tranmission parameters, temporary living here, until we move environment somwhere else
             transmission=ss.Pars(
-                beta=0.0,  # Beta environment
+                beta=1.0,  # Beta environment
                 # Interaction parameters between people and environment
                 ppl2pool_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day)
                 env2ppl_exposure_rate=ss.poisson(lam=10.0),  # Poisson rate determining the daily number of exposures for environment route
@@ -129,12 +127,12 @@ class TyphoidSimple(ss.Infection):
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
-            ss.FloatArr("n_exposures", 0, label="Number of Exposures"),
-            ss.FloatArr("cfu_dose", 0, label="Exposure amount (CFUs)"),   # exposure amount (acquisition phase, "doses" of bacteria that the host takes as input)
-            ss.FloatArr("infectiousness", 0, label="Infectiousness"),     # average number of cfu during different stages of the disease (infected phase, within host)
-            ss.FloatArr("n_infections", 0, label="Number of Infections"), # number of infections over the lifespan of this agent
+            ss.FloatArr("n_exposures", 0, label="Number of Exposures"),    # average daily exposures from a given source/route
+            ss.FloatArr("cfu_dose", 0, label="Exposure amount (CFUs)"),    # exposure amount (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
+            ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of cfu during different stages of the disease (infected phase, within host). Could be rel_trans?
+            ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
             ss.FloatArr("p_chronic", label="p(chronic)"),                      # probability of becoming chronic
-            ss.FloatArr("immunity", 1, label="Immunity Level"),           # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
+            ss.FloatArr("immunity", 1, label="Immunity Level"),            # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
 
             # States that track timing of events
             ss.FloatArr("ti_susceptible", label="Start of susceptible state"),
@@ -258,8 +256,9 @@ class TyphoidSimple(ss.Infection):
         from starsim.Disease rather than from Infection, which by default
         assumes every agent starts in a susceptible state.
         """
-        self.immune[self.susceptible.uids] = True
-        self.susceptible[self.immune.uids] = False
+        eligible = self.sim.people.age < self.pars.sus_saturation_age
+        self.immune[eligible] = True
+        self.susceptible[eligible] = False
 
     # Methods that are specific to a single stage of infection
     def make_susceptible(self):
@@ -600,13 +599,24 @@ class TyphoidSimple(ss.Infection):
     #  or the environment
     def make_new_cases(self):
         """Add short-cycle transmission and long-cycle transmission transmission"""
-        # Make new cases via person-to-person transmission
-        super().make_new_cases()
-        #new_cases_c = self.make_new_cases_contact()
-        new_cases_e = self.make_new_cases_environmental()
-        if len(new_cases_e):
-            self.set_prognoses(new_cases_e, source_uids=None)
+        # From EMOD:
+        # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
+        # Contagion is a level of CFU transmitted by the the pool of contagion to a target
+        new_cases_c, _, _ = super().make_new_cases()
+
+        # Make sure new cases due to contagion contact route get assigned the correct
+        # dose of cfu to determine their prepatent duration
+        # From EMOD: Currently, all infections from the Contact route are assumed to be a
+        # high dose prepatent duration, meaning that the characteristic dose a
+        # target agent receives has to be set to be at least self.pars.cfu_me_hi + 1
+        self.cfu_dose[new_cases_c] = self.pars.cfu_me_hi + 1
+        # Make sure new cases are correctly set up as prepatent (ie, infectiousness levels, etc)
         self.progress_to_prepatent(self.sim.ti)
+        # NOTE/TODO: confirm whether self.pars.transmission.ppl2ppl_exposure_rate.rvs(uids.size)*dt,
+        # refers to average daily number of 'contacts' in the contact route
+
+        self.make_new_cases_environmental()
+
         return
 
     def make_new_cases_environmental(self):
@@ -621,7 +631,7 @@ class TyphoidSimple(ss.Infection):
         ti = self.sim.ti
         dt = self.sim.dt
 
-        # Infectious individuals shed contagion into both the CPs
+        # Infectious individuals shed contagion into the contagion pool
         shedded_cfu = trans_pars.ppl2pool_shedding_rate * self.infectiousness[self.infected].sum()
 
         # Environmental Colony-forming units (CFUs) from the previous time step
@@ -638,8 +648,8 @@ class TyphoidSimple(ss.Infection):
         if trans_pars.beta == 0:
             return []
 
-        # Determine who gets infected from environment
-        susc_uids = (self.susceptible).uids
+        # Determine who gets infected from environment. Multiply by rel_sus, as many interventions will target this parameter
+        susc_uids = (self.susceptible * self.rel_sus).uids
 
         # Increase cfu doses in susceptible people by exposing them to the environment
         # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
@@ -653,6 +663,9 @@ class TyphoidSimple(ss.Infection):
         # a probability of infection.
         got_infected = trans_pars.env2ppl_p_inf(susc_uids)
         new_cases = susc_uids[got_infected]
+        if len(new_cases):
+            self.set_prognoses(new_cases, source_uids=None)
+            self.progress_to_prepatent(ti)
         return new_cases
 
     @staticmethod
@@ -701,7 +714,6 @@ class TyphoidSimple(ss.Infection):
         # TPPI: Typhoid Protection Per Infection
         self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
         # NOTE: We could add a mechanisms for immunity waning here
-        ppl2env_shedding_rate = 0.1,
         return
 
     def drc(self, cfu_dose, alpha=0.175, n50=1.11e6):
@@ -723,19 +735,6 @@ class TyphoidSimple(ss.Infection):
         """
         p_response = 1.0 - (1.0 + cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**(-alpha)
         return p_response
-
-    def expose_contact(self, uids, dt):
-        """
-        Currently, all infections from the Contact route are assumed to be a
-        high dose prepatent duration, meaning that the characteristic dose
-        has to be set to be at least self.pars.cfu_me_hi + 1
-
-        route_cfu_dose is the characteristic dose of a given transmission route
-        """
-        # For person-to-person transmission, n_exposures would be the number of contacts in a day
-        self.n_exposures[uids] = self.pars.transmission.ppl2ppl_exposure_rate.rvs(uids.size)*dt
-        self.cfu_dose[uids] = (self.pars.cfu_me_hi + 1) * self.n_exposures[uids]
-        pass
 
     def update_results(self):
         super().update_results()
