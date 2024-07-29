@@ -105,13 +105,12 @@ class infection_clearence(ss.Intervention):
         self.eligibility = eligibility
         self._parse_product(product)
         self.treated = ss.BoolArr('treated')
-        self.results = ss.ndict()
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.results += ss.Result(self.name, 'n_treated', sim.npts, dtype=int)  # count how many were treated today, includes new and old patients
-        self.results += ss.Result(self.name, 'n_started_tr', sim.npts, dtype=int)  # count how many started treatment today, includes only new patients
+        self.results += ss.Result(self.name, 'n_treated', sim.npts, dtype=int, label="Were treated")  # count how many were treated today, includes new and old patients
+        self.results += ss.Result(self.name, 'n_started_tr', sim.npts, dtype=int, label="Started treatment")  # count how many started treatment today, includes only new patients
         self.initialized = True
         return
 
@@ -121,18 +120,18 @@ class infection_clearence(ss.Intervention):
         all_treated = newly_treated + len(under_treatment)
 
         if len(new_patients):
-            self.product.administer(sim.people, new_patients)
+            self.product.administer(sim, new_patients)
             self.treated[new_patients] = True
 
         if len(under_treatment):
-            self.product.administer(sim.people, under_treatment)
+            self.product.administer(sim, under_treatment)
 
         self.results['n_started_tr'][sim.ti] = newly_treated
         self.results['n_treated'][sim.ti] = all_treated
 
         # Check if infectiousness was cleared in this timestep
         treated = ss.uids.cat(new_patients, under_treatment)
-        cleared_uids = (sim.people.typhoid.infectiousness[treated] <= 0.0).uids
+        cleared_uids = treated.intersect((sim.people.typhoid.infectiousness < 0).uids)
         if len(cleared_uids):
             # Reset infectiousness
             sim.people.typhoid.infectiousness[cleared_uids] = 0.0
@@ -159,7 +158,10 @@ class infection_clearence(ss.Intervention):
 
             # Set recovered state and when this agent becomes susceptible
             sim.people.typhoid.statesdict["recovered"][cleared_uids] = True
+            sim.people.typhoid.statesdict["ti_recovered"][cleared_uids] = sim.ti
             sim.people.typhoid.statesdict["ti_susceptible"][cleared_uids] = sim.ti + 1
+            # Count again
+            sim.people.typhoid.update_results()
 
         return
 
@@ -174,9 +176,11 @@ class infection_clearence(ss.Intervention):
 
         # Those who are under treatment
         under_treatment = (sim.people.infection_clearence.treated).uids
+        untreated = (~sim.people.infection_clearence.treated).uids
+
         # and still are in the acute stage
         old_patients = infected_uids.intersect(under_treatment)
-        new_patients = infected_uids.intersect(~under_treatment)
+        new_patients = infected_uids.intersect(untreated)
         return new_patients, old_patients
 
 
@@ -314,7 +318,7 @@ class infectiousness_clearence(ss.Product):
 
     def __init__(self, pars=None, *args, **kwargs):
         super().__init__()
-        self.default_pars(clearence_rate=0.2, dt=1.0)  # in fraction of CFUs per day that are cleared
+        self.default_pars(clearence_rate=0.2, dt=1.0)  # in fraction of infectiousness CFUs per day that are cleared
         self.update_pars(pars, **kwargs)
         return
 
@@ -324,9 +328,9 @@ class infectiousness_clearence(ss.Product):
         self.initialized = True
         return
 
-    def administer(self, people, uids):
-        clearence = people.typhoid.infectiousness[uids] * self.pars.clearence_rate * self.pars.dt   # multiply by dt for cases when dt < 1
-        people.typhoid.infectiousness[uids] -= clearence
+    def administer(self, sim, uids):
+        clearence = sim.people.typhoid.infectiousness[uids] * self.pars.clearence_rate * self.pars.dt   # multiply by dt for cases when dt < 1
+        sim.people.typhoid.infectiousness[uids] -= clearence
         return
 
 
