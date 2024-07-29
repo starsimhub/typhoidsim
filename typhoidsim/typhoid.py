@@ -90,6 +90,7 @@ class Typhoid(ss.Infection):
             tsri=0.8,    # Typhoid relative (to acute) subclinic infectiousness
             tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
             tppi=0.99,   # Decrease in susceptibility per infection (exponential decrease)
+            p_resp=ss.bernoulli(p=self.response_prob_function),
 
             # ENVIRONMENT PARAMETERS
             # State of the environment, environment dynamics and init prevalence due to environment
@@ -103,7 +104,7 @@ class Typhoid(ss.Infection):
                 beta=1.0,  # Beta environment
                 # Interaction parameters between people and environment
                 ppl2pool_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day), scaled by individual rel_trans
-                env2ppl_exposure_rate=ss.poisson(lam=10.0),  # Poisson rate determining the daily number of exposures for environment route
+                env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
                 ppl2ppl_exposure_rate=ss.poisson(lam=0.18),
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
@@ -243,7 +244,6 @@ class Typhoid(ss.Infection):
             # Initial cases from environment-to-person transmission
             initial_cases_env = self.pars.environment.init_prev.filter((self.susceptible).uids)
             self.set_prognoses(initial_cases_env)
-
         self.progress_to_prepatent(self.sim.ti)   # Set the infectiousness of initial cases
         self.init_env_pool()  # Initialise the environmental pool of contagion at t-1
         return
@@ -603,7 +603,6 @@ class Typhoid(ss.Infection):
         # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
         # Contagion is a level of CFU transmitted by the the pool of contagion to a target
         new_cases_c, _, _ = super().make_new_cases()
-
         # Make sure new cases due to contagion contact route get assigned the correct
         # dose of cfu to determine their prepatent duration
         # From EMOD: Currently, all infections from the Contact route are assumed to be a
@@ -668,6 +667,11 @@ class Typhoid(ss.Infection):
             self.set_prognoses(new_cases, source_uids=None)
             self.progress_to_prepatent(ti)
         return new_cases
+
+    @staticmethod
+    def response_prob_function(module, sim, uids):
+        p_resp = module.drc(module.cfu_dose[uids])
+        return np.array(p_resp)
 
     @staticmethod
     def infection_prob_function(module, sim, uids):
