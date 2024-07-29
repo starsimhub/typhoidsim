@@ -267,16 +267,20 @@ class environmental_intervention(ss.Intervention):
             efficacy = self.pattern(self.time[0])
             self.time = self.time[1:]
             reduction = 1.0 - efficacy
-            target_factor = sim.diseases['typhoid'].pars.transmission[self.target_factor]
-            if sc.isnumber(target_factor):
-                val = target_factor
+            # TODO: make one intervention per factor, if/else blocks at each timestep can cause unnecesary overhead
+            if self.target_factor in ["shedding_rate", "shedding"]:
+                val = sim.diseases['typhoid'].pars.transmission["ppl2pool_shedding_rate"]
                 sim.diseases['typhoid'].pars.transmission[self.target_factor] = np.max([0, reduction * val])
-            elif isinstance(target_factor, (ss.poisson,)):
-                val = target_factor.pars["lam"]
+            elif self.target_factor.endswith("_exposure_rate"):
+                # It's a Poisson distribution, and assumes parameter exists in the disease module
+                val = sim.diseases['typhoid'].pars.transmission[self.target_factor].pars["lam"]
                 sim.diseases['typhoid'].pars.transmission[self.target_factor].pars["lam"] = np.max([0, reduction * val])
+            elif self.target_factor in ["dose", "cfu_dose", "cfu"]:
+                val = sim.diseases['typhoid'].sv.env_cfu[sim.ti]
+                sim.diseases['typhoid'].sv.env_cfu[sim.ti] = np.max([0, reduction * val])
             else:
-                errmsg = f"target_factor must be either a number or a Poisson distribution (ss.poisson), not {type(target_factor)}"
-                TypeError(errmsg)
+                errmsg = f"Don't how to handle target_factor {self.target_factor}. target_factor can be 'shedding', 'env2ppl_exposure_rate' or 'dose'."
+                ValueError(errmsg)
 
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
