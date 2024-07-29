@@ -26,7 +26,7 @@ class states_consistency(ss.Analyzer):
         """
         Checks states that should be mutually exlusive and collectively exhaustive
         """
-        typ = sim.diseases.typhoidsimple
+        typ = sim.diseases.typhoid
 
         # Mutually exclusive estates
         mut_exc_1 = ~(typ.immune & typ.susceptible & typ.prepatent & typ.acute & typ.subclinical & typ.chronic & typ.recovered).any()
@@ -85,6 +85,103 @@ class prepatent_state_monitor(ss.Analyzer):
         self.results['prep_durs_acu'][sim.ti] = prep_dur_acu
 
         return
+
+
+class infectiousness(ss.Analyzer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.requires = [ss.Typhoid]
+        self.name = 'infectiousness_monitor'
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        npts = self.sim.npts
+        self.results += [
+            ss.Result(self.name, 'infectiousness_levels', npts, dtype=float,
+                      scale=True),
+        ]
+        return
+
+    def apply(self, sim):
+        ti = sim.ti
+        return
+
+
+class lifeof(ss.Analyzer):
+    """
+    Plots a schematic with the events of person.
+    Stores a lot of data. Should be used for debugging purposes mainly.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.requires = [ss.Typhoid]
+        self.name = 'life_of_a_person'
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        npts = self.sim.npts
+        self.results += [
+            ss.Result(self.name, 'label_me', npts, dtype=float,
+                      scale=True),
+        ]
+        return
+
+    def apply(self, sim):
+        ti = sim.ti
+        return
+
+class natural_history(ss.Analyzer):
+    """
+    Provides statistics about the natural history of the disease:
+    - proportion of people in each stage
+    - mean duration of each stage
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.requires = [ss.Typhoid]
+        self.name = 'natural_history'
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        npts = self.sim.npts
+        self.results += [
+            ss.Result(self.name, 'new_result', npts, dtype=float,
+                      scale=True),
+        ]
+        return
+
+    def apply(self, sim):
+        ti = sim.ti
+        return
+
+
+class environmental_monitor(ss.Analyzer):
+    """
+    Monitors what's going on with the environment
+    Maybe not needed
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.requires = [ss.Typhoid]
+        self.name = 'natural_history'
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        npts = self.sim.npts
+        self.results += [
+            ss.Result(self.name, 'new_result', npts, dtype=float,
+                      scale=True),
+        ]
+        return
+
+    def apply(self, sim):
+        ti = sim.ti
+        return
+
 
 
 # Debug Analyzers
