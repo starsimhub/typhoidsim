@@ -9,7 +9,7 @@ import starsim as ss
 import typhoidsim as ty
 
 # Define the parameters
-n_years = 0.5  # Number of years to simulate
+n_years = 2  # Number of actual years to simulate
 pars = sc.objdict(
     start=2000,  # Starting year
     n_years=n_years*ty.days_per_year,
@@ -18,10 +18,6 @@ pars = sc.objdict(
     rand_seed=21,  # Set a non-default seed
 )
 
-# Explicitly set demographics to be constant (ie, no births or deaths)
-births = ss.Births({'birth_rate': 0.0})
-deaths = ss.Deaths({'death_rate': 0.0})
-
 # Diseas
 typhoid = ty.Typhoid()
 
@@ -29,7 +25,7 @@ typhoid = ty.Typhoid()
 ppl = ss.People(10000)
 
 # Person-to-person interactions
-network = ss.RandomNet({'n_contacts': ss.poisson(lam=0.18)})
+network = ss.RandomNet({'n_contacts': ss.poisson(lam=0.18)})   # lam represents the average number of daily exposures
 
 sim = ss.Sim(
     pars=pars,
