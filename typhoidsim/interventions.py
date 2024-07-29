@@ -8,7 +8,7 @@ import sciris as sc
 import starsim as ss
 
 # Interventions
-__all__ = ['acute_treatment', 'infection_clearence', 'base_test', 'environmental_intervention']
+__all__ = ['acute_treatment', 'infection_clearence', 'base_test', 'environmental_intervention', 'environmental_seasonality']
 
 # Products
 __all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vax']
@@ -289,6 +289,48 @@ class environmental_intervention(ss.Intervention):
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
 
+        return
+
+
+class environmental_seasonality(ss.Intervention):
+    """
+    Use the mechanism of interventions to increase the number of CFUs in the environment.
+    """
+    def __init__(self, start_day=None, dur_days=None, pattern=None, target_factor=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start_day = start_day
+        self.dur_days = dur_days
+        self.pattern = pattern  # pattern of seasonal cfu
+        self.end_day = None
+        self.time = None
+        self.ti = 0
+        return
+
+    def init_pre(self, sim):
+        # starsim base time units are in years, but the base unit of typhpoid is days
+        if self.start_day is None:
+            self.start_day = sim.pars['start']
+        if self.dur_days is None:
+            self.dur_days = sim.pars['end'] - sim.pars['start']
+
+        # This is the "time" variable that will be evaluated
+        self.time = sc.inclusiverange(0, self.dur_days, sim.dt)
+        self.results += ss.Result(self.name, 'seasonal_cfu', len(self.time), dtype=float, label="Seasonal CFUs")  # additional cfu in the environment due to seasonality
+        self.initialized = True
+
+        return
+
+    def apply(self, sim):
+        if sim.year >= self.start_day and len(self.time):
+            seasonal_cfu = self.pattern(self.time[0])
+            self.time = self.time[1:]
+            val = sim.diseases['typhoid'].sv.env_cfu[sim.ti-1]
+
+            # Update the value
+            # TODO: this one needs to make sure is always env_cfu >= to avoid negative probs in p_response and p_infection
+            sim.diseases['typhoid'].sv.env_cfu[sim.ti-1] = val + seasonal_cfu
+            self.results['seasonal_cfu'][self.ti] = seasonal_cfu
+            self.ti += 1
         return
 
 
