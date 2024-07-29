@@ -18,7 +18,7 @@ pars = sc.objdict(
     rand_seed=21,  # Set a non-default seed
 )
 
-# Diseas
+# Disease
 typhoid = ty.Typhoid()
 
 # Population
@@ -27,11 +27,18 @@ ppl = ss.People(10000)
 # Person-to-person interactions
 network = ss.RandomNet({'n_contacts': ss.poisson(lam=0.18)})   # lam represents the average number of daily exposures
 
+# Intervention, reduces the average number of exposures
+efficacy_pattern = ty.Pattern("average_efficacy + amp * cos((2*pi/period)*var)",
+                              pars={'average_efficacy': 0.9, 'amp': 0.1,
+                                    'period': ty.days_per_year/4, 'pi': 3.141592653589793})
+
+my_intervention = ty.environmental_intervention(pattern=efficacy_pattern,
+                                                target_factor="env2ppl_exposure_rate")
+
 sim = ss.Sim(
     pars=pars,
     networks=network,
     diseases=typhoid,
-    analyzers=ty.analyzers.states_consistency()
     )
 
 sim.run()
