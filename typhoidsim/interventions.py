@@ -8,12 +8,16 @@ import sciris as sc
 import starsim as ss
 
 # Interventions
-__all__ = ['acute_treatment', 'infection_clearence', 'base_test', 'environmental_intervention', 'environmental_seasonality']
-
+# Diagnostics
+__all__  = ['base_test']
+# Treatments applied to people
+__all__ += ['acute_treatment', 'infection_clearence']
+# Interventions applied to the environment
+__all__ += ['shedding_reduction', 'environmental_seasonality']
 # Products
 __all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vax']
 
-
+# -- Treatments
 class acute_treatment(ss.Intervention):
     """
     Treat acute (symptomatic) subjects.
@@ -36,7 +40,7 @@ class acute_treatment(ss.Intervention):
        - b. previous candidates: acute agents under treatment continue to
             be under treatment until they are no longer acute
     - 1. Of the ones that are eligible to 'seek' treatment today, decide who
-         does and who doesnt't
+         does and who doesnt receive treatment
     - 2. Treat new candidates
     - 3. Count how many people receive treatment today
     """
@@ -109,8 +113,10 @@ class infection_clearence(ss.Intervention):
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.results += ss.Result(self.name, 'n_treated', sim.npts, dtype=int, label="Were treated")  # count how many were treated today, includes new and old patients
-        self.results += ss.Result(self.name, 'n_started_tr', sim.npts, dtype=int, label="Started treatment")  # count how many started treatment today, includes only new patients
+        self.results += ss.Result(self.name, 'n_treated',
+                                  sim.npts, dtype=int, label="Were treated")       # count how many were treated today, includes new and old patients
+        self.results += ss.Result(self.name, 'n_started_tr',
+                                  sim.npts, dtype=int, label="Started treatment")  # count how many started treatment today, includes only new patients
         self.initialized = True
         return
 
@@ -184,9 +190,10 @@ class infection_clearence(ss.Intervention):
         return new_patients, old_patients
 
 
+# -- Diagnostics
 class base_test(ss.Intervention):
     """
-    By default, Finds who is a chronic typhoid carrier. But if eligibility is not
+    By default, find who is a chronic typhoid carrier. But if eligibility is not
     None (default) it will count those uids as 'screened'.
 
     Args:
@@ -231,26 +238,26 @@ class base_test(ss.Intervention):
         return chronic_uids
 
 
-class environmental_intervention(ss.Intervention):
+# -- Environmental interventions
+class WASH(ss.Intervention):
     """
     An environmental intervention that targets one of three different
     factors in transmission. Interventions can impact:
-     - shedding into the contagion population,
-     - CFU dose,
+     - shedding into the contagion population (affects transmission parameter people -> environment)
+     - CFU dose (applied to dose received by each person, or the current CFU level of the environment)
      - and frequency of exposures (lambda in the poisson distribution that produces number of exposures).
 
     Assumes the intervention is applied over an interval of (continuous) time.
     """
 
-    def __init__(self, start_day=None, dur_days=None, pattern=None, target_factor=None, *args, **kwargs):
+    def __init__(self, start_day=None, dur_days=None, pattern=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.start_day = start_day
         self.dur_days = dur_days
-        self.pattern = pattern  # pattern of efficacy of intervention
+        self.pattern = pattern  # (temporal) pattern of efficacy of this intervention
         self.end_day = None
         self.time = None
-        self.target_factor = target_factor if target_factor is not None else 'ppl2pool_shedding_rate'
-        self.ti = 0
+        self.ti = 0  # time index relative to the start of the simulation
         return
 
     def init_pre(self, sim):
@@ -262,8 +269,18 @@ class environmental_intervention(ss.Intervention):
 
         # This is the "time" variable that will be evaluated
         self.time = sc.inclusiverange(0, self.dur_days, sim.dt)
-        self.results += ss.Result(self.name, 'efficacy', len(self.time), dtype=float)  # count how many were treated today, includes new and old patients
+        self.results += ss.Result(self.name, 'efficacy', len(self.time),
+                                  dtype=float)  # count how many were treated today, includes new and old patients
 
+        return
+
+    def apply(self, sim):
+        raise NotImplementedError
+
+
+class shedding_reduction(WASH):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         return
 
     def apply(self, sim):
@@ -271,27 +288,53 @@ class environmental_intervention(ss.Intervention):
             efficacy = self.pattern(self.time[0])
             self.time = self.time[1:]
             reduction = 1.0 - efficacy
-            # TODO: make one intervention per factor, if/else blocks at each timestep can cause unnecesary overhead
-            if self.target_factor in ["shedding_rate", "shedding"]:
-                val = sim.diseases['typhoid'].pars.transmission["ppl2pool_shedding_rate"]
-                sim.diseases['typhoid'].pars.transmission[self.target_factor] = np.max([0, reduction * val])
-            elif self.target_factor.endswith("_exposure_rate"):
-                # It's a Poisson distribution, and assumes parameter exists in the disease module
-                val = sim.diseases['typhoid'].pars.transmission[self.target_factor].pars["lam"]
-                sim.diseases['typhoid'].pars.transmission[self.target_factor].pars["lam"] = np.max([0, reduction * val])
-            elif self.target_factor in ["dose", "cfu_dose", "cfu"]:
-                val = sim.diseases['typhoid'].sv.env_cfu[sim.ti]
-                sim.diseases['typhoid'].sv.env_cfu[sim.ti] = np.max([0, reduction * val])
-            else:
-                errmsg = f"Don't how to handle target_factor {self.target_factor}. target_factor can be 'shedding', 'env2ppl_exposure_rate' or 'dose'."
-                ValueError(errmsg)
-
+            val = sim.diseases['typhoid'].pars.transmission["ppl2pool_shedding_rate"]
+            sim.diseases['typhoid'].pars.transmission["ppl2pool_shedding_rate"] = np.max([0, reduction * val])
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
-
         return
 
 
+class exposure_reduction(WASH):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        return
+
+    def apply(self, sim):
+        if sim.year >= self.start_day and len(self.time):
+            efficacy = self.pattern(self.time[0])
+            self.time = self.time[1:]
+            reduction = 1.0 - efficacy
+            # It's a Poisson distribution, and assumes parameter exists in the disease module
+            val = sim.diseases['typhoid'].pars.transmission["env2ppl_exposure_rate"].pars["lam"]
+            sim.diseases['typhoid'].pars.transmission["env2ppl_exposure_rate"].pars["lam"] = np.max([0, reduction * val])
+            self.results['efficacy'][self.ti] = efficacy
+            self.ti += 1
+        return
+
+
+class policy_changes(WASH):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        return
+
+    def apply(self, sim):
+        if sim.year >= self.start_day and len(self.time):
+            efficacy = self.pattern(self.time[0])
+            self.time = self.time[1:]
+            reduction = 1.0 - efficacy
+            val = sim.diseases['typhoid'].sv.env_cfu[sim.ti]
+            sim.diseases['typhoid'].sv.env_cfu[sim.ti] = np.max([0, reduction * val])
+            self.results['efficacy'][self.ti] = efficacy
+            self.ti += 1
+        return
+
+
+class behavioral_change(WASH):
+    pass
+
+
+# Environmental modulation
 class environmental_seasonality(ss.Intervention):
     """
     Use the mechanism of interventions to increase the number of CFUs in the environment.
@@ -334,7 +377,7 @@ class environmental_seasonality(ss.Intervention):
         return
 
 
-# - Products
+# -- Products
 class infectiousness_redux(ss.Product):
     """
     Reduction in infectiousness. This product is applied to acute cases only
