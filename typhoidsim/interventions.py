@@ -12,10 +12,12 @@ import starsim as ss
 __all__  = ['base_test']
 # Treatments applied to people
 __all__ += ['acute_treatment', 'infection_clearence']
-# Interventions applied to the environment
-__all__ += ['shedding_reduction', 'environmental_seasonality']
+# Interventions applied to the environment or environmental transmission
+__all__ += ['shedding_reduction', 'environmental_cleanup', 'environemental_exposure_reduction',
+            'environmental_seasonality']
 # Products
 __all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vax']
+
 
 # -- Treatments
 class acute_treatment(ss.Intervention):
@@ -267,7 +269,10 @@ class WASH(ss.Intervention):
         if self.dur_days is None:
             self.dur_days = sim.pars['end'] - sim.pars['start']
 
-        # This is the "time" variable that will be evaluated
+        # This is the "time" vector or variable that will be evaluated.
+        # time is the compact support to evaluate the pattern over.
+        # time = 0, represents time relative to the start of the temporal pattern.
+        # so a sin() pattern would always return to 0.0 on its start day (sim.year=pattern_start_day)
         self.time = sc.inclusiverange(0, self.dur_days, sim.dt)
         self.results += ss.Result(self.name, 'efficacy', len(self.time),
                                   dtype=float)  # count how many were treated today, includes new and old patients
@@ -279,6 +284,10 @@ class WASH(ss.Intervention):
 
 
 class shedding_reduction(WASH):
+    """
+    Simulates sanitation interventions such as latrines and sewage disposal.
+    Efficacy for this intervention is a multiplier on the daily shedding amounts.
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         return
@@ -287,15 +296,23 @@ class shedding_reduction(WASH):
         if sim.year >= self.start_day and len(self.time):
             efficacy = self.pattern(self.time[0])
             self.time = self.time[1:]
-            reduction = 1.0 - efficacy
             val = sim.diseases['typhoid'].pars.transmission["ppl2pool_shedding_rate"]
-            sim.diseases['typhoid'].pars.transmission["ppl2pool_shedding_rate"] = np.max([0, reduction * val])
+            sim.diseases['typhoid'].pars.transmission["ppl2pool_shedding_rate"] = np.max([0, (1.0 - efficacy) * val])
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
 
 
-class exposure_reduction(WASH):
+class environemental_exposure_reduction(WASH):
+    """
+    Results in a reduction in frequency of exposure due to interventions such
+    as dietary changes, crop irrigation, health inspections of food vendors.
+
+    Efficacy for this intervention is a multiplier on # exposures. This means
+    that if we want to reduce the n_exposure rate by half throughout the
+    simulation, we have to apply the reduction at a single point in time, because
+    this intervention modifies the model/module parameteter.
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         return
@@ -304,16 +321,15 @@ class exposure_reduction(WASH):
         if sim.year >= self.start_day and len(self.time):
             efficacy = self.pattern(self.time[0])
             self.time = self.time[1:]
-            reduction = 1.0 - efficacy
             # It's a Poisson distribution, and assumes parameter exists in the disease module
             val = sim.diseases['typhoid'].pars.transmission["env2ppl_exposure_rate"].pars["lam"]
-            sim.diseases['typhoid'].pars.transmission["env2ppl_exposure_rate"].pars["lam"] = np.max([0, reduction * val])
+            sim.diseases['typhoid'].pars.transmission["env2ppl_exposure_rate"].pars["lam"] = np.max([0, (1.0 - efficacy) * val])
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
 
 
-class policy_changes(WASH):
+class environmental_cleanup(WASH):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         return
@@ -322,15 +338,18 @@ class policy_changes(WASH):
         if sim.year >= self.start_day and len(self.time):
             efficacy = self.pattern(self.time[0])
             self.time = self.time[1:]
-            reduction = 1.0 - efficacy
-            val = sim.diseases['typhoid'].sv.env_cfu[sim.ti]
-            sim.diseases['typhoid'].sv.env_cfu[sim.ti] = np.max([0, reduction * val])
+            val = sim.diseases['typhoid'].sv.env_cfu[sim.ti-1]
+            r_val = (1.0 - efficacy) * val
+            sim.diseases['typhoid'].sv.env_cfu[sim.ti-1] = r_val
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
 
 
 class behavioral_change(WASH):
+    """Simulates reduction in exposure amount that may be due to behavioral
+    changes (washing vegetables, handwashing). Efficacy for this intervention
+    is a multiplier on the dose."""
     pass
 
 
@@ -358,7 +377,8 @@ class environmental_seasonality(ss.Intervention):
 
         # This is the "time" variable that will be evaluated
         self.time = sc.inclusiverange(0, self.dur_days, sim.dt)
-        self.results += ss.Result(self.name, 'seasonal_cfu', len(self.time), dtype=float, label="Seasonal CFUs")  # additional cfu in the environment due to seasonality
+        self.results += ss.Result(self.name, 'seasonal_cfu',
+                                  len(self.time), dtype=float, label="Seasonal CFUs")  # additional cfu in the environment due to seasonality
         self.initialized = True
 
         return
