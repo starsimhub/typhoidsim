@@ -41,8 +41,11 @@ efficacy_pattern = ty.Pattern("where((var >= start) & (var < start+dur), average
                                   'dur': 1,    #
                                   'average_efficacy': 0.9})
 
+# "Delta" intervention
+efficacy_pattern = ty.Pattern("where((var == 0.0), average_efficacy, 0.0)",
+                              pars={'average_efficacy': 0.9})
 
-my_intervention = ty.environmental_cleanup(pattern=efficacy_pattern, start_day=2500, dur_days=2)
+my_intervention = ty.environmental_cleanup(pattern=efficacy_pattern, start_day=2500, dur_days=1)
 
 sim = ss.Sim(
     pars=pars,
