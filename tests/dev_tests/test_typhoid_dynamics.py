@@ -34,15 +34,15 @@ efficacy_pattern = ty.Pattern("average_efficacy + amp * cos((2*pi/period)*var)",
                                     'period': ty.days_per_year/4,
                                     'pi': 3.141592653589793})
 
-# Square "pulse" intervention
-# efficacy_pattern = ty.Pattern("where((var > start_day) & (var < end_day), average_efficacy, 0.0)",
-#                               pars={
-#                                   'start_day': 100,  # days expressed in number of dats relative to the start of the simulation that is considered to be 0
-#                                   'end_day': 110,    #
-#                                   'average_efficacy': 0.1})
+#Square "pulse" intervention
+efficacy_pattern = ty.Pattern("where((var >= start) & (var < start+dur), average_efficacy, 0.0)",
+                              pars={
+                                  'start': 0,  # days expressed in number of dats relative to the start of the simulation that is considered to be 0
+                                  'dur': 1,    #
+                                  'average_efficacy': 0.9})
 
 
-my_intervention = ty.shedding_reduction(pattern=efficacy_pattern)
+my_intervention = ty.environmental_cleanup(pattern=efficacy_pattern, start_day=2500, dur_days=2)
 
 sim = ss.Sim(
     pars=pars,
