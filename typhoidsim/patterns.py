@@ -174,11 +174,10 @@ class Pattern:
         self._pars['var'] = var
         return ne.evaluate(self.equation, local_dict=self._pars)
 
-    def generate_data(self, vmin=0, vmax=100, step=None):
+    def generate_data(self, vmin=0, vmax=128, step=None):
         """
         NOTE: The variable name of the actual independent variable
         in the equation expression should be named var
-
         """
         if step is None:
             step = float(vmax - vmin) / tyd.default_plot_granularity
@@ -189,13 +188,13 @@ class Pattern:
         y = self.evaluate(var)
         return var.flat, y.flat
 
-    def plot(self, data_kw=None, fig_kw=None, hist_kw=None):
+    def plot(self, data_kw=None, fig_kw=None, var_name=None):
         """Plot the pattern"""
         pl.figure(**sc.mergedicts(fig_kw))
         x, y = self.generate_data(**sc.mergedicts(data_kw))
         pl.plot(x, y)
         pl.title(str(self))
-        pl.xlabel("Var")
+        pl.xlabel(var_name or "var")
         pl.ylabel(f"{self.equation}")
         return
 
