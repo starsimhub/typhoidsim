@@ -1,24 +1,27 @@
 Typhoidsim
 =======
 
-Typhpoisim implements an agent based disease model of Typhoid fever, based on
-the reference implementation of EMOD-Typhoid.
+Typhodisim implements an agent-based disease model of Typhoid fever (caused by S. Typhi).
+This package is part of the starsim family, and needs the starsim framework to run.
+
 
 Installation
 ------------
 
-typhoidsim can be installed
+`typhoidsim` can be installed
 
-- via PyPI:
-   - ``pip installtyphoidsim``.
 - via cloning or downloading the sources from github, and then running:
+   - ``cd typhoidsim``
    - ``pip install -e .`` (don't forget the dot at the end!).
 
+- via PyPI (not available yet):
+   - ``pip install typhoidsim``.
 
 Usage and documentation
 -----------------------
 
 Documentation is available at <PLACEHOLDER>.
+Tutorials (ipython notebooks)
 
 Contributing
 ------------
