@@ -81,7 +81,7 @@ class Typhoid(ss.Infection):
             p_cpg=0.15,    # Base prob of becoming chronic after subclinical or acute with gallstones. Same for female and male, but does not have to be.
             d_chro=ss.bernoulli(p=self.chronic_gall_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection modulated by gallstone prevalence
             p_gall=tyu.load_dataset("gallstone_probs"),    # Probability of having gallstones by age and sex
-            gall_prev=tyu.load_dataset("gallstone_prev"),  # Biological sex gallstone prevalence
+            gall_prev=tyu.load_dataset("gallstone_prev"),  # Biological sex gallstone prevalence (expressed in fraction of the population, value between 0 and 1)
             p_death=ss.bernoulli(p=0.01),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
@@ -499,24 +499,28 @@ class Typhoid(ss.Infection):
 
     @staticmethod
     def chronic_gall_prob_function(module, sim, uids):
-        """ Assumes gallstone probabilities and prevalence are defined"""
+        """
+        Assumes gallstone probabilities and prevalence are defined.
+        This scales p_cpg using prob of having gallstones and gallstone prevalence.
+        """
         mpars = module.pars
         age_ints = tyu.digitize_ages_1yr(sim.people.age[uids])
-        # Scale prob of becoming chronic using prob of having gallstones
-        # TODO: QUESTION: Is this operation ok, multiplying probabilities, or
-        # do we first evaluate whether the agent has gallstones, and then multiply
-        # the state by p_chro, multiplying these probs, makes the effective probability of becoming
-        # chronic given gallstones, incredibly small, compared to the default probability of becoming
-        # chronic (mpars.p_chro), without assuming the presence of gallstones.
-        p_chro = mpars.p_cpg * mpars.p_gall[age_ints, sim.people.female[uids].astype(int)] * mpars.gall_prev[age_ints, sim.people.female[uids].astype(int)]
+        p_chro = mpars.p_cpg * \
+                 mpars.p_gall[age_ints, sim.people.female[uids].astype(int)] * \
+                 mpars.gall_prev[age_ints, sim.people.female[uids].astype(int)]
         return np.array(p_chro)
 
     @staticmethod
     def chronic_prob_function(module, sim, uids):
+        """
+        Does not use gallstone probabilities and prevalence.
+        Uses directly p_cpg as p_chro.
+
+        This method can be useful when either we do not have age and sex
+        gallstone prob and prevalence distributions, or we want to simplify
+        calibration by reducing degrees of freedom.
+        """
         mpars = module.pars
-        # If we don't have age and gender gallstone prob and prevalence distributions,
-        # then use the base p_cpg value for everyone, where p_cpg directly represents
-        # the probability of becoming chronic.
         p_chro = mpars.p_cpg
         return np.array(p_chro)
 
