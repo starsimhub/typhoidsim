@@ -42,7 +42,7 @@ setup(
         'scipy',
         'pandas>=2.0.0',
         'sciris>=3.1.6',
-        'starsim>=1.1.0',
+        'starsim>=1.0.0',
         'matplotlib',
         'numba',
         'networkx',
