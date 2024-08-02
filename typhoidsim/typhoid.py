@@ -78,9 +78,10 @@ class Typhoid(ss.Infection):
             dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, stdev=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
 
             # Long-term stages
-            p_chro=0.15,    # base prob of chronic carrier in the absence of gallstones
-            d_chro=ss.bernoulli(p=self.chronic_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection
-            p_gall=tyu.load_dataset("gallstone_probs"),  # Probability of having gallstones by age and sex
+            p_cpg=0.15,    # Base prob of becoming chronic after subclinical or acute with gallstones. Same for female and male, but does not have to be.
+            d_chro=ss.bernoulli(p=self.chronic_gall_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection modulated by gallstone prevalence
+            p_gall=tyu.load_dataset("gallstone_probs"),    # Probability of having gallstones by age and sex
+            gall_prev=tyu.load_dataset("gallstone_prev"),  # Biological sex gallstone prevalence
             p_death=ss.bernoulli(p=0.01),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
@@ -399,7 +400,7 @@ class Typhoid(ss.Infection):
         sub2chro = (self.subclinical & (self.ti_chronic <= ti)).uids
         self.chronic[sub2chro] = True
         self.subclinical[sub2chro] = False
-        # TODO: verify this assumption about chronic (from subclinical) infectiousness is correct
+        # https://github.com/starsimhub/typhoidsim/issues/53
         self.infectiousness[sub2chro] = self.pars.tai * self.pars.tsri * self.pars.tcri
 
     def progress_to_dead(self, ti):
@@ -497,19 +498,26 @@ class Typhoid(ss.Infection):
         return np.array(p_sus)
 
     @staticmethod
+    def chronic_gall_prob_function(module, sim, uids):
+        """ Assumes gallstone probabilities and prevalence are defined"""
+        mpars = module.pars
+        age_ints = tyu.digitize_ages_1yr(sim.people.age[uids])
+        # Scale prob of becoming chronic using prob of having gallstones
+        # TODO: QUESTION: Is this operation ok, multiplying probabilities, or
+        # do we first evaluate whether the agent has gallstones, and then multiply
+        # the state by p_chro, multiplying these probs, makes the effective probability of becoming
+        # chronic given gallstones, incredibly small, compared to the default probability of becoming
+        # chronic (mpars.p_chro), without assuming the presence of gallstones.
+        p_chro = mpars.p_cpg * mpars.p_gall[age_ints, sim.people.female[uids].astype(int)] * mpars.gall_prev[age_ints, sim.people.female[uids].astype(int)]
+        return np.array(p_chro)
+
+    @staticmethod
     def chronic_prob_function(module, sim, uids):
         mpars = module.pars
-        if mpars.p_gall is not None:
-            age_ints = tyu.digitize_ages_1yr(sim.people.age[uids])
-            # Scale prob of becoming chronic using prob of having gallstones
-            # TODO: QUESTION: Is this operation ok, multiplying probabilities, or
-            # do we first evaluate whether the agent has gallstones, and then multiply
-            # the state by p_chro, multiplying these probs, makes the effective probability of becoming
-            # chronic given gallstones, incredibly small, compared to the default probability of becoming
-            # chronic (mpars.p_chro), without assuming the presence of gallstones.
-            p_chro = mpars.p_chro * mpars.p_gall[age_ints, sim.people.female[uids].astype(int)]
-        else:
-            p_chro = mpars.p_chro
+        # If we don't have age and gender gallstone prob and prevalence distributions,
+        # then use the base p_cpg value for everyone, where p_cpg directly represents
+        # the probability of becoming chronic.
+        p_chro = mpars.p_cpg
         return np.array(p_chro)
 
     def will_become_chronic_carrier(self, uids):

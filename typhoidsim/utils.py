@@ -87,9 +87,13 @@ def load_dataset(ds_name, data_home=None, **kwargs):
       data_home (str/Path, optional): the directory in which to cache data.
       kwargs: additional keyword arguments passed through to `pandas.read_csv`.
 
-    Returns:
+    Returns: data, type depends on dataset
        df(`pandas.DataFrame`): tabular data, with some preprocessing applied
        (depends on the dataset)
+
+       or
+
+       arr(`numpy.ndarray`): array data
 
     """
 
@@ -109,30 +113,18 @@ def load_dataset(ds_name, data_home=None, **kwargs):
 
     match ds_name:
         case "gallstone_probs":
-            # If age_lo and age_hi define an age bin > 1 year, then
-            # this bit inflates the dataset to have a complete range of ages in 1yr bins.
-            # Then transforms the dataframe into an array that can be indexed with
-            # an integer version of agent ages.
-            complete_df = pd.DataFrame({
-                'age': np.concatenate(
-                    [np.arange(lo, hi if pd.notnull(hi) else tyd.max_age) for lo, hi
-                     in df[['age_lo', 'age_hi']].values]),
-                'prob': np.repeat(df['prob'].values,
-                                 df['age_hi'].fillna(tyd.max_age).sub(
-                                     df['age_lo']).astype(int)),
-                'sex': np.repeat(df['sex'].values,
-                                 df['age_hi'].fillna(tyd.max_age).sub(
-                                     df['age_lo']).astype(int))
-            })
-
-            arr = complete_df.pivot(index='age',
-                                    columns='sex',
-                                    values='prob').fillna(0).to_numpy()
-
+            arr = process_gallstone_data(df, coi="prob")
+            return arr
+        case "gallstone_prev":
+            arr = process_gallstone_data(df, coi="prev")
             return arr
         case "prepatent_dur_dist_pars":
             complete_df = df.set_index('parameter').T.to_dict()
             return complete_df
+        case _:
+            mssg = (f"Unknown dataset {ds_name}. Known datasets are 'gallstone_probs',"
+                    f"'gallstone_prev', and 'prepatent_dur_dist_pars")
+            ValueError(mssg)
     return
 
 
@@ -141,3 +133,42 @@ def remove_empty_rows(df):
     if df.iloc[-1].isnull().all():
         df = df.iloc[:-1]
     return df
+
+
+def process_gallstone_data(df, coi="prob"):
+    """
+    Processes gallstone data from csv files.
+    gallstone_probs.csv and gallstone_prev.csv are assumed to have the same
+    structure.
+
+    If age_lo and age_hi define an age bin > 1 year, then this function inflates
+    the dataset to have a complete range of ages in 1yr bins.
+
+    It then transforms the dataframe into an array that can be safely indexed
+    with an integer version of agent ages.
+
+    Arguments:
+      df(`pandas.DataFrame`): datafrme with the data
+      coi(str): column of interest in the dataframe, for gallstone probabilities
+          is "prob"; for gallstone prevalence is "prev".
+
+    Returns: data, type depends on dataset
+       arr(`numpy.ndarray`): array data of size (tyd.max_age x 2)
+    """
+
+    complete_df = pd.DataFrame({
+        'age': np.concatenate(
+            [np.arange(lo, hi if pd.notnull(hi) else tyd.max_age) for lo, hi
+             in df[['age_lo', 'age_hi']].values]),
+        coi: np.repeat(df[coi].values,
+                          df['age_hi'].fillna(tyd.max_age).sub(
+                              df['age_lo']).astype(int)),
+        'sex': np.repeat(df['sex'].values,
+                         df['age_hi'].fillna(tyd.max_age).sub(
+                             df['age_lo']).astype(int))
+    })
+
+    arr = complete_df.pivot(index='age',
+                            columns='sex',
+                            values=coi).fillna(0).to_numpy()
+    return arr
