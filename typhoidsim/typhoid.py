@@ -606,6 +606,7 @@ class Typhoid(ss.Infection):
         # From EMOD:
         # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
         # Contagion is a level of CFU transmitted by the the pool of contagion to a target
+        # This exposes
         new_cases_c, _, _ = super().make_new_cases()
         # Make sure new cases due to contagion contact route get assigned the correct
         # dose of cfu to determine their prepatent duration
@@ -613,14 +614,77 @@ class Typhoid(ss.Infection):
         # high dose prepatent duration, meaning that the characteristic dose a
         # target agent receives has to be set to be at least self.pars.cfu_me_hi + 1
         self.cfu_dose[new_cases_c] = self.pars.cfu_me_hi + 1
+
+
         # Make sure new cases are correctly set up as prepatent (ie, infectiousness levels, etc)
         self.progress_to_prepatent(self.sim.ti)
         # NOTE/TODO: confirm whether self.pars.transmission.exposure_rate_contact.rvs(uids.size)*dt,
         # refers to average daily number of 'contacts' in the contact route
-
+        self.make_new_cases_contact()
         self.make_new_cases_environmental()
 
         return
+
+    def make_new_cases_contact(self):
+        """
+        Add new cases of module, through transmission, incidence, etc.
+
+        Common-random-number-safe transmission code works by mapping edges onto
+        slots.
+        """
+        new_cases = []
+        sources = []
+        networks = []
+        betamap = self._check_betas()
+
+        for i, (nkey, net) in enumerate(self.sim.networks.items()):
+            if not len(net):
+                break
+
+            nbetas = betamap[nkey]
+            edges = net.edges
+
+            rel_trans = self.rel_trans.asnew(self.infectious * self.rel_trans)
+            rel_sus = self.rel_sus.asnew(self.susceptible * self.rel_sus)
+            p1p2b0 = [edges.p1, edges.p2, nbetas[0]]
+            p2p1b1 = [edges.p2, edges.p1, nbetas[1]]
+            for src, trg, beta in [p1p2b0, p2p1b1]:
+
+                # Skip networks with no transmission
+                if beta == 0:
+                    continue
+
+                # Calculate probability of a->b transmission.
+                beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.sim.dt)
+                p_transmit = rel_trans[src] * rel_sus[trg] * beta_per_dt
+
+                # Generate a new random number based on the two other random numbers
+                rvs_s = self.rng_source.rvs(src)
+                rvs_t = self.rng_target.rvs(trg)
+                rvs = ss.combine_rands(rvs_s, rvs_t)
+
+                new_cases_bool = rvs < p_transmit
+                new_cases.append(trg[new_cases_bool])
+                sources.append(src[new_cases_bool])
+                networks.append(
+                    np.full(np.count_nonzero(new_cases_bool), dtype=ss_int_,
+                            fill_value=i))
+
+        # Tidy up
+        if len(new_cases) and len(sources):
+            new_cases = ss.uids.cat(new_cases)
+            new_cases, inds = new_cases.unique(return_index=True)
+            sources = ss.uids.cat(sources)[inds]
+            networks = np.concatenate(networks)[inds]
+        else:
+            new_cases = np.empty(0, dtype=int)
+            sources = np.empty(0, dtype=int)
+            networks = np.empty(0, dtype=int)
+
+        if len(new_cases):
+            self._set_cases(new_cases, sources)
+
+        return new_cases, sources, networks
 
     def make_new_cases_environmental(self):
         """
