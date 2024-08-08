@@ -611,7 +611,8 @@ class Typhoid(ss.Infection):
         # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
         # Contagion is a level of CFU transmitted by the the pool of contagion to a target
         self.make_new_cases_contact()
-        self.make_new_cases_environmental()
+        if self.pars.environmental_transmission:
+            self.make_new_cases_environmental()
         return
 
     def make_new_cases_contact(self):
