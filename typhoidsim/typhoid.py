@@ -97,7 +97,7 @@ class Typhoid(ss.Infection):
             p_resp=ss.bernoulli(p=self.response_prob_function),
 
             # ENVIRONMENT PARAMETERS
-            environmental_transmission=False,  # Whether to allow for environmental transmission or not
+            has_environment=None,
             # Tranmission parameters
             transmission=ss.Pars(
                 beta=1.0,  # Beta environment
@@ -210,9 +210,14 @@ class Typhoid(ss.Infection):
         """
         demographic_modules = self.sim.demographics
         if demographic_modules is not None and len(demographic_modules) > 0:
-            if self.pars.environmental_transmission:
+            try:
                 #TODO: this is a temporary quick way to check that we have the only available environemental module, available in the sim
                 demographic_modules["environmentalpool"]
+                self.pars.has_environment = True
+            except sc.KeyNotFoundError:
+                self.pars.has_environment = False
+                mssg = "'environmentalpool' module not found. Will run simulation without environmental transmission."
+                RuntimeWarning(mssg)
         return
 
     def init_post(self):
@@ -611,8 +616,7 @@ class Typhoid(ss.Infection):
         # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
         # Contagion is a level of CFU transmitted by the the pool of contagion to a target
         self.make_new_cases_contact()
-        if self.pars.environmental_transmission:
-            self.make_new_cases_environmental()
+        self.make_new_cases_environmental()
         return
 
     def make_new_cases_contact(self):
@@ -703,14 +707,10 @@ class Typhoid(ss.Infection):
                 - each agent's infectiousness, which can be modulated by
                 treatment interventions.
         """
-
-        trans_pars = self.pars.transmission
-
-        # Skip all of this if there is no tranmission,
-        # TODO: if environmental transmission is 0, then this parameter should also scale shedding?
-        if trans_pars.beta == 0:
+        if not self.pars.has_environment:
             return []
 
+        trans_pars = self.pars.transmission
         ti = self.sim.ti
         dt = self.sim.dt
         environment = self.sim.demographics['environmentalpool']

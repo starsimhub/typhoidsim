@@ -24,7 +24,7 @@ pars = sc.objdict(
 ppl = ss.People(10000)
 
 # What
-typhoid = ty.Typhoid(pars={'environmental_transmission': True})
+typhoid = ty.Typhoid()
 
 # How
 environment = ty.EnvironmentalPool()
