@@ -92,6 +92,8 @@ class Typhoid(ss.Infection):
             tsri=0.8,    # Typhoid relative (to acute) subclinic infectiousness
             tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
             tppi=0.99,   # Decrease in susceptibility per infection (exponential decrease)
+            drc_alpha=0.175,  # parameter in the Dose Response Curve
+            drc_n50=1.11e6,   # parameter in the Dose Response Curve
             p_resp=ss.bernoulli(p=self.response_prob_function),
 
             # ENVIRONMENT PARAMETERS
@@ -805,7 +807,7 @@ class Typhoid(ss.Infection):
         # NOTE: We could add a mechanisms for immunity waning here
         return
 
-    def drc(self, cfu_dose, alpha=0.175, n50=1.11e6):
+    def drc(self, cfu_dose):
         """
         The probability of infection is mediated by the dose-response curve (drc),
         taking in the contagion population as a value of colony-forming units (CFU)
@@ -822,7 +824,7 @@ class Typhoid(ss.Infection):
         # TODO: parameterise this function via pars. Also this function could
         be user-defined if the environment was a separate module.
         """
-        p_response = 1.0 - (1.0 + cfu_dose * ((2.0**(1.0/alpha) - 1.0)/n50))**(-alpha)
+        p_response = 1.0 - (1.0 + cfu_dose * ((2.0**(1.0/self.pars.drc_alpha) - 1.0)/self.pars.drc_n50))**(-self.pars.drc_alpha)
         return p_response
 
     def update_results(self):
