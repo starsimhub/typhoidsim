@@ -21,7 +21,7 @@ class EnvironmentalPool(ss.Demographics):
             decay_rate=0.3,  # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
             acceptable_level=600,  # CFU/ml
             bs_temp=6,       # Baseline temperature at which bacteria would stop growing, in degree Celsius
-            av_temp=typ.Pattern("av_temp", pars={'av_temp': 21.0}, pattern_name="Environmental Temperature"),
+            av_temp=typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
             b=0.0297,  # fraction of change (increase or decrease) in growth rate/degree Celsius
             transmission=ss.Pars(
                 ppl2env_shedding_rate=0.1,                  # Rate at which infectious people shed colony-forming units to the environment (per day)

@@ -599,7 +599,10 @@ class Typhoid(ss.Infection):
     #  Transmission-realated methods - interaction between agents and "else" (other agents)
     #  or the environment
     def make_new_cases(self):
-        """Add short-cycle transmission and long-cycle transmission transmission"""
+        """
+        Handle transmission of the infections, includes contact and transmission
+        routes
+        """
         # From EMOD:
         # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
         # Contagion is a level of CFU transmitted by the the pool of contagion to a target
@@ -615,7 +618,7 @@ class Typhoid(ss.Infection):
         # NOTE/TODO: confirm whether self.pars.transmission.ppl2ppl_exposure_rate.rvs(uids.size)*dt,
         # refers to average daily number of 'contacts' in the contact route
 
-        #self.make_new_cases_environmental()
+        self.make_new_cases_environmental()
 
         return
 
