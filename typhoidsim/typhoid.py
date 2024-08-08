@@ -94,7 +94,7 @@ class Typhoid(ss.Infection):
             p_resp=ss.bernoulli(p=self.response_prob_function),
 
             # ENVIRONMENT PARAMETERS
-            environmental_transmission=True,  # Whether to allow for environmental transmission or not
+            environmental_transmission=False,  # Whether to allow for environmental transmission or not
             # Tranmission parameters
             transmission=ss.Pars(
                 beta=1.0,  # Beta environment
