@@ -3,69 +3,88 @@ Define environments
 """
 
 import numpy as np
+
 import starsim as ss
-import sciris as sc
-import pandas as pd
 
-__all__ = ['Environment']
+import typhoidsim.patterns as typ
 
 
-class Environment(ss.Module):
-    """
-    A base class for environment modules.
-    """
-    def initialize(self, sim):
-        super().initialize(sim)
-        self.init_results()
-        return
-
-    def init_results(self):
-        pass
-
-    def update(self):
-        pass
-
-    def update_results(self):
-        pass
+__all__ = ['EnvironmentalPool']
 
 
-class Climate(Environment):
-    pass
-
-
-class LongCycleCCVT(Environment):
-    """
-    Contaminated vehicles of transmission
-    """
-
-    def __init__(self, pars=None, *args, **kwargs):
-        """ Initialize with parameters """
+class EnvironmentalPool(ss.Demographics):
+    def __init__(self, pars=None, metadata=None, **kwargs):
         super().__init__()
         self.default_pars(
+            init_prev=ss.bernoulli(0.0),
+            init_cfu=0,      # Initial level of CFUs in the environment.
+            decay_rate=0.3,  # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
+            acceptable_level=600,  # CFU/ml
+            bs_temp=6,       # Baseline temperature at which bacteria would stop growing, in degree Celsius
+            av_temp=typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
+            b=0.0297,  # fraction of change (increase or decrease) in growth rate/degree Celsius
+            transmission=ss.Pars(
+                ppl2env_shedding_rate=0.1,                  # Rate at which infectious people shed colony-forming units to the environment (per day)
+                env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (size ppl)
+            ),
 
-            # Environmental parameters
-            beta=1.0,  #  transmission from environment,
-            half_sat_rate=1_000_000,
-            # Infectious dose in water sufficient to produce infection in X% of exposed agent
-            shedding_rate=10,
-            # Rate at which infectious people shed bacteria to the environment (per day),
-            decay_rate=0.033,
-            # Rate at which bacteria in the environment dies (per day),
-            p_env_transmit=ss.bernoulli(p=0),
-            # Probability of environmental transmission - filled out later
         )
         self.update_pars(pars, **kwargs)
 
-        # Boolean states
-        self.add_states(
-            # Susceptible & infected are added automatically, here we add the rest
-            ss.BoolArr('prevalence'),
-            ss.BoolArr('concentration'),
-            ss.BoolArr('contaminated'),
+        # Track a variable that does not track the state of individual agents, ~and it's not a Result
+        self.sv = typ.StateVariables(self.name)
 
-            # Timepoint states
-            ss.FloatArr('ti_contaminated'),
-        )
+        return
+
+    def init_results(self):
+        npts = self.sim.npts
+        self.results += [
+            ss.Result(self.name, 'temperature', npts, dtype=int, scale=True, label='Environmental temperature'),
+            ss.Result(self.name, 'cfu', npts, dtype=int, scale=True, label='Current CFU levels'),
+        ]
+        return
+
+    def init_pre(self, sim):
+        """ Initialize with sim information """
+        super().init_pre(sim)
+        self.init_svs()
+        self.init_env_pool()  # Initialise the environmental pool of contagion at t-1
+        return
+
+    def init_svs(self):
+        """
+        Initialise StateVariable objects
+        """
+        npts = self.sim.npts
+        self.sv += [typ.StateVariable(self.name, "cfu_level", npts, dtype=float),]
+        self.sv += [typ.StateVariable(self.name, "temperature", npts, dtype=float),]
+        return
+
+    def init_env_pool(self):
+        ti = 0  # initial time step
+        self.sv.cfu_level[ti-1] = self.pars.init_cfu
+        return
+
+    def get_growth_rate(self):
+        sim = self.sim
+        ti = sim.ti
+        p = self.pars
+        self.sv.temperature[ti] = p.av_temp.evaluate(ti)
+        sqr_growth_rate = p.b * (self.sv.temperature[ti] - p.bs_temp)  # fraction of change in CFUs / per day
+        return sqr_growth_rate**2
 
     def update(self):
-        pass
+        sim = self.sim
+        ti = self.sim.ti
+        p = self.pars
+
+        # For external changes that may promote bacterial growth
+        growth_rate = self.get_growth_rate()
+        change_rate = (p.decay_rate-growth_rate)
+        self.sv.cfu_level[ti] = self.sv.cfu_level[ti-1] * np.exp(-change_rate*self.sim.dt)  # + shedded into environment + decay
+        return
+
+    def update_results(self):
+        self.results['cfu'][self.sim.ti] = self.sv.cfu_level[self.sim.ti-1]
+        self.results['temperature'][self.sim.ti] = self.sv.temperature[self.sim.ti]
+        return
