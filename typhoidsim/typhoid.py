@@ -43,7 +43,7 @@ class Typhoid(ss.Infection):
         self.default_pars(
             # Initial conditions and transmissibility beta
             beta=1.0,
-            init_prev=ss.bernoulli(0.001),
+            init_prev=ss.bernoulli(0.01),
 
             # NATURAL HISTORY PARAMETERS
             # From immune (never exposed) to susceptible
@@ -639,14 +639,6 @@ class Typhoid(ss.Infection):
         dt = self.sim.dt
         environment = self.sim.demographics['environmentalpool']
 
-        # Infectious individuals shed contagion into the contagion pool.
-        # Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
-        # or due to sanitation interventions.
-        shedded_cfu = environment.pars.transmission.ppl2pool_shedding_rate * (self.rel_trans[self.infected]*self.infectiousness[self.infected]).sum()
-
-        # CFU level increases due to people shedding into the environment
-        environment.sv.cfu_level[ti - 1] += shedded_cfu
-
         # Determine who gets infected from environment. Multiply by rel_sus, as many interventions will target this parameter
         # This means an agent can become unsusceptible because of an external factor.
         susc = self.susceptible.asnew(self.susceptible * self.rel_sus)
@@ -655,7 +647,7 @@ class Typhoid(ss.Infection):
         # Increase cfu doses in susceptible people by exposing them to the environment
         # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
         self.n_exposures[susc_uids] = trans_pars.env2ppl_exposure_rate.rvs(susc_uids.size) * dt
-        self.cfu_dose[susc_uids] = environment.sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # beta us used to simulate reduction in exposure amount due to behavioural changes
+        self.cfu_dose[susc_uids] = self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1]  * self.n_exposures[susc_uids]  # beta us used to simulate reduction in exposure amount due to behavioural changes
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
@@ -667,6 +659,19 @@ class Typhoid(ss.Infection):
         if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
             self.progress_to_prepatent(ti)
+
+        # Infectious individuals shed contagion into the contagion pool.
+        # Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
+        # or due to sanitation interventions.
+        shedded_cfu = environment.pars.transmission.ppl2env_shedding_rate * (
+                self.rel_trans[self.infected] * self.infectiousness[
+            self.infected]).sum()
+
+        # CFU level increases due to people shedding into the environment
+        self.sim.demographics['environmentalpool'].sv.cfu_level[
+            ti - 1] += shedded_cfu
+
+
         return new_cases
 
     @staticmethod

@@ -17,7 +17,7 @@ class EnvironmentalPool(ss.Demographics):
         super().__init__()
         self.default_pars(
             init_prev=ss.bernoulli(0.0),
-            init_cfu=10_000,      # Initial level of CFUs in the environment.
+            init_cfu=0,      # Initial level of CFUs in the environment.
             decay_rate=0.3,  # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
             acceptable_level=600,  # CFU/ml
             bs_temp=6,       # Baseline temperature at which bacteria would stop growing, in degree Celsius
@@ -85,6 +85,6 @@ class EnvironmentalPool(ss.Demographics):
         return
 
     def update_results(self):
-        self.results['cfu'][self.sim.ti] = self.sv.cfu_level[self.sim.ti]
+        self.results['cfu'][self.sim.ti] = self.sv.cfu_level[self.sim.ti-1]
         self.results['temperature'][self.sim.ti] = self.sv.temperature[self.sim.ti]
         return
