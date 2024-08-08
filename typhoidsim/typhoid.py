@@ -95,12 +95,13 @@ class Typhoid(ss.Infection):
 
             # ENVIRONMENT PARAMETERS
             environmental_transmission=True,  # Whether to allow for environmental transmission or not
-            # Tranmission parameters, temporary living here, until we move environment somwhere else
+            # Tranmission parameters
             transmission=ss.Pars(
                 beta=1.0,  # Beta environment
                 # Interaction parameters between people and environment
                 env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
+                # Interaction parameters for the contact route (people 2 people)
                 ppl2ppl_exposure_rate=ss.poisson(lam=0.18),
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
             ),
@@ -191,13 +192,7 @@ class Typhoid(ss.Infection):
             ss.Result(self.name, "new_chronic", npts, dtype=int, label="New Chronic"),
             ss.Result(self.name, "new_recovered", npts, dtype=int, label="New Recovered"),
             ss.Result(self.name, "new_deaths", npts, dtype=int, label="New Dead"),
-            ss.Result(self.name, "env_cfu", npts, dtype=float, label="Current Environmental CFU"),
         ]
-        return
-
-    def init_env_pool(self):
-        ti = 0  # initial time step
-        self.sv.env_cfu[ti-1] = self.pars.environment.init_cfu
         return
 
     def init_pre(self, sim):
@@ -213,6 +208,7 @@ class Typhoid(ss.Infection):
         demographic_modules = self.sim.demographics
         if demographic_modules is not None and len(demographic_modules) > 0:
             if self.pars.environmental_transmission:
+                #TODO: this is a temporary quick way to check that we have the only available environemental module, available in the sim
                 demographic_modules["environmentalpool"]
         return
 
@@ -625,7 +621,6 @@ class Typhoid(ss.Infection):
 
     def make_new_cases_environmental(self):
         """
-        TODO: this should move to a different module or network
         1. infected individuals shed into the environment (environmental contagion pool grows ↑↑)
         2. individuals get exposed by the environment (increases their n_exposures)
         3. Bacteria in the environment die at a specific rate (contagion pool in environment decays ↓↓)
@@ -646,7 +641,7 @@ class Typhoid(ss.Infection):
         # or due to sanitation interventions.
         shedded_cfu = environment.pars.transmission.ppl2pool_shedding_rate * (self.rel_trans[self.infected]*self.infectiousness[self.infected]).sum()
 
-        # CFU growth due to people shedding into the environment
+        # CFU level increases due to people shedding into the environment
         environment.sv.cfu_level[ti - 1] += shedded_cfu
 
         # Determine who gets infected from environment. Multiply by rel_sus, as many interventions will target this parameter
