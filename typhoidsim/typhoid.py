@@ -8,9 +8,10 @@ import sciris as sc
 import starsim as ss
 
 import typhoidsim.utils as tyu
-import typhoidsim.patterns as typ
 import typhoidsim.defaults as tyd
 import typhoidsim.utils_math as tyum
+
+ss_int_ = ss.dtypes.int
 
 __all__ = ["Typhoid"]
 
@@ -607,7 +608,7 @@ class Typhoid(ss.Infection):
         # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
         # Contagion is a level of CFU transmitted by the the pool of contagion to a target
         # This exposes
-        new_cases_c, _, _ = super().make_new_cases()
+        new_cases_c, _, _ = self.make_new_cases_contact()
         # Make sure new cases due to contagion contact route get assigned the correct
         # dose of cfu to determine their prepatent duration
         # From EMOD: Currently, all infections from the Contact route are assumed to be a
@@ -650,6 +651,7 @@ class Typhoid(ss.Infection):
             p2p1b1 = [edges.p2, edges.p1, nbetas[1]]
             for src, trg, beta in [p1p2b0, p2p1b1]:
 
+                # Transmission of infection
                 # Skip networks with no transmission
                 if beta == 0:
                     continue
@@ -664,6 +666,8 @@ class Typhoid(ss.Infection):
                 rvs = ss.combine_rands(rvs_s, rvs_t)
 
                 new_cases_bool = rvs < p_transmit
+
+                # Append new cases
                 new_cases.append(trg[new_cases_bool])
                 sources.append(src[new_cases_bool])
                 networks.append(
@@ -688,10 +692,25 @@ class Typhoid(ss.Infection):
 
     def make_new_cases_environmental(self):
         """
-        1. infected individuals shed into the environment (environmental contagion pool grows ↑↑)
-        2. individuals get exposed by the environment (increases their n_exposures)
-        3. Bacteria in the environment die at a specific rate (contagion pool in environment decays ↓↓)
+        At each time step:
+        1. Individuals get exposed by the environment (env->ppl)
+            - They receive a cfu dose, which depends on:
+                 - the level of cfu in the environment, and
+                 - the number of exposures to the environment.
+
+        2. New individuals may become infected, based on the cfu dose received
+            and their past history with the disease. This is mediated by the
+            Dose Response Curve. See self.drc(),
+
+        3. Individuals shed bacteria/CFU to the environment. How many CFUs are
+            shedded depends on two main factors:
+                - shedding rate, a single factor that depends on the environment
+                   as it represents level of sanitation and/or collective
+                   change in behaviour.
+                - each agent's infectiousness, which can be modulated by
+                treatment interventions.
         """
+
         trans_pars = self.pars.transmission
 
         # Skip all of this if there is no tranmission,
@@ -711,7 +730,7 @@ class Typhoid(ss.Infection):
         # Increase cfu doses in susceptible people by exposing them to the environment
         # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
         self.n_exposures[susc_uids] = trans_pars.exposure_rate_env.rvs(susc_uids.size) * dt
-        self.cfu_dose[susc_uids] = self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # beta us used to simulate reduction in exposure amount due to behavioural changes
+        self.cfu_dose[susc_uids] = self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # beta is used to simulate reduction in exposure amount due to behavioural changes
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
@@ -732,10 +751,7 @@ class Typhoid(ss.Infection):
             self.infected]).sum()
 
         # CFU level increases due to people shedding into the environment
-        self.sim.demographics['environmentalpool'].sv.cfu_level[
-            ti - 1] += shedded_cfu
-
-
+        self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] += shedded_cfu
         return new_cases
 
     @staticmethod
