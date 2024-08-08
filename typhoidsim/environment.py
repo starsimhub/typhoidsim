@@ -40,11 +40,11 @@ class EnvironmentalPool(Environment):
             init_cfu=0,      # Initial level of CFUs in the environment.
             decay_rate=0.3,  # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
             acceptable_level=600,  # CFU/ml
-            bs_temp=6,       # Baseline temperature at which bacteria would stop growing
+            bs_temp=6,       # Baseline temperature at which bacteria would stop growing, in degree Celsius
             av_temp=typ.Pattern("av_temp", pars={'av_temp': 25.0}, pattern_name="Environmental Temperature"),
-            b=0.0297,
+            b=0.0297,  # fraction of change (increase or decrease) in growth rate/degree Celsius
             transmission=ss.Pars(
-                ppl2env_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day), scaled by individual rel_trans
+                ppl2env_shedding_rate=0.1,                  # Rate at which infectious people shed colony-forming units to the environment (per day)
                 env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (size ppl)
             ),
 
@@ -74,7 +74,7 @@ class EnvironmentalPool(Environment):
         sim = self.sim
         ti = self.sim.ti
         p = self.pars
-        sqr_growth_rate = p.b * (p.av_temp.evaluate(ti) - p.bs_temp)
+        sqr_growth_rate = p.b * (p.av_temp.evaluate(ti) - p.bs_temp)  # fraction of change in CFUs / per day
         return sqr_growth_rate**2
 
     def update(self):

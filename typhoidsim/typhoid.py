@@ -86,7 +86,7 @@ class Typhoid(ss.Infection):
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Infectiousness parameters
-            tai=40_000,  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi
+            tai=40_000,  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
             tpri=0.4,    # Typhoid relative (to acute) prepatent infectiousness
             tsri=0.8,    # Typhoid relative (to acute) subclinic infectiousness
             tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
@@ -94,17 +94,11 @@ class Typhoid(ss.Infection):
             p_resp=ss.bernoulli(p=self.response_prob_function),
 
             # ENVIRONMENT PARAMETERS
-            # State of the environment, environment dynamics and init prevalence due to environment
-            environment=ss.Pars(
-                init_prev=ss.bernoulli(0.0),  # Initial prevalence due to environment
-                init_cfu=0,                   # Initial level of CFUs in the environment.
-                decay_rate=0.3,               # Decay rate of environmental CFUs in 1/day
-            ),
+            environmental_transmission=True,  # Whether to allow for environmental transmission or not
             # Tranmission parameters, temporary living here, until we move environment somwhere else
             transmission=ss.Pars(
                 beta=1.0,  # Beta environment
                 # Interaction parameters between people and environment
-                ppl2pool_shedding_rate=0.1,  # Rate at which infectious people shed colony-forming units to the environment (per day), scaled by individual rel_trans
                 env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
                 ppl2ppl_exposure_rate=ss.poisson(lam=0.18),
@@ -133,7 +127,7 @@ class Typhoid(ss.Infection):
             ss.FloatArr("cfu_dose", 0, label="Exposure amount (CFUs)"),    # exposure amount (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
             ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of cfu during different stages of the disease (infected phase, within host). Could be rel_trans?
             ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
-            ss.FloatArr("p_chronic", label="p(chronic)"),                      # probability of becoming chronic
+            ss.FloatArr("p_chronic", label="p(chronic)"),                       # probability of becoming chronic
             ss.FloatArr("immunity", 1, label="Immunity Level"),            # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
 
             # States that track timing of events
@@ -146,9 +140,6 @@ class Typhoid(ss.Infection):
             ss.FloatArr("ti_recovered", label="Time of recovery"),
             ss.FloatArr("ti_dead", label="Time of death"),
         )
-
-        # Track a variable that does not belong to individual agents
-        self.sv = typ.StateVariables(self.name)
 
         return
 
@@ -202,20 +193,27 @@ class Typhoid(ss.Infection):
             ss.Result(self.name, "new_deaths", npts, dtype=int, label="New Dead"),
             ss.Result(self.name, "env_cfu", npts, dtype=float, label="Current Environmental CFU"),
         ]
-        self.init_svs()
-        return
-
-    def init_svs(self):
-        """
-        Initialise StateVariable objects
-        """
-        npts = self.sim.npts
-        self.sv += [typ.StateVariable(self.name, "env_cfu", npts, dtype=float),]
         return
 
     def init_env_pool(self):
         ti = 0  # initial time step
         self.sv.env_cfu[ti-1] = self.pars.environment.init_cfu
+        return
+
+    def init_pre(self, sim):
+        """ Initialise objects and valid before simulation run"""
+        super().init_pre(sim)
+        self.validate_environment()
+        return
+
+    def validate_environment(self):
+        """
+        Validate environment
+        """
+        demographic_modules = self.sim.demographics
+        if demographic_modules is not None and len(demographic_modules) > 0:
+            if self.pars.environmental_transmission:
+                demographic_modules["environmentalpool"]
         return
 
     def init_post(self):
@@ -238,15 +236,10 @@ class Typhoid(ss.Infection):
             return
 
         if self.pars.init_prev is not None:
-            # Initial cases from person-to-person transmission
-            initial_cases_contact = self.pars.init_prev.filter()
-            self.set_prognoses(initial_cases_contact)
-        if self.pars.environment.init_prev is not None:
-            # Initial cases from environment-to-person transmission
-            initial_cases_env = self.pars.environment.init_prev.filter((self.susceptible).uids)
-            self.set_prognoses(initial_cases_env)
-        self.progress_to_prepatent(self.sim.ti)   # Set the infectiousness of initial cases
-        self.init_env_pool()  # Initialise the environmental pool of contagion at t-1
+            # Initial cases
+            initial_cases = self.pars.init_prev.filter()
+            self.set_prognoses(initial_cases)
+        self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of initial cases
         return
 
     def make_impervious(self):
@@ -626,7 +619,7 @@ class Typhoid(ss.Infection):
         # NOTE/TODO: confirm whether self.pars.transmission.ppl2ppl_exposure_rate.rvs(uids.size)*dt,
         # refers to average daily number of 'contacts' in the contact route
 
-        self.make_new_cases_environmental()
+        #self.make_new_cases_environmental()
 
         return
 
@@ -642,7 +635,9 @@ class Typhoid(ss.Infection):
         ti = self.sim.ti
         dt = self.sim.dt
 
-        # Infectious individuals shed contagion into the contagion pool
+        # Infectious individuals shed contagion into the contagion pool.
+        # Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
+        # or due to sanitation interventions.
         shedded_cfu = trans_pars.ppl2pool_shedding_rate * (self.rel_trans[self.infected]*self.infectiousness[self.infected]).sum()
 
         # Environmental Colony-forming units (CFUs) from the previous time step
@@ -660,6 +655,7 @@ class Typhoid(ss.Infection):
             return []
 
         # Determine who gets infected from environment. Multiply by rel_sus, as many interventions will target this parameter
+        # This means an agent can become unsusceptible because of an external factor.
         susc = self.susceptible.asnew(self.susceptible * self.rel_sus)
         susc_uids = (susc).uids
 
@@ -764,5 +760,4 @@ class Typhoid(ss.Infection):
         res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
-        res.env_cfu[ti] = self.sv.env_cfu[ti]
         return
