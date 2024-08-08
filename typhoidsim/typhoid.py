@@ -596,7 +596,8 @@ class Typhoid(ss.Infection):
             dur_acu = self.get_acute_duration_by_age(dead_uids)
             self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu
 
-        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1  # recover in the next time step, just to make things tidy
+        # Become susceptible in the next time step, just to make things tidy
+        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1
         return
 
     #  Transmission-realated methods - interaction between agents and "else" (other agents)
@@ -609,23 +610,8 @@ class Typhoid(ss.Infection):
         # From EMOD:
         # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
         # Contagion is a level of CFU transmitted by the the pool of contagion to a target
-        # This exposes
-        new_cases_c, _, _ = self.make_new_cases_contact()
-        # Make sure new cases due to contagion contact route get assigned the correct
-        # dose of cfu to determine their prepatent duration
-        # From EMOD: Currently, all infections from the Contact route are assumed to be a
-        # high dose prepatent duration, meaning that the characteristic dose a
-        # target agent receives has to be set to be at least self.pars.cfu_me_hi + 1
-        self.cfu_dose[new_cases_c] = self.pars.cfu_me_hi + 1
-
-
-        # Make sure new cases are correctly set up as prepatent (ie, infectiousness levels, etc)
-        self.progress_to_prepatent(self.sim.ti)
-        # NOTE/TODO: confirm whether self.pars.transmission.exposure_rate_contact.rvs(uids.size)*dt,
-        # refers to average daily number of 'contacts' in the contact route
         self.make_new_cases_contact()
         self.make_new_cases_environmental()
-
         return
 
     def make_new_cases_contact(self):
@@ -646,8 +632,11 @@ class Typhoid(ss.Infection):
             nbetas = betamap[nkey]
             edges = net.edges
 
+            # Relevant for sources
             rel_trans = self.rel_trans.asnew(self.infectious * self.rel_trans)
+            # Relevant for targets
             rel_sus = self.rel_sus.asnew(self.susceptible * self.rel_sus)
+
             p1p2b0 = [edges.p1, edges.p2, nbetas[0]]
             p2p1b1 = [edges.p2, edges.p1, nbetas[1]]
             for src, trg, beta in [p1p2b0, p2p1b1]:
@@ -656,16 +645,18 @@ class Typhoid(ss.Infection):
                 # Skip networks with no transmission
                 if beta == 0:
                     continue
-                # Calculate probability of a->b transmission.
+
+                # In typhoid source->target transmission is guaranteed, but infection is not.
                 beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.sim.dt)
-                p_transmit = rel_trans[src] * rel_sus[trg] * beta_per_dt
 
-                # Generate a new random number based on the two other random numbers
-                rvs_s = self.rng_source.rvs(src)
-                rvs_t = self.rng_target.rvs(trg)
-                rvs = ss.combine_rands(rvs_s, rvs_t)
-
-                new_cases_bool = rvs < p_transmit
+                # Make sure new cases due to contagion contact route get assigned the correct
+                # dose of cfu to determine their prepatent duration
+                # From EMOD: Currently, all infections from the Contact route are assumed to be a
+                # high dose prepatent duration, meaning that the characteristic dose a
+                # target agent receives has to be set to be at least self.pars.cfu_me_hi + 1
+                self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt
+                self.n_exposures[trg] = self.pars.transmission.exposure2contact_rate.rvs(len(trg)) * self.sim.dt
+                new_cases_bool = self.pars.transmission.ppl2ppl_p_inf(trg)
 
                 # Append new cases
                 new_cases.append(trg[new_cases_bool])
@@ -686,7 +677,8 @@ class Typhoid(ss.Infection):
             networks = np.empty(0, dtype=int)
 
         if len(new_cases):
-            self._set_cases(new_cases, sources)
+            self.set_prognoses(new_cases, source_uids=None)
+            self.progress_to_prepatent(self.sim.ti)
 
         return new_cases, sources, networks
 
