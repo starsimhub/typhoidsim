@@ -631,28 +631,23 @@ class Typhoid(ss.Infection):
         3. Bacteria in the environment die at a specific rate (contagion pool in environment decays ↓↓)
         """
         trans_pars = self.pars.transmission
-        env_pars = self.pars.environment
+
+        # Skip all of this if there is no tranmission,
+        # TODO: if environmental transmission is 0, then this parameter should also scale shedding?
+        if trans_pars.beta == 0:
+            return []
+
         ti = self.sim.ti
         dt = self.sim.dt
+        environment = self.sim.demographics['environmentalpool']
 
         # Infectious individuals shed contagion into the contagion pool.
         # Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
         # or due to sanitation interventions.
-        shedded_cfu = trans_pars.ppl2pool_shedding_rate * (self.rel_trans[self.infected]*self.infectiousness[self.infected]).sum()
-
-        # Environmental Colony-forming units (CFUs) from the previous time step
-        cfu_tm1   = self.sv.env_cfu[ti - 1]
+        shedded_cfu = environment.pars.transmission.ppl2pool_shedding_rate * (self.rel_trans[self.infected]*self.infectiousness[self.infected]).sum()
 
         # CFU growth due to people shedding into the environment
-        cfu_total = cfu_tm1 + shedded_cfu
-
-        # Decay CFUs and get net number of CFUS at this time step (include growth due to shedded cfu, and decay)
-        self.sv.env_cfu[ti] = cfu_total * np.exp(-env_pars.decay_rate*dt)
-
-        # Skip if there is no tranmission,
-        # TODO: if environmental transmission is 0, then this parameter should also scale shedding?
-        if trans_pars.beta == 0:
-            return []
+        environment.sv.cfu_level[ti - 1] += shedded_cfu
 
         # Determine who gets infected from environment. Multiply by rel_sus, as many interventions will target this parameter
         # This means an agent can become unsusceptible because of an external factor.
@@ -662,7 +657,7 @@ class Typhoid(ss.Infection):
         # Increase cfu doses in susceptible people by exposing them to the environment
         # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
         self.n_exposures[susc_uids] = trans_pars.env2ppl_exposure_rate.rvs(susc_uids.size) * dt
-        self.cfu_dose[susc_uids] = cfu_total * self.n_exposures[susc_uids]  # beta us used to simulate reduction in exposure amount due to behavioural changes
+        self.cfu_dose[susc_uids] = environment.sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # beta us used to simulate reduction in exposure amount due to behavioural changes
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
