@@ -629,7 +629,6 @@ class Typhoid(ss.Infection):
     def make_new_cases_contact(self):
         """
         Add new cases of module, through transmission, incidence, etc.
-
         Common-random-number-safe transmission code works by mapping edges onto
         slots.
         """
@@ -655,7 +654,6 @@ class Typhoid(ss.Infection):
                 # Skip networks with no transmission
                 if beta == 0:
                     continue
-
                 # Calculate probability of a->b transmission.
                 beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.sim.dt)
                 p_transmit = rel_trans[src] * rel_sus[trg] * beta_per_dt
@@ -729,7 +727,7 @@ class Typhoid(ss.Infection):
 
         # Increase cfu doses in susceptible people by exposing them to the environment
         # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
-        self.n_exposures[susc_uids] = trans_pars.exposure_rate_env.rvs(susc_uids.size) * dt
+        self.n_exposures[susc_uids] = environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) * dt
         self.cfu_dose[susc_uids] = self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # beta is used to simulate reduction in exposure amount due to behavioural changes
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
