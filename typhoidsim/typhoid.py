@@ -216,8 +216,8 @@ class Typhoid(ss.Infection):
                 self.pars.has_environment = True
             except sc.KeyNotFoundError:
                 self.pars.has_environment = False
-                mssg = "'environmentalpool' module not found. Will run simulation without environmental transmission."
-                RuntimeWarning(mssg)
+                msg = "'environmentalpool' module not found. Will run simulation without environmental transmission."
+                ss.warn(msg)
         return
 
     def init_post(self):
