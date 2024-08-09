@@ -24,7 +24,7 @@ class EnvironmentalPool(ss.Demographics):
             av_temp=typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
             b=0.0297,  # fraction of change (increase or decrease) in growth rate/degree Celsius
             transmission=ss.Pars(
-                ppl2env_shedding_rate=0.1,                  # Rate at which infectious people shed colony-forming units to the environment (per day)
+                shedding_rate=0.1,                  # Rate at which infectious people shed colony-forming units to the environment (per day)
                 env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (size ppl)
             ),
 
