@@ -264,6 +264,7 @@ class WASH(ss.Intervention):
         self.end_day = None
         self.time = None
         self.ti = 0  # time index relative to the start of the simulation
+        self.val_baseline = None
         return
 
     def init_pre(self, sim):
