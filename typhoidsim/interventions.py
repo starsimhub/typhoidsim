@@ -7,6 +7,8 @@ import numpy as np
 import sciris as sc
 import starsim as ss
 
+from .patterns import Pattern
+
 # Interventions
 # Diagnostics
 __all__  = ['base_test']
@@ -252,11 +254,11 @@ class WASH(ss.Intervention):
     Assumes the intervention is applied over an interval of (continuous) time.
     """
 
-    def __init__(self, start_day=None, dur_days=None, pattern=None, *args, **kwargs):
+    def __init__(self, start_day=None, dur_days=None, efficacy=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.start_day = start_day
         self.dur_days = dur_days
-        self.pattern = pattern  # (temporal) pattern of efficacy of this intervention
+        self.efficacy_pattern = efficacy  # (temporal) pattern of efficacy of this intervention
         self.end_day = None
         self.time = None
         self.ti = 0  # time index relative to the start of the simulation
@@ -277,6 +279,11 @@ class WASH(ss.Intervention):
         self.results += ss.Result(self.name, 'efficacy', len(self.time),
                                   dtype=float)  # count how many were treated today, includes new and old patients
 
+        if self.efficacy_pattern is None:
+            raise ValueError('No efficacy value or pattern specified')
+        if sc.isnumber(self.efficacy_pattern):
+            self.efficacy_pattern = Pattern("efficacy", pars={'efficacy': self.efficacy_pattern})
+
         return
 
     def apply(self, sim):
@@ -292,12 +299,16 @@ class shedding_reduction(WASH):
         super().__init__(**kwargs)
         return
 
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.val_baseline = sim.demographics['environmentalpool'].pars.transmission["shedding_rate"]
+        return
+
     def apply(self, sim):
         if sim.year >= self.start_day and len(self.time):
-            efficacy = self.pattern(self.time[0])
+            efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            val = sim.diseases['typhoid'].pars.transmission["ppl2pool_shedding_rate"]
-            sim.diseases['typhoid'].pars.transmission["ppl2pool_shedding_rate"] = np.max([0, (1.0 - efficacy) * val])
+            sim.demographics['environmentalpool'].pars.transmission["shedding_rate"] = (1.0 - efficacy) * self.val_baseline
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
