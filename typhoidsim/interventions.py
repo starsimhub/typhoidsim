@@ -17,6 +17,8 @@ __all__ += ['acute_treatment', 'infection_clearence']
 # Interventions applied to the environment or environmental transmission
 __all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposure_reduction',
             'environmental_seasonality']
+# Interventions that are not treatments but change some of the agents properties
+__all__ += ['behavioral_change']
 # Products
 __all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vax']
 
@@ -277,7 +279,9 @@ class WASH(ss.Intervention):
         # so a sin() pattern would always return to 0.0 on its start day (sim.year=pattern_start_day)
         self.time = sc.inclusiverange(0, self.dur_days, sim.dt)
         self.results += ss.Result(self.name, 'efficacy', len(self.time),
-                                  dtype=float)  # count how many were treated today, includes new and old patients
+                                  dtype=float)
+        self.results += ss.Result(self.name, 'effective_value', len(self.time),
+                                  dtype=float)  # The effective value of the parameter that this intervention modulates.
 
         if self.efficacy_pattern is None:
             raise ValueError('No efficacy value or pattern specified')
@@ -362,10 +366,28 @@ class environmental_cleanup(WASH):
 
 
 class behavioral_change(WASH):
-    """Simulates reduction in exposure amount that may be due to behavioral
+    """
+    Simulates reduction in exposure amount that may be due to behavioral
     changes (washing vegetables, handwashing). Efficacy for this intervention
-    is a multiplier on the dose."""
-    pass
+    is a multiplier on the dose.
+
+    In starsim behavioural changes will be represented by a reduction in each
+    agent's relative susceptibility.
+
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        return
+
+    def apply(self, sim):
+        if sim.year >= self.start_day and len(self.time):
+            efficacy = self.efficacy_pattern(self.time[0])
+            self.time = self.time[1:]
+            sim.diseases.typhoid.rel_sus[:] *= (1.0 - efficacy)
+            self.results['efficacy'][self.ti] = efficacy
+            self.ti += 1
+        return
 
 
 # Environmental modulation
@@ -373,11 +395,11 @@ class environmental_seasonality(ss.Intervention):
     """
     Use the mechanism of interventions to increase the number of CFUs in the environment.
     """
-    def __init__(self, start_day=None, dur_days=None, pattern=None, target_factor=None, *args, **kwargs):
+    def __init__(self, start_day=None, dur_days=None, seasonal_pattern=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.start_day = start_day
         self.dur_days = dur_days
-        self.pattern = pattern  # pattern of seasonal cfu
+        self.pattern = seasonal_pattern  # pattern of seasonal cfu
         self.end_day = None
         self.time = None
         self.ti = 0
@@ -402,11 +424,11 @@ class environmental_seasonality(ss.Intervention):
         if sim.year >= self.start_day and len(self.time):
             seasonal_cfu = self.pattern(self.time[0])
             self.time = self.time[1:]
-            val = sim.diseases['typhoid'].sv.env_cfu[sim.ti-1]
+            val = sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1]
 
             # Update the value
             # TODO: this one needs to make sure is always env_cfu >= to avoid negative probs in p_response and p_infection
-            sim.diseases['typhoid'].sv.env_cfu[sim.ti-1] = val + seasonal_cfu
+            sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1] = val + seasonal_cfu
             self.results['seasonal_cfu'][self.ti] = seasonal_cfu
             self.ti += 1
         return
@@ -457,9 +479,10 @@ class infectiousness_clearence(ss.Product):
 class blocking_vax(ss.Product):
     """
     An Acquisition Blocking vaccine that impacts the overall probability of infection after exposure,
-    by modifying the 'susceptibility level' state (typhoid.immunity). If the level is 0, then
-    the agen can't acquire an infection, if the level is, it can acquire the infection -- also
-    depends on other factors
+    by modifying the 'susceptibility level' state (typhoid.immunity). If the immunity level is 0, then
+    the agen can't acquire an infection, if the level is 1.0, it can acquire the infection -- also
+    depends on other factors.
+    # TODO: 'immunity' could simply be captured by relative susceptibility
     """
 
     def __init__(self, pars=None, *args, **kwargs):
