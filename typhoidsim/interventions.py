@@ -328,13 +328,17 @@ class environemental_exposure_reduction(WASH):
         super().__init__(**kwargs)
         return
 
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.val_baseline = sim.diseases['typhoid'].pars.transmission["exposure2env_rate"].pars["lam"]
+        return
+
     def apply(self, sim):
         if sim.year >= self.start_day and len(self.time):
-            efficacy = self.pattern(self.time[0])
+            efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
             # It's a Poisson distribution, and assumes parameter exists in the disease module
-            val = sim.diseases['typhoid'].pars.transmission["env2ppl_exposure_rate"].pars["lam"]
-            sim.diseases['typhoid'].pars.transmission["env2ppl_exposure_rate"].pars["lam"] = np.max([0, (1.0 - efficacy) * val])
+            sim.diseases['typhoid'].pars.transmission["env2ppl_exposure_rate"].pars["lam"] = (1.0 - efficacy) * self.val_baseline
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return

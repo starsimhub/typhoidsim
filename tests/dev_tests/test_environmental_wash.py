@@ -32,7 +32,7 @@ environment = ty.EnvironmentalPool()
 
 sanitation_efficacy = ty.Pattern("efficacy", pars={'efficacy': 0.5})
 
-sanitation = ty.shedding_reduction(efficacy=0.5)
+sanitation = ty.environemental_exposure_reduction(efficacy=0.5)
 
 #
 sim = ss.Sim(
