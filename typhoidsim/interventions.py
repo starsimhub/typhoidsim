@@ -386,6 +386,7 @@ class behavioral_change(WASH):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
             sim.diseases.typhoid.rel_sus[:] *= (1.0 - efficacy)
+            sim.diseases.typhoid.rel_trans[:] *= (1.0 - efficacy)
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
