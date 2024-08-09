@@ -338,7 +338,7 @@ class environmental_exposure_reduction(WASH):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
             # It's a Poisson distribution, and assumes parameter exists in the disease module
-            sim.diseases['typhoid'].pars.transmission["exposure2contact_rate"].pars["lam"] = (1.0 - efficacy) * self.val_baseline
+            sim.diseases['typhoid'].pars.transmission["exposure2env_rate"].pars["lam"] = (1.0 - efficacy) * self.val_baseline
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
