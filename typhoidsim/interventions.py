@@ -15,7 +15,7 @@ __all__  = ['base_test']
 # Treatments applied to people
 __all__ += ['acute_treatment', 'infection_clearence']
 # Interventions applied to the environment or environmental transmission
-__all__ += ['shedding_reduction', 'environmental_cleanup', 'environemental_exposure_reduction',
+__all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposure_reduction',
             'environmental_seasonality']
 # Products
 __all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vax']
@@ -314,7 +314,7 @@ class shedding_reduction(WASH):
         return
 
 
-class environemental_exposure_reduction(WASH):
+class environmental_exposure_reduction(WASH):
     """
     Results in a reduction in frequency of exposure due to interventions such
     as dietary changes, crop irrigation, health inspections of food vendors.
@@ -338,7 +338,7 @@ class environemental_exposure_reduction(WASH):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
             # It's a Poisson distribution, and assumes parameter exists in the disease module
-            sim.diseases['typhoid'].pars.transmission["env2ppl_exposure_rate"].pars["lam"] = (1.0 - efficacy) * self.val_baseline
+            sim.diseases['typhoid'].pars.transmission["exposure2contact_rate"].pars["lam"] = (1.0 - efficacy) * self.val_baseline
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
@@ -351,11 +351,11 @@ class environmental_cleanup(WASH):
 
     def apply(self, sim):
         if sim.year >= self.start_day and len(self.time):
-            efficacy = self.pattern(self.time[0])
+            efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            val = sim.diseases['typhoid'].sv.env_cfu[sim.ti-1]
+            val = sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1]
             r_val = (1.0 - efficacy) * val
-            sim.diseases['typhoid'].sv.env_cfu[sim.ti-1] = r_val
+            sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1] = r_val
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
