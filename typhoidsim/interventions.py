@@ -298,23 +298,40 @@ class WASH(ss.Intervention):
         attr = sim
         for attr_name in self.target_attr_path[:-1]:
             attr = getattr(attr, attr_name)
-        target_attr_name = self.target_attr_path[-1]
-        val = getattr(attr, target_attr_name)
+        target_attr = self.target_attr_path[-1]
+        val = getattr(attr, target_attr)
         return val
 
-    def _set_target_val(self, sim, val):
+    def _get_target_val_arr(self, sim, idx):
+        """Get target value of an attribute that is an interable"""
         attr = sim
         for attr_name in self.target_attr_path[:-1]:
             attr = getattr(attr, attr_name)
-        target_attr_name = self.target_attr_path[-1]
-        setattr(attr, target_attr_name, val)
+        target_attr = self.target_attr_path[-1]
+        val = getattr(attr[idx], target_attr)
         return val
+
+    def _set_target_val_par(self, sim, val):
+        attr = sim
+        for attr_name in self.target_attr_path[:-1]:
+            attr = getattr(attr, attr_name)
+        target_attr = self.target_attr_path[-1]
+        setattr(attr, target_attr, val)
+        return
+
+    def _set_target_val_arr(self, sim, idx, val):
+        attr = sim
+        for attr_name in self.target_attr_path[:-1]:
+            attr = getattr(attr, attr_name)
+        target_attr = self.target_attr_path[-1]
+        target_attr[idx] = val
+        return
 
     def apply(self, sim):
         if sim.year >= self.start and len(self.time):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            self._set_target_val(sim, (1.0 - efficacy) * self.target_baseline)
+            self._set_target_val_par(sim, (1.0 - efficacy) * self.target_baseline)
             self.results['efficacy'][self.ti] = efficacy
             self.results['effective_value'] = (1.0 - efficacy) * self.target_baseline
             self.ti += 1
@@ -338,7 +355,6 @@ class shedding_reduction(WASH):
 
     def apply(self, sim):
         super().apply(sim)
-        breakpoint()
         return
 
 
@@ -358,17 +374,12 @@ class environmental_exposure_reduction(WASH):
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.val_baseline = sim.diseases['typhoid'].pars.transmission["exposure2env_rate"].pars["lam"]
+        self.target_attr_path = ['diseases', 'typhoid', 'pars', 'transmission', 'exposure2env_rate', 'lam']
+        self.target_baseline = super()._get_target_baseline(sim)
         return
 
     def apply(self, sim):
-        if sim.year >= self.start_day and len(self.time):
-            efficacy = self.efficacy_pattern(self.time[0])
-            self.time = self.time[1:]
-            # It's a Poisson distribution, and assumes parameter exists in the disease module
-            sim.diseases['typhoid'].pars.transmission["exposure2env_rate"].pars["lam"] = (1.0 - efficacy) * self.val_baseline
-            self.results['efficacy'][self.ti] = efficacy
-            self.ti += 1
+        super().apply(sim)
         return
 
 
@@ -377,13 +388,18 @@ class environmental_cleanup(WASH):
         super().__init__(**kwargs)
         return
 
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.target_attr_path = ['demographics', 'environmentalpool', 'sv', 'cfu_level']
+        return
+
     def apply(self, sim):
-        if sim.year >= self.start_day and len(self.time):
+        if sim.year >= self.start and len(self.time):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            val = sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1]
+            val = super()._get_target_val_arr(sim, sim.ti-1)
             r_val = (1.0 - efficacy) * val
-            sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1] = r_val
+            super()._set_target_val_arr(sim, sim.ti-1, r_val)
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
@@ -404,12 +420,17 @@ class behavioral_change(WASH):
         super().__init__(**kwargs)
         return
 
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.target_attr_path = ['diseases', 'typhoid', 'rel_sus']
+        return
+
     def apply(self, sim):
-        if sim.year >= self.start_day and len(self.time):
+        if sim.year >= self.start and len(self.time):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            sim.diseases.typhoid.rel_sus[:] *= (1.0 - efficacy)
-            sim.diseases.typhoid.rel_trans[:] *= (1.0 - efficacy)
+            val = super()._get_target_val_arr(sim, Ellipsis)
+            super()._set_target_val_arr(sim, Ellipsis, (1.0 - efficacy)*val)
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
@@ -420,10 +441,10 @@ class environmental_seasonality(ss.Intervention):
     """
     Use the mechanism of interventions to increase the number of CFUs in the environment.
     """
-    def __init__(self, start_day=None, dur_days=None, seasonal_pattern=None, *args, **kwargs):
+    def __init__(self, start=None, dur=None, seasonal_pattern=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.start_day = start_day
-        self.dur_days = dur_days
+        self.start = start
+        self.dur = dur
         self.pattern = seasonal_pattern  # pattern of seasonal cfu
         self.end_day = None
         self.time = None
@@ -432,13 +453,13 @@ class environmental_seasonality(ss.Intervention):
 
     def init_pre(self, sim):
         # starsim base time units are in years, but the base unit of typhpoid is days
-        if self.start_day is None:
-            self.start_day = sim.pars['start']
-        if self.dur_days is None:
-            self.dur_days = sim.pars['end'] - sim.pars['start']
+        if self.start is None:
+            self.start = sim.pars['start']
+        if self.dur is None:
+            self.dur = sim.pars['end'] - sim.pars['start']
 
         # This is the "time" variable that will be evaluated
-        self.time = sc.inclusiverange(0, self.dur_days, sim.dt)
+        self.time = sc.inclusiverange(0, self.dur, sim.dt)
         self.results += ss.Result(self.name, 'seasonal_cfu',
                                   len(self.time), dtype=float, label="Seasonal CFUs")  # additional cfu in the environment due to seasonality
         self.initialized = True
@@ -446,7 +467,7 @@ class environmental_seasonality(ss.Intervention):
         return
 
     def apply(self, sim):
-        if sim.year >= self.start_day and len(self.time):
+        if sim.year >= self.start and len(self.time):
             seasonal_cfu = self.pattern(self.time[0])
             self.time = self.time[1:]
             val = sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1]
@@ -547,5 +568,5 @@ class typhoid_vaccine(ss.Vx):
         if self.pars.leaky:
             people.typhoid.rel_sus[uids] *= 1 - self.pars.efficacy
         else:
-            people.typhpid.rel_sus[uids] *= np.random.binomial(1, 1 - self.pars.efficacy, len(uids))
+            people.typhoid.rel_sus[uids] *= np.random.binomial(1, 1 - self.pars.efficacy, len(uids))
         return
