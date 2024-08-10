@@ -7,6 +7,7 @@ import numpy as np
 import starsim as ss
 
 import typhoidsim.patterns as typ
+import typhoidsim.defaults as tyd
 
 
 __all__ = ['EnvironmentalPool']
@@ -81,6 +82,7 @@ class EnvironmentalPool(ss.Demographics):
         # For external changes that may promote bacterial growth
         growth_rate = self.get_growth_rate()
         change_rate = (p.decay_rate-growth_rate)
+        effective_rate = (change_rate / tyd.day2year)  # transform to yearly rate
         self.sv.cfu_level[ti] = self.sv.cfu_level[ti-1] * np.exp(-change_rate*self.sim.dt)  # + shedded into environment + decay
         return
 
