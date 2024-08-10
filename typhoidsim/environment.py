@@ -83,7 +83,7 @@ class EnvironmentalPool(ss.Demographics):
         growth_rate = self.get_growth_rate()
         change_rate = (p.decay_rate-growth_rate)
         effective_rate = (change_rate / tyd.day2year)  # transform to yearly rate
-        self.sv.cfu_level[ti] = self.sv.cfu_level[ti-1] * np.exp(-change_rate*self.sim.dt)  # + shedded into environment + decay
+        self.sv.cfu_level[ti] = self.sv.cfu_level[ti-1] * np.exp(-effective_rate*self.sim.dt)  # + shedded into environment + decay
         return
 
     def update_results(self):
