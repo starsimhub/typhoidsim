@@ -21,7 +21,7 @@ pars = sc.objdict(
 typhoid = ty.Typhoid()
 
 # Population
-ppl = ss.People(10000)
+ppl = ss.People(10_000)
 
 # Person-to-person interactions
 network = ss.RandomNet({'n_contacts': ss.poisson(lam=0.18)})   # lam represents the average number of daily exposures
@@ -30,21 +30,21 @@ network = ss.RandomNet({'n_contacts': ss.poisson(lam=0.18)})   # lam represents 
 efficacy_pattern = ty.Pattern("average_efficacy + amp * cos((2*pi/period)*var)",
                               pars={'average_efficacy': 0.9,
                                     'amp': 0.1,
-                                    'period': ty.days_per_year/4,
+                                    'period': 0.25,
                                     'pi': 3.141592653589793})
 
 #Square "pulse" intervention
-efficacy_pattern = ty.Pattern("where((var >= start) & (var < start+dur), average_efficacy, 0.0)",
-                              pars={
-                                  'start': 0,  # days expressed in number of dats relative to the start of the simulation that is considered to be 0
-                                  'dur': 1,    #
-                                  'average_efficacy': 0.9})
+# efficacy_pattern = ty.Pattern("where((var >= start) & (var < start+dur), average_efficacy, 0.0)",
+#                               pars={
+#                                   'start': 0,          # expressed in number of years relative to the start of the simulation that is considered to be 0
+#                                   'dur': 2.0/365.0,    # in years
+#                                   'average_efficacy': 0.9})
+#
+# # "Delta" intervention
+# efficacy_pattern = ty.Pattern("where((var == 0.0), average_efficacy, 0.0)",
+#                               pars={'average_efficacy': 0.9})
 
-# "Delta" intervention
-efficacy_pattern = ty.Pattern("where((var == 0.0), average_efficacy, 0.0)",
-                              pars={'average_efficacy': 0.9})
-
-my_intervention = ty.environmental_cleanup(pattern=efficacy_pattern, start_day=2500, dur_days=1)
+my_intervention = ty.environmental_cleanup(efficacy=efficacy_pattern, start_day=2500, dur_days=1)
 
 sim = ss.Sim(
     pars=pars,

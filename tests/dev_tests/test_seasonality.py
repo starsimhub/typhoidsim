@@ -20,21 +20,24 @@ pars = sc.objdict(
 # Disease
 typhoid = ty.Typhoid(pars={'tppi': 0.1})
 
+environment = ty.EnvironmentalPool()
+
 # Population
-ppl = ss.People(10000)
+ppl = ss.People(10_000)
 
 
 # Intervention, reduces the average number of exposures
 seasonal_pattern = ty.Pattern("baseline_cfu + amp_cfu * cos((2*pi/period)*var)",
                               pars={'baseline_cfu': 4_000_000,
                                     'amp_cfu': 1_000_000,
-                                    'period': ty.days_per_year,
+                                    'period': 0.25,  # in years
                                     'pi': 3.141592653589793})
 
 sim = ss.Sim(
     pars=pars,
     diseases=typhoid,
-    interventions=ty.environmental_seasonality(pattern=seasonal_pattern)
+    demographics=environment,
+    interventions=ty.environmental_seasonality(seasonal_pattern=seasonal_pattern)
     )
 
 sim.run()

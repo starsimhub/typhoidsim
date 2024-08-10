@@ -20,7 +20,7 @@ pars = sc.objdict(
 )
 
 # Who
-ppl = ss.People(10000)
+ppl = ss.People(10_000)
 
 # What
 typhoid = ty.Typhoid()
