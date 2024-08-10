@@ -458,6 +458,17 @@ class Typhoid(ss.Infection):
         dur_scl *= tyd.day2year
         return sc.randround(dur_scl / dt)
 
+    def get_wait_duration(self, uids):
+        """
+        Determine how many days a person in the acute stage would wait before
+        seeking treatment
+        """
+        p = self.pars
+        dt = self.sim.dt
+        dur_wait = p.dur_wait2treatment.rvs(uids)
+        dur_wait *= tyd.day2year
+        return sc.randround(dur_wait / dt)
+
     @staticmethod
     def prepatent_mean_dur_function(module, sim, uids):
         """
@@ -564,7 +575,7 @@ class Typhoid(ss.Infection):
 
         # If treatment applied, this is when acute cases would seek treatment, relative
         # to the onset of acute stage. This variable captures human behaviour
-        dur_wait = sc.randround(p.dur_wait2treatment.rvs(acute_uids) / dt)
+        dur_wait = self.get_wait_duration(acute_uids)
         self.ti_seek_trtmnt[acute_uids] = self.ti_acute[acute_uids] + dur_wait
 
         # Chronic/carrier stage: Determine who becomes a (chronic) carrier from acute and sublclinical
@@ -603,8 +614,9 @@ class Typhoid(ss.Infection):
             dur_acu = self.get_acute_duration_by_age(dead_uids)
             self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu
 
-        # Become susceptible in the next time step, just to make things tidy
-        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + 1
+        # Become susceptible the next day, just to make things tidy
+        dur = sc.randround(tyd.day2year / dt)
+        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + dur
         return
 
     #  Transmission-realated methods - interaction between agents and "else" (other agents)
@@ -662,7 +674,7 @@ class Typhoid(ss.Infection):
                 # high dose prepatent duration, meaning that the characteristic dose a
                 # target agent receives has to be set to be at least self.pars.cfu_me_hi + 1
                 self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt
-                self.n_exposures[trg] = self.pars.transmission.exposure2contact_rate.rvs(len(trg)) * self.sim.dt
+                self.n_exposures[trg] = (self.pars.transmission.exposure2contact_rate.rvs(len(trg)) / tyd.day2year) * self.sim.dt
                 new_cases_bool = self.pars.transmission.ppl2ppl_p_inf(trg)
 
                 # Append new cases
@@ -724,7 +736,7 @@ class Typhoid(ss.Infection):
 
         # Increase cfu doses in susceptible people by exposing them to the environment
         # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
-        self.n_exposures[susc_uids] = environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) * dt
+        self.n_exposures[susc_uids] = (environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt  # number of exposured on the time interval "dt"
         self.cfu_dose[susc_uids] = self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # beta is used to simulate reduction in exposure amount due to behavioural changes
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
@@ -741,9 +753,8 @@ class Typhoid(ss.Infection):
         # Infectious individuals shed contagion into the contagion pool.
         # Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
         # or due to sanitation interventions.
-        shedded_cfu = environment.pars.transmission.shedding_rate * (
-                self.rel_trans[self.infected] * self.infectiousness[
-            self.infected]).sum()
+        effective_shedding = ((environment.pars.transmission.shedding_rate / tyd.day2year) * dt)   # transform to yearly rate, then multiply by dt to get the effective shedding on the time interval dt
+        shedded_cfu = effective_shedding * (self.rel_trans[self.infected] * self.infectiousness[self.infected]).sum()
 
         # CFU level increases due to people shedding into the environment
         self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] += shedded_cfu
