@@ -265,7 +265,9 @@ class WASH(ss.Intervention):
         self.end = None
         self.time = None
         self.ti = 0  # time index relative to the start of the simulation
-        self.val_baseline = None
+        self.target_baseline = None  # baseline value of the factor this intervention targets at the start of the simulation
+        self.target_attr_path = None
+        self.target_attr = None
         return
 
     def init_pre(self, sim):
@@ -292,20 +294,29 @@ class WASH(ss.Intervention):
 
         return
 
-    def apply(self, sim):
-        raise NotImplementedError
+    def _get_target_baseline(self, sim):
+        attr = sim
+        for attr_name in self.target_attr_path[:-1]:
+            attr = getattr(attr, attr_name)
+        target_attr_name = self.target_attr_path[-1]
+        val = getattr(attr, target_attr_name)
+        return val
 
-    def apply_changes(self, sim, attr_path):
+    def _set_target_val(self, sim, val):
+        attr = sim
+        for attr_name in self.target_attr_path[:-1]:
+            attr = getattr(attr, attr_name)
+        target_attr_name = self.target_attr_path[-1]
+        setattr(attr, target_attr_name, val)
+        return val
+
+    def apply(self, sim):
         if sim.year >= self.start and len(self.time):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            # Navigate all the way to get the right attribute in sim
-            attr = sim
-            for attr_name in attr_path[:-1]:
-                attr = getattr(attr, attr_name)
-            final_attr_name = attr_path[-1]
-            setattr(attr, final_attr_name, (1.0 - efficacy) * self.val_baseline)
+            self._set_target_val(sim, (1.0 - efficacy) * self.target_baseline)
             self.results['efficacy'][self.ti] = efficacy
+            self.results['effective_value'] = (1.0 - efficacy) * self.target_baseline
             self.ti += 1
         return
 
@@ -321,12 +332,13 @@ class shedding_reduction(WASH):
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.val_baseline = sim.demographics['environmentalpool'].pars.transmission["shedding_rate"]
+        self.target_attr_path = ['demographics', 'environmentalpool', 'pars', 'transmission', 'shedding_rate']
+        self.target_baseline = super()._get_target_baseline(sim)
         return
 
     def apply(self, sim):
-        self.apply_changes(sim, ['demographics', 'environmentalpool',
-                                 'pars', 'transmission', 'shedding_rate'])
+        super().apply(sim)
+        breakpoint()
         return
 
 
@@ -504,4 +516,36 @@ class blocking_vax(ss.Product):
     def administer(self, people, uids):
         """ Apply the vaccine to the requested uids. """
         people.typhoid.immunity[uids] -= self.pars.efficacy * people.typhoid.immunity[uids]
+        return
+
+
+class typhoid_vaccine(ss.Vx):
+    """
+    Create a vaccine product that affects the probability of infection.
+
+    The vaccine can be either "leaky", in which everyone who receives the vaccine
+    receives the same amount of protection (specified by the efficacy parameter)
+    each time they are exposed to an infection. The alternative (leaky=False) is
+    that the efficacy is the probability that the vaccine "takes", in which case
+    that person is 100% protected (and the remaining people are 0% protected).
+
+    Args:
+        efficacy (float): efficacy of the vaccine (0<=efficacy<=1)
+        leaky (bool): see above
+    """
+
+    def __init__(self, pars=None, *args, **kwargs):
+        super().__init__()
+        self.default_pars(
+            efficacy=0.9,
+            leaky=True
+        )
+        self.update_pars(pars, **kwargs)
+        return
+
+    def administer(self, people, uids):
+        if self.pars.leaky:
+            people.typhoid.rel_sus[uids] *= 1 - self.pars.efficacy
+        else:
+            people.typhpid.rel_sus[uids] *= np.random.binomial(1, 1 - self.pars.efficacy, len(uids))
         return
