@@ -8,6 +8,7 @@ import sciris as sc
 import starsim as ss
 
 from .patterns import Pattern
+from .defaults import day2year
 
 # Interventions
 # Diagnostics
@@ -256,12 +257,12 @@ class WASH(ss.Intervention):
     Assumes the intervention is applied over an interval of (continuous) time.
     """
 
-    def __init__(self, start_day=None, dur_days=None, efficacy=None, *args, **kwargs):
+    def __init__(self, start=None, dur=None, efficacy=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.start_day = start_day
-        self.dur_days = dur_days
+        self.start = start
+        self.dur   = dur
         self.efficacy_pattern = efficacy  # (temporal) pattern of efficacy of this intervention
-        self.end_day = None
+        self.end = None
         self.time = None
         self.ti = 0  # time index relative to the start of the simulation
         self.val_baseline = None
@@ -269,16 +270,16 @@ class WASH(ss.Intervention):
 
     def init_pre(self, sim):
         # starsim base time units are in years, but the base unit of typhpoid is days
-        if self.start_day is None:
-            self.start_day = sim.pars['start']
-        if self.dur_days is None:
-            self.dur_days = sim.pars['end'] - sim.pars['start']
+        if self.start is None:
+            self.start = sim.pars['start']
+        if self.dur is None:
+            self.dur = sim.pars['end'] - sim.pars['start']
 
         # This is the "time" vector or variable that will be evaluated.
         # time is the compact support to evaluate the pattern over.
         # time = 0, represents time relative to the start of the temporal pattern.
-        # so a sin() pattern would always return to 0.0 on its start day (sim.year=pattern_start_day)
-        self.time = sc.inclusiverange(0, self.dur_days, sim.dt)
+        # so a sin() pattern would always return a value of 0.0 on its start
+        self.time = sc.inclusiverange(0, self.dur, sim.dt)
         self.results += ss.Result(self.name, 'efficacy', len(self.time),
                                   dtype=float)
         self.results += ss.Result(self.name, 'effective_value', len(self.time),
@@ -293,6 +294,20 @@ class WASH(ss.Intervention):
 
     def apply(self, sim):
         raise NotImplementedError
+
+    def apply_changes(self, sim, attr_path):
+        if sim.year >= self.start and len(self.time):
+            efficacy = self.efficacy_pattern(self.time[0])
+            self.time = self.time[1:]
+            # Navigate all the way to get the right attribute in sim
+            attr = sim
+            for attr_name in attr_path[:-1]:
+                attr = getattr(attr, attr_name)
+            final_attr_name = attr_path[-1]
+            setattr(attr, final_attr_name, (1.0 - efficacy) * self.val_baseline)
+            self.results['efficacy'][self.ti] = efficacy
+            self.ti += 1
+        return
 
 
 class shedding_reduction(WASH):
@@ -310,12 +325,8 @@ class shedding_reduction(WASH):
         return
 
     def apply(self, sim):
-        if sim.year >= self.start_day and len(self.time):
-            efficacy = self.efficacy_pattern(self.time[0])
-            self.time = self.time[1:]
-            sim.demographics['environmentalpool'].pars.transmission["shedding_rate"] = (1.0 - efficacy) * self.val_baseline
-            self.results['efficacy'][self.ti] = efficacy
-            self.ti += 1
+        self.apply_changes(sim, ['demographics', 'environmentalpool',
+                                 'pars', 'transmission', 'shedding_rate'])
         return
 
 
@@ -373,7 +384,7 @@ class behavioral_change(WASH):
     is a multiplier on the dose.
 
     In starsim behavioural changes will be represented by a reduction in each
-    agent's relative susceptibility.
+    agent's relative susceptibility and transmissibility.
 
     """
 
@@ -427,9 +438,6 @@ class environmental_seasonality(ss.Intervention):
             seasonal_cfu = self.pattern(self.time[0])
             self.time = self.time[1:]
             val = sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1]
-
-            # Update the value
-            # TODO: this one needs to make sure is always env_cfu >= to avoid negative probs in p_response and p_infection
             sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1] = val + seasonal_cfu
             self.results['seasonal_cfu'][self.ti] = seasonal_cfu
             self.ti += 1
@@ -462,18 +470,18 @@ class infectiousness_clearence(ss.Product):
 
     def __init__(self, pars=None, *args, **kwargs):
         super().__init__()
-        self.default_pars(clearence_rate=0.2, dt=1.0)  # in fraction of infectiousness CFUs per day that are cleared
+        self.default_pars(clearence_rate=0.2)  # in fraction of infectiousness CFUs per day that are cleared
         self.update_pars(pars, **kwargs)
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.pars.dt = sim.dt
         self.initialized = True
         return
 
     def administer(self, sim, uids):
-        clearence = sim.people.typhoid.infectiousness[uids] * self.pars.clearence_rate * self.pars.dt   # multiply by dt for cases when dt < 1
+        # estimate how many CFUs are cleared in one timestep
+        clearence = sim.people.typhoid.infectiousness[uids] * (self.pars.clearence_rate / day2year) * sim.dt
         sim.people.typhoid.infectiousness[uids] -= clearence
         return
 
