@@ -236,7 +236,7 @@ class Typhoid(ss.Infection):
         # to True by default, so here reset this array to False
         self.make_impervious()
 
-        if self.pars.init_prev is None and self.pars.environment.init_prev is None:
+        if self.pars.init_prev is None:
             return
 
         if self.pars.init_prev is not None:
@@ -434,9 +434,9 @@ class Typhoid(ss.Infection):
     def get_prepatent_duration_by_exposure(self, uids):
         """ Get durations in number of timesteps"""
         dt = self.sim.dt
-        dur_prep = self.pars.dur_prep_dist.rvs(uids.size)
-        # Return in number of timesteps with units (1 timestep / day)
-        return sc.randround(dur_prep/dt)
+        dur_prep = self.pars.dur_prep_dist.rvs(uids.size)  # in days
+        dur_prep *= tyd.day2year  # in years
+        return sc.randround(dur_prep / dt)  # in number of timesteps
 
     def get_acute_duration_by_age(self, uids):
         """
@@ -447,14 +447,16 @@ class Typhoid(ss.Infection):
         """
         p = self.pars
         dt = self.sim.dt
-        dur_acu = p.dur_symp_dist.rvs(uids.size)
-        return sc.randround(dur_acu * (tyd.days_per_week / dt))
+        dur_acu = p.dur_symp_dist.rvs(uids.size) * tyd.days_per_week  # in days
+        dur_acu *= tyd.day2year  # in years
+        return sc.randround(dur_acu / dt)  # in number of timesteps
 
     def get_subclinical_duration_by_age(self, uids):
         p = self.pars
         dt = self.sim.dt
-        dur_scl = p.dur_symp_dist.rvs(uids.size)
-        return sc.randround(dur_scl * (tyd.days_per_week / dt))
+        dur_scl = p.dur_symp_dist.rvs(uids.size) * tyd.days_per_week  # in days
+        dur_scl *= tyd.day2year
+        return sc.randround(dur_scl / dt)
 
     @staticmethod
     def prepatent_mean_dur_function(module, sim, uids):
@@ -813,9 +815,6 @@ class Typhoid(ss.Infection):
         data by QMRA (Enger, 2013), where:
 
         P(response) = 1- [1 + cfu_dose * (2^(1/ α)- 1)/N50] ^(-α)
-
-        # TODO: parameterise this function via pars. Also this function could
-        be user-defined if the environment was a separate module.
         """
         p_response = 1.0 - (1.0 + cfu_dose * ((2.0**(1.0/self.pars.drc_alpha) - 1.0)/self.pars.drc_n50))**(-self.pars.drc_alpha)
         return p_response

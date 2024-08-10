@@ -9,7 +9,8 @@ import sciris as sc
 # Datetime
 months_per_year = 12   # Months per year
 days_per_year   = 365  # Not quite, because of leap years ...
-days_per_week   = 7    #
+days_per_week   = 7.0    #
+day2year        = 1.0 / days_per_year   # A factor to transfor quantities expressed in days, to quantities expressed in years
 
 # Numeric
 tinynum         = np.finfo(np.float64).resolution  # To avoid divisions by-zero
