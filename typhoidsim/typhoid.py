@@ -434,7 +434,7 @@ class Typhoid(ss.Infection):
     def get_prepatent_duration_by_exposure(self, uids):
         """ Get durations in number of timesteps"""
         dt = self.sim.dt
-        dur_prep = self.pars.dur_prep_dist.rvs(uids.size)  # in days
+        dur_prep = self.pars.dur_prep_dist.rvs(uids.size).astype(float)  # in days
         dur_prep *= tyd.day2year  # in years
         return sc.randround(dur_prep / dt)  # in number of timesteps
 
@@ -465,7 +465,7 @@ class Typhoid(ss.Infection):
         """
         p = self.pars
         dt = self.sim.dt
-        dur_wait = p.dur_wait2treatment.rvs(uids)
+        dur_wait = p.dur_wait2treatment.rvs(uids).astype(float)
         dur_wait *= tyd.day2year
         return sc.randround(dur_wait / dt)
 
