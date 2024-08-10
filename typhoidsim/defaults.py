@@ -7,8 +7,8 @@ import sciris as sc
 
 
 # Datetime
-months_per_year = 12   # Months per year
-days_per_year   = 365  # Not quite, because of leap years ...
+months_per_year = 12.0   # Months per year
+days_per_year   = 365.0  # Not quite, because of leap years ...
 days_per_week   = 7.0    #
 day2year        = 1.0 / days_per_year   # A factor to transfor quantities expressed in days, to quantities expressed in years
 
