@@ -21,7 +21,7 @@ __all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposu
 # Interventions that are not treatments but change some of the agents properties
 __all__ += ['behavioral_change']
 # Products
-__all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vax']
+__all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vaccine', 'typhoid_vaccine']
 
 
 # -- Treatments
@@ -262,6 +262,7 @@ class WASH(ss.Intervention):
         self.start = start
         self.dur   = dur
         self.efficacy_pattern = efficacy  # (temporal) pattern of efficacy of this intervention
+        self.efficacy = None,             # current value of efficacy
         self.end = None
         self.time = None
         self.ti = 0  # time index relative to the start of the simulation
@@ -282,9 +283,9 @@ class WASH(ss.Intervention):
         # time = 0, represents time relative to the start of the temporal pattern.
         # so a sin() pattern would always return a value of 0.0 on its start
         self.time = sc.inclusiverange(0, self.dur, sim.dt)
-        self.results += ss.Result(self.name, 'efficacy', len(self.time),
+        self.results += ss.Result(self.name, 'efficacy', sim.npts,
                                   dtype=float)
-        self.results += ss.Result(self.name, 'effective_value', len(self.time),
+        self.results += ss.Result(self.name, 'effective_value', sim.npts,
                                   dtype=float)  # The effective value of the parameter that this intervention modulates.
 
         if self.efficacy_pattern is None:
@@ -328,13 +329,18 @@ class WASH(ss.Intervention):
         return
 
     def apply(self, sim):
+        self.results['effective_value'][sim.ti] = self.target_baseline
         if sim.year >= self.start and len(self.time):
-            efficacy = self.efficacy_pattern(self.time[0])
+            self.efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            self._set_target_val_par(sim, (1.0 - efficacy) * self.target_baseline)
-            self.results['efficacy'][self.ti] = efficacy
-            self.results['effective_value'] = (1.0 - efficacy) * self.target_baseline
+            self._set_target_val_par(sim, (1.0 - self.efficacy) * self.target_baseline)
+            self._update_results(sim)
             self.ti += 1
+        return
+
+    def _update_results(self, sim):
+        self.results['efficacy'][sim.ti] = self.efficacy
+        self.results['effective_value'][sim.ti] = (1.0 - self.efficacy) * self.target_baseline
         return
 
 
@@ -355,6 +361,10 @@ class shedding_reduction(WASH):
 
     def apply(self, sim):
         super().apply(sim)
+        return
+
+    def update_results(self):
+        super().update_results()
         return
 
 
@@ -449,6 +459,7 @@ class environmental_seasonality(ss.Intervention):
         self.end_day = None
         self.time = None
         self.ti = 0
+        self.results = ss.ndict()
         return
 
     def init_pre(self, sim):
@@ -519,7 +530,7 @@ class infectiousness_clearence(ss.Product):
         return
 
 
-class blocking_vax(ss.Product):
+class blocking_vaccine(ss.Product):
     """
     An Acquisition Blocking vaccine that impacts the overall probability of infection after exposure,
     by modifying the 'susceptibility level' state (typhoid.immunity). If the immunity level is 0, then

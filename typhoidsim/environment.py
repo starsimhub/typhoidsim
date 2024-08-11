@@ -18,13 +18,12 @@ class EnvironmentalPool(ss.Demographics):
     def __init__(self, pars=None, metadata=None, **kwargs):
         super().__init__()
         self.default_pars(
-            init_prev=ss.bernoulli(0.0),
-            init_cfu=0,      # Initial level of CFUs in the environment.
-            decay_rate=0.3,  # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
-            acceptable_level=600,  # CFU/ml
-            bs_temp=6.0,       # Baseline temperature at which bacteria would stop growing, in degree Celsius
-            av_temp=14.0, #typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
-            b=0.0297,  # fraction of change (increase or decrease) in growth rate/degree Celsius
+            init_cfu=0,            # Initial level of CFUs in the environment.
+            decay_rate=0.3,        # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
+            acceptable_level=600,  # CFU/ml (not used at the moment)
+            bs_temp=6.0,           # Baseline temperature at which bacteria would stop growing, in degree Celsius
+            av_temp=14.0,          # typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
+            b=0.0297,              # fraction of change (increase or decrease) in growth rate/degree Celsius
             transmission=ss.Pars(
                 shedding_rate=0.1,                  # Rate at which infectious people shed colony-forming units to the environment (per day)
                 env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (size ppl)
@@ -91,5 +90,5 @@ class EnvironmentalPool(ss.Demographics):
 
     def update_results(self):
         self.results['cfu'][self.sim.ti] = self.sv.cfu_level[self.sim.ti-1]
-        self.results['temperature'][self.sim.ti] = self.sv.temperature[self.sim.ti]
+        self.results['temperature'][self.sim.ti] = self.sv.temperature[self.sim.ti-1]
         return
