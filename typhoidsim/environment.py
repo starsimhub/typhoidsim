@@ -5,6 +5,7 @@ Define environments
 import numpy as np
 
 import starsim as ss
+import sciris as sc
 
 import typhoidsim.patterns as typ
 import typhoidsim.defaults as tyd
@@ -21,8 +22,8 @@ class EnvironmentalPool(ss.Demographics):
             init_cfu=0,      # Initial level of CFUs in the environment.
             decay_rate=0.3,  # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
             acceptable_level=600,  # CFU/ml
-            bs_temp=6,       # Baseline temperature at which bacteria would stop growing, in degree Celsius
-            av_temp=typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
+            bs_temp=6.0,       # Baseline temperature at which bacteria would stop growing, in degree Celsius
+            av_temp=14.0, #typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
             b=0.0297,  # fraction of change (increase or decrease) in growth rate/degree Celsius
             transmission=ss.Pars(
                 shedding_rate=0.1,                  # Rate at which infectious people shed colony-forming units to the environment (per day)
@@ -49,7 +50,9 @@ class EnvironmentalPool(ss.Demographics):
         """ Initialize with sim information """
         super().init_pre(sim)
         self.init_svs()
-        self.init_env_pool()  # Initialise the environmental pool of contagion at t-1
+        self.init_env_pool(sim)  # Initialise the environmental pool of contagion at t-1
+        if sc.isnumber(self.pars.av_temp):
+            self.pars.av_temp = typ.Pattern("av_temp", pars={'av_temp': self.pars.av_temp})
         return
 
     def init_svs(self):
@@ -61,9 +64,9 @@ class EnvironmentalPool(ss.Demographics):
         self.sv += [typ.StateVariable(self.name, "temperature", npts, dtype=float),]
         return
 
-    def init_env_pool(self):
+    def init_env_pool(self, sim):
         ti = 0  # initial time step
-        self.sv.cfu_level[ti-1] = self.pars.init_cfu
+        self.sv.cfu_level[sim.ti-1] = self.pars.init_cfu
         return
 
     def get_growth_rate(self):
@@ -83,7 +86,7 @@ class EnvironmentalPool(ss.Demographics):
         growth_rate = self.get_growth_rate()
         change_rate = (p.decay_rate-growth_rate)
         effective_rate = (change_rate / tyd.day2year)  # transform to yearly rate
-        self.sv.cfu_level[ti] = self.sv.cfu_level[ti-1] * np.exp(-effective_rate*self.sim.dt)  # + shedded into environment + decay
+        self.sv.cfu_level[ti-1] = self.sv.cfu_level[ti-2] * np.exp(-effective_rate*self.sim.dt)  # + shedded into environment + decay
         return
 
     def update_results(self):
