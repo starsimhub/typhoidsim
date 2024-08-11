@@ -204,7 +204,6 @@ class base_test(ss.Intervention):
     None (default) it will count those uids as 'screened'.
 
     Args:
-         product        (Product)       : the diagnostic to use
          prob           (float/arr)     : probability of eligible people (chronic) receiving a positive diagnostic
          eligibility    (inds/callable) : indices OR callable that returns inds
          kwargs         (dict)          : passed to Intervention()
@@ -215,7 +214,7 @@ class base_test(ss.Intervention):
         self.prob = sc.promotetoarray(prob)
         self.eligibility = eligibility
         self.coverage_dist = ss.bernoulli(p=self.prob)
-        self.screened = ss.BoolArr('screened')
+        self.screened = ss.BoolArr('screened', default=False)
         self.screens = ss.FloatArr('screens', default=0)
         self.ti_screened = ss.FloatArr('ti_screened')
         return
@@ -241,7 +240,7 @@ class base_test(ss.Intervention):
         return tested_uids
 
     def check_eligibility(self, sim):
-        chronic_uids = (sim.people.typhoid.chronic).uids
+        chronic_uids = (sim.people.typhoid.chronic & ~self.screened).uids
         return chronic_uids
 
 
