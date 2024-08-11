@@ -45,6 +45,7 @@ class Typhoid(ss.Infection):
             # Initial conditions and transmissibility beta
             beta=1.0,
             init_prev=ss.bernoulli(0.01),
+            contagion_pool_prev=ss.bernoulli(0.005),  # individual contagion pool maintained at non-negative value
 
             # NATURAL HISTORY PARAMETERS
             # From immune (never exposed) to susceptible
@@ -243,6 +244,17 @@ class Typhoid(ss.Infection):
             # Initial cases
             initial_cases = self.pars.init_prev.filter()
             self.set_prognoses(initial_cases)
+        self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of initial cases
+        return
+
+    def contagion_pool(self):
+        """ From specs:
+        Individual contagion populations are maintained at non-negative values in all typhoid
+        simulations.
+        """
+        # Initial cases
+        new_cases = self.pars.contagion_pool_prev.filter()   # Use prevalence value
+        self.set_prognoses(new_cases)
         self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of initial cases
         return
 
@@ -629,6 +641,7 @@ class Typhoid(ss.Infection):
         # From EMOD:
         # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
         # Contagion is a level of CFU transmitted by the the pool of contagion to a target
+        self.contagion_pool()
         self.make_new_cases_contact()
         self.make_new_cases_environmental()
         return
