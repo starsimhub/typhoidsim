@@ -45,7 +45,7 @@ class Typhoid(ss.Infection):
             # Initial conditions and transmissibility beta
             beta=1.0,
             init_prev=ss.bernoulli(0.01),
-            contagion_pool_prev=ss.bernoulli(0.005),  # individual contagion pool maintained at non-negative value
+            contagion_pool_prev=ss.bernoulli(0.0),  # individual contagion pool maintained at non-negative value
 
             # NATURAL HISTORY PARAMETERS
             # From immune (never exposed) to susceptible
