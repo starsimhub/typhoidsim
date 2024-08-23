@@ -3,7 +3,6 @@ Test that the current version of Typhoidsim exactly matches
 the baseline results.
 """
 
-import numpy as np
 import sciris as sc
 import starsim as ss
 import typhoidsim as ty
@@ -32,8 +31,7 @@ def make_sim(run=False):
     """
     diseases = [ty.Typhoid()]
     networks = [ ss.RandomNet({'n_contacts': 5})]
-    sim = ss.Sim(pars=pars, networks=networks, diseases=diseases,
-                 demographics=True)
+    sim = ss.Sim(pars=pars, networks=networks, diseases=diseases)
 
     # Optionally run and plot
     if run:
