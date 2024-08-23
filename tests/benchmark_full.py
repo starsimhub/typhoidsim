@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Larger test of sim performance.
+Larger test of sim performance with multi-transmission route.
+If you want to test this script multiple times run
+
+>> bash benchmark_runs.sh benchmark_full.py 10
 """
 
 import sciris as sc
