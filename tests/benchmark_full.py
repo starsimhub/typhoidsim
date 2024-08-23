@@ -7,9 +7,6 @@ import sciris as sc
 import starsim as ss
 import typhoidsim as ty
 
-# Define the parameters
-repeats = 10
-
 
 def make_run_sim(n_agents=100_000):
     # Define high-level simulation parameters
@@ -41,10 +38,6 @@ def make_run_sim(n_agents=100_000):
 
 
 if __name__ == '__main__':
-    T = sc.timer()
-    for r in range(repeats):
-        make_run_sim()
-        T.tt(f'Trial {r + 1}/{repeats}')
-
-    sc.heading(
-        f'Average: {T.mean() * 1000:0.0f} ± {T.std() / len(T) ** 0.5 * 1000:0.0f} ms')
+    sc.tic()
+    sim = make_run_sim()
+    sc.toc()
