@@ -17,7 +17,7 @@ from . import settings as tys
 # Specify all externally visible things this file defines
 __all__ = ['get_data_home', 'load_dataset', 'get_dataset_names']
 __all__ += ['digitize_ages_1yr']
-
+__all__ += ['test_cpu_performance']
 
 @nb.jit((nb.float64[:], ), cache=True, nopython=True)
 def digitize_ages_1yr(ages):
@@ -172,3 +172,21 @@ def process_gallstone_data(df, coi="prob"):
                             columns='sex',
                             values=coi).fillna(0).to_numpy()
     return arr
+
+
+def test_cpu_performance():
+    """ Normalize performance across CPUs """
+    t_bls = []
+    bl_repeats = 50
+    n_outer = 10
+    n_inner = 1e6
+    for r in range(bl_repeats):
+        t0 = sc.tic()
+        for i in range(n_outer):
+            a = np.random.random(int(n_inner))
+            b = np.random.random(int(n_inner))
+            a * b
+        t_bl = sc.toc(t0, output=True)
+        t_bls.append(t_bl)
+    t_bl = min(t_bls)
+    return t_bl  # baseline performance in seconds
