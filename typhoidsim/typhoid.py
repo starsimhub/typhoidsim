@@ -16,7 +16,7 @@ ss_int_ = ss.dtypes.int
 __all__ = ["Typhoid"]
 
 
-class Typhoid(ss.Infection):
+class Typhoid(ss.Disease):
     """
     Typhoid module that includes the natural history of the disease in a human
     agent and also environmental 'state' variables and parameters that
@@ -102,10 +102,10 @@ class Typhoid(ss.Infection):
             # Tranmission parameters
             transmission=ss.Pars(
                 beta=1.0,  # Beta environment
-                # Interaction parameters between people and environment
+                # Behavioural interaction parameters between people and environment
                 exposure2env_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
-                # Interaction parameters for the contact route (people 2 people)
+                # Bejavioural interaction parameters for the contact route (people 2 people)
                 exposure2contact_rate=ss.poisson(lam=0.18),
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
             ),
@@ -118,7 +118,8 @@ class Typhoid(ss.Infection):
         # Boolean states
         self.add_states(
             # Infection life cycle states
-            # Susceptible & infected are added automatically, here we add the rest
+            ss.BoolArr('susceptible', default=False, label='Susceptible'),
+            ss.BoolArr('infected', label='Infectious'),
             ss.BoolArr("immune", True, label="Completely Immune"),
             ss.BoolArr("prepatent", label="Prepatent"),  # Also known as exposed state (incubation stage)
             ss.BoolArr("acute", label="Acute"),
@@ -134,8 +135,10 @@ class Typhoid(ss.Infection):
             ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
             ss.FloatArr("p_chronic", label="p(chronic)"),                       # probability of becoming chronic
             ss.FloatArr("immunity", 1, label="Immunity Level"),            # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
-
+            ss.FloatArr('rel_sus', default=1.0, label='Relative susceptibility'),  # TODO: remove immunity state and use rel_sus instead?
+            ss.FloatArr('rel_trans', default=1.0, label='Relative transmission'),
             # States that track timing of events
+            ss.FloatArr('ti_infected', label='Time of infection'),
             ss.FloatArr("ti_susceptible", label="Start of susceptible state"),
             ss.FloatArr("ti_prepatent", label="Start of prepatent stage"),
             ss.FloatArr("ti_subclinical", label="Start of subclinical stage"),
@@ -146,6 +149,68 @@ class Typhoid(ss.Infection):
             ss.FloatArr("ti_dead", label="Time of death"),
         )
 
+        # Define random number generators for make_new_cases
+        self.rng_target = ss.rand_raw(name='target')
+        self.rng_source = ss.rand_raw(name='source')
+
+        return
+
+    def init_pre(self, sim):
+        """ Initialise objects and valid before simulation run"""
+        super().init_pre(sim)
+        self.validate_beta()
+        self.validate_environment()
+        return
+
+    def validate_beta(self):
+        """
+        Perform any parameter validation
+        """
+        networks = self.sim.networks
+        if networks is not None and len(networks) > 0:
+
+            if 'beta' not in self.pars:
+                errormsg = f'Disease {self.name} is missing beta; pars are: {sc.strjoin(self.pars.keys())}'
+                raise sc.KeyNotFoundError(errormsg)
+
+            # If beta is a scalar, apply this bi-directionally to all networks
+            if sc.isnumber(self.pars.beta):
+                β = self.pars.beta
+                self.pars.beta = sc.objdict(
+                    {k: [β, β] for k in networks.keys()})
+
+            # If beta is a dict, check all entries are bi-directional
+            elif isinstance(self.pars.beta, dict):
+                for k, β in self.pars.beta.items():
+                    if sc.isnumber(β):
+                        self.pars.beta[k] = [β, β]
+        return
+
+    def init_post(self):
+        """
+        Set initial values for states and new cases. This could involve passing in a full
+        set of initial conditions, or using init_prev (initial prevalence), or other.
+
+        Note that this is different to initialization of the Arr objects i.e.,
+        creating their dynamic array, linking them to a People instance.
+        That should have already taken place by the time this method is called.
+        """
+        # NOTE: Typhoid assumes that all individuals are born into an
+        # a class where they cannot get infected, and then
+        # move to the susceptible class at probabilities
+        # for each age.
+
+        # Determines which individuals enter the susceptible class.
+        self.make_susceptible()
+
+        if self.pars.init_prev is None:
+            return
+
+        if self.pars.init_prev is not None:
+            # Initial cases
+            initial_cases = self.pars.init_prev.filter()
+            self.set_prognoses(initial_cases)
+        self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of initial cases
         return
 
     def prepare_partial_prep_funs(self):
@@ -189,6 +254,9 @@ class Typhoid(ss.Infection):
         super().init_results()
         npts = self.sim.npts
         self.results += [
+            ss.Result(self.name, 'prevalence', npts, dtype=float, scale=False, label='Prevalence'),
+            ss.Result(self.name, 'new_infections', npts, dtype=int, scale=True, label='New infections'),
+            ss.Result(self.name, 'cum_infections', npts, dtype=int, scale=True, label='Cumulative infections'),
             ss.Result(self.name, "new_susceptible", npts, dtype=int, label="New Susceptible"),
             ss.Result(self.name, "new_prepatent", npts, dtype=int, label="New Prepatent"),
             ss.Result(self.name, "new_acute", npts, dtype=int, label="New Acute"),
@@ -199,11 +267,30 @@ class Typhoid(ss.Infection):
         ]
         return
 
-    def init_pre(self, sim):
-        """ Initialise objects and valid before simulation run"""
-        super().init_pre(sim)
-        self.validate_environment()
-        return
+    def _check_betas(self):
+        """ Check that there's a network for each beta key """
+        # Ensure keys are lowercase
+        if isinstance(self.pars.beta, dict): # TODO: check if needed
+            self.pars.beta = {k.lower(): v for k, v in self.pars.beta.items()}
+
+        # Create a mapping between beta and networks, and populate it
+        betapars = self.pars.beta
+        betamap = sc.objdict()
+        netkeys = list(self.sim.networks.keys())
+        if netkeys: # Skip if no networks
+            for bkey in betapars.keys():
+                orig_bkey = bkey[:]
+                if bkey in netkeys: # TODO: CK: could tidy up logic
+                    betamap[bkey] = betapars[orig_bkey]
+                else:
+                    if 'net' not in bkey:
+                        bkey += 'net'  # Add 'net' suffix if not already there
+                    if bkey in netkeys:
+                        betamap[bkey] = betapars[orig_bkey]
+                    else:
+                        errormsg = f'No network for beta parameter "{bkey}"; your beta should match network keys:\n{sc.newlinejoin(netkeys)}'
+                        raise ValueError(errormsg)
+        return betamap
 
     def validate_environment(self):
         """
@@ -221,32 +308,6 @@ class Typhoid(ss.Infection):
                 ss.warn(msg)
         return
 
-    def init_post(self):
-        """
-        Set initial values for states and new cases. This could involve passing in a full
-        set of initial conditions, or using init_prev (initial prevalence), or other.
-
-        Note that this is different to initialization of the Arr objects i.e.,
-        creating their dynamic array, linking them to a People instance.
-        That should have already taken place by the time this method is called.
-        """
-        # NOTE: Typhoid may assume that all individuals are born into an
-        # a class where they cannot get infected, and then
-        # move to the susceptible class at probabilities
-        # for each age. The ss.Infection class set the self.susceptible state
-        # to True by default, so here reset this array to False
-        self.make_impervious()
-
-        if self.pars.init_prev is None:
-            return
-
-        if self.pars.init_prev is not None:
-            # Initial cases
-            initial_cases = self.pars.init_prev.filter()
-            self.set_prognoses(initial_cases)
-        self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of initial cases
-        return
-
     def contagion_pool(self):
         """ From specs:
         Individual contagion populations are maintained at non-negative values in all typhoid
@@ -258,29 +319,20 @@ class Typhoid(ss.Infection):
         self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of initial cases
         return
 
-    def make_impervious(self):
-        """
-        Individuals that are created through births in the model should start out in a
-        fully immune state.
-        #TODO: This may not be needed any more if Typhoid is derived directly
-        from starsim.Disease rather than from Infection, which by default
-        assumes every agent starts in a susceptible state.
-        """
-        eligible = self.sim.people.age < self.pars.sus_saturation_age
-        self.immune[eligible] = True
-        self.susceptible[eligible] = False
-
     # Methods that are specific to a single stage of infection
     def make_susceptible(self):
         """
+        Age-based susceptibility.
+
         From Gauld et al. 2018:
         'Our model assumes all individuals are born into an unexposed/immune class
         and move to the susceptible class at probabilities for each age.
         Specifically, at each *month of age* a fitted curve determines the
         probability of an individual entering the susceptible class.
 
-        The curve is anchored at 0% exposure at birth, and 100% exposure at age
-        20 years, with a free slope parameter (S) determining the concavity/shape
+        The curve is anchored at 0% (susceptible to) exposure at birth,
+        and 100% (susceptible to) exposure at age 20 years,
+        with a free slope parameter (S) determining the concavity/shape
         of the function (Fig 2B).'
 
 
@@ -354,7 +406,10 @@ class Typhoid(ss.Infection):
         """
 
         ti = self.sim.ti  # current timestep
+
         # Check who becomes susceptible in this timestep age 0-20
+        # TODO: Handle the case where there is no aging, or document that vital dynamics be enabled for typhoid simulations.
+        # If the population does not age, then over a long simulation, eventually all people aged 0-20 will transition to the susceptible state.
         self.make_susceptible()
 
         # Age-based susceptibility in children <= 6 years old
@@ -847,6 +902,9 @@ class Typhoid(ss.Infection):
         super().update_results()
         res = self.results
         ti = self.sim.ti
+        res.prevalence[ti] = res.n_infected[ti] / np.count_nonzero(self.sim.people.alive)
+        res.new_infections[ti] = np.count_nonzero(self.ti_infected == ti)
+        res.cum_infections[ti] = np.sum(res['new_infections'][:ti+1])
         res.new_susceptible[ti] = np.count_nonzero(self.ti_susceptible == ti)
         res.new_prepatent[ti] = np.count_nonzero(self.ti_prepatent == ti)
         res.new_acute[ti] = np.count_nonzero(self.ti_acute == ti)
