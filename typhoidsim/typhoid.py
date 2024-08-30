@@ -49,10 +49,10 @@ class Typhoid(ss.Disease):
 
             # NATURAL HISTORY PARAMETERS
             # From immune (never exposed) to susceptible
-            p_imm2sus_6m=ss.bernoulli(p=0.14),  # Proportion of immune population at 6 months that moves to susceptible state
-            p_imm2sus_3y=ss.bernoulli(p=0.29),  # Proportion of immune population at 3 years that moves to susceptible state
-            p_imm2sus_6y=ss.bernoulli(p=0.61),  # Proportion of immune population at 6 years that moves to susceptible state
-            p_imm2sus=ss.bernoulli(p=self.susceptibility_prob_function),
+            p_unexp2sus_6m=ss.bernoulli(p=0.14),  # Proportion of immune population at 6 months that moves to susceptible state
+            p_unexp2sus_3y=ss.bernoulli(p=0.29),  # Proportion of immune population at 3 years that moves to susceptible state
+            p_unexp2sus_6y=ss.bernoulli(p=0.61),  # Proportion of immune population at 6 years that moves to susceptible state
+            p_unexp2sus=ss.bernoulli(p=self.susceptibility_prob_function),
             sus_saturation_age=20.0,  # Age (years) after which agents are 100% susceptible
             sus_age_exposure_slope=1.0,
 
@@ -347,7 +347,7 @@ class Typhoid(ss.Disease):
         """
 
         never_exposed = (self.unexposed).uids
-        self.susceptible[never_exposed] = self.pars.p_imm2sus.rvs(never_exposed)
+        self.susceptible[never_exposed] = self.pars.p_unexp2sus.rvs(never_exposed)
         self.unexposed[never_exposed] = ~self.susceptible[never_exposed]
         return
 
@@ -371,13 +371,13 @@ class Typhoid(ss.Disease):
         uids_6y = ((self.sim.people.age >= _6y) &
                    ((self.sim.people.age - self.sim.dt) < _6y)).uids
 
-        self.susceptible[uids_6m] = self.pars.p_imm2sus_6m(uids_6m)
+        self.susceptible[uids_6m] = self.pars.p_unexp2sus_6m(uids_6m)
         self.unexposed[uids_6m] = ~self.susceptible[uids_6m]
 
-        self.susceptible[uids_3y] = self.pars.p_imm2sus_3y(uids_3y)
+        self.susceptible[uids_3y] = self.pars.p_unexp2sus_3y(uids_3y)
         self.unexposed[uids_3y] = ~self.susceptible[uids_3y]
 
-        self.susceptible[uids_6y] = self.pars.p_imm2sus_6y(uids_6y)
+        self.susceptible[uids_6y] = self.pars.p_unexp2sus_6y(uids_6y)
         self.unexposed[uids_6y] = ~self.susceptible[uids_6y]
         return
 
