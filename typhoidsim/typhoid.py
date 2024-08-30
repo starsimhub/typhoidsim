@@ -118,9 +118,9 @@ class Typhoid(ss.Disease):
         # Boolean states
         self.add_states(
             # Infection life cycle states
-            ss.BoolArr('susceptible', default=False, label='Susceptible'),
-            ss.BoolArr('infected', label='Infectious'),
-            ss.BoolArr("immune", True, label="Completely Immune"),
+            ss.BoolArr("susceptible", default=False, label="Susceptible"),
+            ss.BoolArr("infected", label="Infectious"),
+            ss.BoolArr("unexposed", True, label="Unexposed"),  # People are born into this state, naive and never exposed
             ss.BoolArr("prepatent", label="Prepatent"),  # Also known as exposed state (incubation stage)
             ss.BoolArr("acute", label="Acute"),
             ss.BoolArr("subclinical", label="Subclinical"),
@@ -325,7 +325,7 @@ class Typhoid(ss.Disease):
         Age-based susceptibility.
 
         From Gauld et al. 2018:
-        'Our model assumes all individuals are born into an unexposed/immune class
+        'Our model assumes all individuals are born into an unexposed class
         and move to the susceptible class at probabilities for each age.
         Specifically, at each *month of age* a fitted curve determines the
         probability of an individual entering the susceptible class.
@@ -346,9 +346,9 @@ class Typhoid(ss.Disease):
         This is referred to as age-specific immunity.
         """
 
-        never_exposed = (self.immune).uids
+        never_exposed = (self.unexposed).uids
         self.susceptible[never_exposed] = self.pars.p_imm2sus.rvs(never_exposed)
-        self.immune[never_exposed] = ~self.susceptible[never_exposed]
+        self.unexposed[never_exposed] = ~self.susceptible[never_exposed]
         return
 
     def increase_childhood_susceptibility(self):
@@ -357,9 +357,9 @@ class Typhoid(ss.Disease):
         Not currently used by default
         """
         # Santiago case:
-        _6m = 0.5 * tyd.days_per_year  # in days
-        _3y = 3.0 * tyd.days_per_year  # in days
-        _6y = 6.0 * tyd.days_per_year  # in days
+        _6m = 0.5  # age in years
+        _3y = 3.0  # age in years
+        _6y = 6.0  # age in years
 
         # Detect 'age' anniversaries
         uids_6m = ((self.sim.people.age >= _6m) &
@@ -372,13 +372,13 @@ class Typhoid(ss.Disease):
                    ((self.sim.people.age - self.sim.dt) < _6y)).uids
 
         self.susceptible[uids_6m] = self.pars.p_imm2sus_6m(uids_6m)
-        self.immune[uids_6m] = ~self.susceptible[uids_6m]
+        self.unexposed[uids_6m] = ~self.susceptible[uids_6m]
 
         self.susceptible[uids_3y] = self.pars.p_imm2sus_3y(uids_3y)
-        self.immune[uids_3y] = ~self.susceptible[uids_3y]
+        self.unexposed[uids_3y] = ~self.susceptible[uids_3y]
 
         self.susceptible[uids_6y] = self.pars.p_imm2sus_6y(uids_6y)
-        self.immune[uids_6y] = ~self.susceptible[uids_6y]
+        self.unexposed[uids_6y] = ~self.susceptible[uids_6y]
         return
 
     def update_death(self, uids):
@@ -428,7 +428,7 @@ class Typhoid(ss.Disease):
     # Methods that handle transitions between states
     def progress_to_prepatent(self, ti):
         susc2prep = (self.prepatent & (self.ti_prepatent <= ti)).uids
-        self.immune[susc2prep] = False
+        self.unexposed[susc2prep] = False
         self.susceptible[susc2prep] = False
         # N_i: number of prior infections,
         # used to determine the probability of becoming
@@ -619,7 +619,7 @@ class Typhoid(ss.Disease):
 
         # Set value of states associated to being infected, and record events
         self.susceptible[uids] = False
-        self.immune[uids] = False
+        self.unexposed[uids] = False
         self.infected[uids] = True
         self.prepatent[uids] = True
         self.ti_prepatent[uids] = ti
