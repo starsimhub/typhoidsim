@@ -393,7 +393,7 @@ class Typhoid(ss.Disease):
             "recovered",
         ]:
             self.statesdict[state][uids] = False
-        self.statesdict["immune"][uids] = True
+        self.statesdict["unexposed"][uids] = False
         return
 
     # Update progression of disease, handle transitions
