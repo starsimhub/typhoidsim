@@ -16,7 +16,7 @@ ss_int_ = ss.dtypes.int
 # The disease module
 __all__ = ["Typhoid"]
 # Context-specific functions that can be used as parameters of the Typhoid module
-__all__ += ["unexp2susc_prob_function_gauld2018"]
+__all__ += ["unexp2sus_youth_prob_function_gauld2018"]
 
 
 class Typhoid(ss.Disease):
@@ -323,28 +323,31 @@ class Typhoid(ss.Disease):
     # Methods that are specific to a single stage of infection
     def make_susceptible(self):
         """
-        Age-based susceptibility.
+        Our model assumes all individuals are born into an unexposed, completely
+        immune state and move to the susceptible class at probabilities.
 
-        From Gauld et al. 2018:
-        'Our model assumes all individuals are born into an unexposed class
-        and move to the susceptible class at probabilities for each age.
-        Specifically, at each *month of age* a fitted curve determines the
-        probability of an individual entering the susceptible class.
+        The mechanism that moves individuals from one state to the other,
+        can depend on age and/or other factors.
 
-        The curve is anchored at 0% (susceptible to) exposure at birth,
-        and 100% (susceptible to) exposure at age 20 years,
-        with a free slope parameter (S) determining the concavity/shape
-        of the function (Fig 2B).'
+        By default, we do not assume any age-specific structure. Thus, agents are
+        born into the unexposed state and move immediately to the susceptible
+        state.
 
+        However, there are a couple of predefined age-specific susceptibilty
+        probabilty functions implemented:
+         - unexp2sus_youth_prob_function_gauld2018()
+         - unexp2sus_childhood_prob_function_gauld2018()
 
-        From:
+        These function can be passed as arguments to the Typhoid parameter. For
+        instance:
+
+           >> p_unexp2sus=ss.bernoulli(p=unexp2sus_youth_prob_function_gauld2018),
+        or
+           >> p_unexp2sus=ss.bernoulli(p=unexp2sus_childhood_prob_function_gauld2018),
+
+        See Also:
         https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/SusceptibilityTyphoid.cpp
 
-        NOTE:
-        Fraction of children that become susceptible upon reaching a certain
-        age threhsold.
-
-        This is referred to as age-specific immunity.
         """
 
         never_exposed = (self.unexposed).uids
@@ -352,35 +355,6 @@ class Typhoid(ss.Disease):
         self.unexposed[never_exposed] = ~self.susceptible[never_exposed]
         return
 
-    def increase_childhood_susceptibility(self):
-        """
-        Age-based susceptiblity used in the Santiago de Chile case.
-        Not currently used by default
-        """
-        # Santiago case:
-        _6m = 0.5  # age in years
-        _3y = 3.0  # age in years
-        _6y = 6.0  # age in years
-
-        # Detect 'age' anniversaries
-        uids_6m = ((self.sim.people.age >= _6m) &
-                  ((self.sim.people.age - self.sim.dt) < _6m)).uids
-
-        uids_3y = ((self.sim.people.age >= _3y) &
-                   ((self.sim.people.age - self.sim.dt) < _3y)).uids
-
-        uids_6y = ((self.sim.people.age >= _6y) &
-                   ((self.sim.people.age - self.sim.dt) < _6y)).uids
-
-        self.susceptible[uids_6m] = self.pars.p_unexp2sus_6m(uids_6m)
-        self.unexposed[uids_6m] = ~self.susceptible[uids_6m]
-
-        self.susceptible[uids_3y] = self.pars.p_unexp2sus_3y(uids_3y)
-        self.unexposed[uids_3y] = ~self.susceptible[uids_3y]
-
-        self.susceptible[uids_6y] = self.pars.p_unexp2sus_6y(uids_6y)
-        self.unexposed[uids_6y] = ~self.susceptible[uids_6y]
-        return
 
     def update_death(self, uids):
         """Reset states for dead agents"""
@@ -917,16 +891,15 @@ class Typhoid(ss.Disease):
 
 
 # Functions that are typhoid-specific but are context dependent (ie, location)
-def unexp2susc_prob_function_gauld2018(module, sim, uids, sus_saturation_age=50.0,
-                                       sus_age_exposure_slope=0.5):
+def unexp2sus_youth_prob_function_gauld2018(module, sim, uids, sus_saturation_age=50.0,
+                                            sus_age_exposure_slope=0.5):
     """
     Estimate the age-dependent probability of transistioning from
-    unexposed to susceptible, from Gauld et al 2018
-    (Santiago de Chile case).
+    unexposed to susceptible. From Gauld et al 2018, Fig. 2B.
 
     Args:
         module: a startsim (disease) Module
-        sim: the Sim object
+        sim: the starsim Sim object (fully initialised)
         uids: the uids of the eligible people
 
         # Parameters for age-based transition from unexposed to susceptible (Gauld et al. 2018)
@@ -938,3 +911,59 @@ def unexp2susc_prob_function_gauld2018(module, sim, uids, sus_saturation_age=50.
     """
     p_sus = tyum.sigmoid(sim.people.age[uids], sus_saturation_age, sus_age_exposure_slope)
     return np.array(p_sus)
+
+
+def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
+    """
+    Estimate the age-dependent probability of transistioning from
+    unexposed to susceptible. From Gauld et al 2018, Fig. 2B.
+
+    Age-specific immunity. Individuals that are created through births in the model
+    start out in a fully immune state. For the Santiago-site simulation,
+    there are three ages that individuals can move from immune (unexposed)
+    to susceptible:
+     - 6 months (no children under 6 months of age can be infected).
+         - Need to define the distribution parameter
+             p_unexp2sus_6m=ss.bernoulli(p=0.14)
+     - 3 years
+         - Need to define the distribution parameter
+             p_unexp2sus_3y=ss.bernoulli(p=0.29),
+     - 6 years
+         - Need to define the distribution parameter
+            p_unexp2sus_6y=ss.bernoulli(p=0.61)
+
+     At each of these ages, a proportion of the remaining unexposed
+     population will be moved to the susceptible population determined
+     by the calibrated values below
+
+    Args:
+        module: a startsim (disease) Module
+        sim: the starsim Sim object (fully initialised)
+        uids: the uids of the eligible people
+
+    Returns:
+        p_sus (array): array of probabilities for every agent in uids.
+    """
+
+    p_sus = np.zeros(len(uids))
+
+    # Santiago de Chile cas
+    _6m = 0.5  # age in years, assumes end of maternal antibodies at 6 months
+    _3y = 3.0  # age in years
+    _6y = 6.0  # age in years
+
+    # Detect whether people have reached/crossed their 'age' anniversaries
+    became_6m = _detect_age_anniversary(sim, _6m)
+    became_3y = _detect_age_anniversary(sim, _3y)
+    became_6y = _detect_age_anniversary(sim, _6y)
+    p_sus[became_6m] = module.pars.p_unexp2sus_6m(uids[became_6m]).astype(float)
+    p_sus[became_3y] = module.pars.p_unexp2sus_3y(uids[became_3y]).astype(float)
+    p_sus[became_6y] = module.pars.p_unexp2sus_3y(uids[became_6y]).astype(float)
+    return p_sus
+
+
+def _detect_age_anniversary(sim, age_anniversary):
+    # Detect people who crossed their age_anniversary. Returns Boolean array
+    reached_anniv = (((sim.people.age - sim.dt) < age_anniversary) &
+                    (sim.people.age >= age_anniversary))
+    return reached_anniv
