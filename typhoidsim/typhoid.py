@@ -13,7 +13,10 @@ import typhoidsim.utils_math as tyum
 
 ss_int_ = ss.dtypes.int
 
+# The disease module
 __all__ = ["Typhoid"]
+# Context-specific functions that can be used as parameters of the Typhoid module
+__all__ += ["unexp2susc_prob_function_gauld2018"]
 
 
 class Typhoid(ss.Disease):
@@ -49,12 +52,10 @@ class Typhoid(ss.Disease):
 
             # NATURAL HISTORY PARAMETERS
             # From immune (never exposed) to susceptible
-            p_unexp2sus_6m=ss.bernoulli(p=0.14),  # Proportion of immune population at 6 months that moves to susceptible state
-            p_unexp2sus_3y=ss.bernoulli(p=0.29),  # Proportion of immune population at 3 years that moves to susceptible state
-            p_unexp2sus_6y=ss.bernoulli(p=0.61),  # Proportion of immune population at 6 years that moves to susceptible state
-            p_unexp2sus=ss.bernoulli(p=self.susceptibility_prob_function),
-            sus_saturation_age=20.0,  # Age (years) after which agents are 100% susceptible
-            sus_age_exposure_slope=1.0,
+            p_unexp2sus_6m=ss.bernoulli(p=0.14),  # Proportion of never exposed/completely immune population at 6 months that moves to susceptible state
+            p_unexp2sus_3y=ss.bernoulli(p=0.29),  # Proportion of never exposed/completely immune population at 3 years that moves to susceptible state
+            p_unexp2sus_6y=ss.bernoulli(p=0.61),  # Proportion of never exposed/completely immune population at 6 years that moves to susceptible state
+            p_unexp2sus=ss.bernoulli(p=self.unexp2susc_prob_function),
 
             # Prepatent stage, the parameters of the distribution of durations is CFU-dose dependent
             prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),   # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
@@ -565,14 +566,14 @@ class Typhoid(ss.Disease):
         return np.array(std)
 
     @staticmethod
-    def susceptibility_prob_function(module, sim, uids):
+    def unexp2susc_prob_function(module, sim, uids):
         """
-        Estimate the age-dependent probability of becoming susceptible
+        Simple (default) mechanism that defines the probability of
+        moving from the unexposed stat to the susceptible state.
+        This mechanism moves everyone to the susceotible state.
         """
-        mpars = module.pars
-        p_sus = tyum.sigmoid(sim.people.age[uids], mpars.sus_saturation_age,
-                             mpars.sus_age_exposure_slope)
-        return np.array(p_sus)
+        p_sus = np.ones(len(uids))
+        return p_sus
 
     @staticmethod
     def chronic_gall_prob_function(module, sim, uids):
@@ -913,3 +914,27 @@ class Typhoid(ss.Disease):
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
         return
+
+
+# Functions that are typhoid-specific but are context dependent (ie, location)
+def unexp2susc_prob_function_gauld2018(module, sim, uids, sus_saturation_age=50.0,
+                                       sus_age_exposure_slope=0.5):
+    """
+    Estimate the age-dependent probability of transistioning from
+    unexposed to susceptible, from Gauld et al 2018
+    (Santiago de Chile case).
+
+    Args:
+        module: a startsim (disease) Module
+        sim: the Sim object
+        uids: the uids of the eligible people
+
+        # Parameters for age-based transition from unexposed to susceptible (Gauld et al. 2018)
+        sus_saturation_age=20.0,     # Age (years) after which agents are 100% susceptible
+        sus_age_exposure_slope=1.0,  #
+
+    Returns:
+        p_sus (array): array of probabilities for every agent in uids.
+    """
+    p_sus = tyum.sigmoid(sim.people.age[uids], sus_saturation_age, sus_age_exposure_slope)
+    return np.array(p_sus)
