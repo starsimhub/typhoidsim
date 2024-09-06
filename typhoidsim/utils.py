@@ -22,10 +22,11 @@ __all__ += ['test_cpu_performance']
 @nb.jit((nb.float64[:], ), cache=True, nopython=True)
 def digitize_ages_1yr(ages):
     """
-    Return the indices of the 1-year bins to which each value in ages array belongs.
-    The bin index is used as an integer representation of the agent's age.
+    This function returns the indices of the 1-year age bins in the range
+    (0, tyd.max_age). The bin index is used as an integer representation
+    of the agent's age.
     """
-    # Create age bins because ppl.age is a continous variable
+    # Create 1-y age bins because ppl.age is a continous variable
     age_cutoffs = np.arange(0, tyd.max_age)
     return np.digitize(ages, age_cutoffs) - 1  # "rounds to the integer part of age"
 
@@ -138,8 +139,9 @@ def remove_empty_rows(df):
 def process_gallstone_data(df, coi="prob"):
     """
     Processes gallstone data from csv files.
-    gallstone_probs.csv and gallstone_prev.csv are assumed to have the same
-    structure.
+    The files
+    - gallstone_probs.csv and
+    - gallstone_prev.csv are assumed to have the same structure.
 
     If age_lo and age_hi define an age bin > 1 year, then this function inflates
     the dataset to have a complete range of ages in 1yr bins.
@@ -148,7 +150,7 @@ def process_gallstone_data(df, coi="prob"):
     with an integer version of agent ages.
 
     Arguments:
-      df(`pandas.DataFrame`): datafrme with the data
+      df(`pandas.DataFrame`): dataframe with the data
       coi(str): column of interest in the dataframe, for gallstone probabilities
           is "prob"; for gallstone prevalence is "prev".
 
