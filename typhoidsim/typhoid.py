@@ -16,7 +16,8 @@ ss_int_ = ss.dtypes.int
 # The disease module
 __all__ = ["Typhoid"]
 # Context-specific functions that can be used as parameters of the Typhoid module
-__all__ += ["unexp2sus_youth_prob_function_gauld2018"]
+__all__ += ["unexp2sus_youth_prob_function_gauld2018",
+            "unexp2sus_childhood_prob_function_gauld2018",]
 
 
 class Typhoid(ss.Disease):
@@ -236,6 +237,7 @@ class Typhoid(ss.Disease):
                         l3=pdpars["std_dur"]["hi"],
                         x_12=th1, x_23=th2))
 
+    @property
     @property
     def infectious(self):
         return self.infected
@@ -904,14 +906,13 @@ def unexp2sus_youth_prob_function_gauld2018(module, sim, uids, sus_saturation_ag
 
         # Parameters for age-based transition from unexposed to susceptible (Gauld et al. 2018)
         sus_saturation_age=20.0,     # Age (years) after which agents are 100% susceptible
-        sus_age_exposure_slope=1.0,  #
+        sus_age_exposure_slope=1.0,  # Called lambda
 
     Returns:
         p_sus (array): array of probabilities for every agent in uids.
     """
     p_sus = tyum.sigmoid(sim.people.age[uids], sus_saturation_age, sus_age_exposure_slope)
     return np.array(p_sus)
-
 
 def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
     """
