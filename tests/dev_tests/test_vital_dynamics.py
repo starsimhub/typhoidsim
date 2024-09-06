@@ -26,7 +26,6 @@ demographics = [
     ss.Deaths(death_rate=15)
 ]
 
-# This example runs on one static networks + the maternal network
 network = ss.RandomNet({'n_contacts': 5})
 
 sim = ss.Sim(
