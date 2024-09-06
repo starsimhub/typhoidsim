@@ -43,6 +43,7 @@ setup(
         'pandas>=2.0.0',
         'sciris>=3.1.6',
         'starsim>=1.0.0',
+        'synthpops',
         'matplotlib',
         'numba',
         'networkx',
