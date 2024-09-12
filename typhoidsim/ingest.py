@@ -70,7 +70,7 @@ def get_household_size_distribution(location=None):
     result = {}
 
     for loc, hh_size_distribution in entries.items():
-        hh_sizes = []
+        hhs_data = []
         for hh_size, hh_size_perc in hh_size_distribution.items():
             if hh_size[-1] == '+':
                  val = [int(hh_size[:-1]), max_hh_size, hh_size_perc]
@@ -80,8 +80,13 @@ def get_household_size_distribution(location=None):
                      val = [int(size[0]), int(size[0]), hh_size_perc]
                 else:
                      val = [int(size[0]), int(size[1]), hh_size_perc]
-            hh_sizes.append(val)
-        result[loc] = np.array(hh_sizes)
+            hhs_data.append(val)
+        hhs_data = np.array(hhs_data)
+        bins = np.hstack([np.arange(start, end + 1) for start, end in hhs_data[:, :2]])
+        bin_widths = (hhs_data[:, 1] - hhs_data[:, 0] + 1).astype(int)
+        vals = np.repeat(hhs_data[:, 2] / bin_widths, bin_widths)
+        hh_size_dist = np.column_stack((bins, vals))
+        result[loc] = hh_size_dist
 
     if len(result) == 1:
         result = list(result.values())[0]
