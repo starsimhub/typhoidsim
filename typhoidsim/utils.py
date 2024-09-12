@@ -2,8 +2,7 @@
 General utilities
 """
 import os
-import warnings
-
+import re
 import numpy as np
 import numba as nb
 import pandas as pd
@@ -58,8 +57,11 @@ def get_dataset_names(data_home=None):
     dataset_names = os.listdir(data_home)
     dataset_names = list(filter(None, dataset_names))
 
+    pattern = r'.*\.csv$'
+    csv_files = [name for name in dataset_names if re.match(pattern, name)]
+
     output = f"Available datasets in {data_home}:\n"
-    for name in dataset_names:
+    for name in csv_files:
         namestr = sc.colorize(f'  {name}\n', fg='yellow', output=True)
         output += f"{namestr}"
     print(output)
