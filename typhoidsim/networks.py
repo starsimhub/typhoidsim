@@ -7,7 +7,7 @@ import starsim as ss
 ss_float_ = ss.dtypes.float
 ss_int_ = ss.dtypes.int
 
-from .ingest import get_household_size_distribution, get_household_head_age_by_size_distribution
+from .ingest import get_household_size_distribution, get_household_head_age_distribution
 
 
 class HouseholdNet(ss.DynamicNetwork):
@@ -100,6 +100,18 @@ class HouseholdNet(ss.DynamicNetwork):
         self.append(p1=p1, p2=p2, beta=beta, dur=dur)
         return
 
+    def make_households(self):
+       # we have n_households, n_households by size
+       # we know who is a household reference
+       # we need to generate_household_head_by_size_distribution() based on current distibution
+       # Then for every household size:
+       # we have to find size-1 contacts for the household heads
+       # make adjustments as needed.
+
+    def init_location_hh_data(self):
+        # Set class attributes to have the corresponding data
+        pass
+
     def get_households(self):
         """
         Given a population of size n_agents, and a household size distribution
@@ -144,6 +156,30 @@ class HouseholdNet(ss.DynamicNetwork):
 
         return n_households_by_size
 
+    def select_household_heads(self, nhh_by_hs):
+        # TODO: make this a function that returns probabilities, so it can be
+        # used by household_head_dist = ss.bernoulli(), to determine whether
+        # someone is a household head or not
+
+        if self.pars.location is not None:
+            hh_head_age_dist = get_household_head_age_distribution(self.pars.location)
+        else:
+            hh_head_age_dist = np.empty()
+            hh_head_age_dist[:, 0] = np.arange(0, 101)
+            hh_head_age_dist[:, 1] = np.random.dirichlet(np.ones(101), size=1)[0]
+
+        head_age_probs = hh_head_age_dist[:, 1]
+        n_households = np.sum(nhh_by_hs)
+
+        # Assumes we have all ages represented in head_age_probs
+        probs = [head_age_probs[age] for age in self.sim.people.age]
+        probs /= np.sum(probs)
+
+        # sample from array based on calculated probabilities
+        head_uids = np.random.choice(self.sim.people.uids, size=n_households, p=probs)
+
+        return head_uids
+
 
 def adjust_households(delta_agents, nhh_by_hs, delta_hh_size):
     """
@@ -165,3 +201,25 @@ def adjust_households(delta_agents, nhh_by_hs, delta_hh_size):
     delta_agents = delta_agents + sign*delta_hh_size
     nhh_by_hs[delta_hh_size - 1] = nhh_by_hs[delta_hh_size - 1] + sign
     return delta_agents, nhh_by_hs
+
+
+def generate_household_head_by_size_distribution(nhh_by_hs, hh_head_age_dist):
+    """
+    Args:
+        nhh_by_hs (np.array): number of household of a given size (current distribution/count) .
+        hh_head_age_dist (int): current distribution of household head ages.
+
+    Returns:
+
+    """
+    import pandas as pd
+    # Total number of households
+    n_households = np.sum(nhh_by_hs)
+    # Transform to probabilities
+    hh_size_dist = nhh_by_hs / n_households
+
+    # Counts of unique combinations of household heads of a given age and household sie
+    df = pd.DataFrame(np.outer(hh_size_dist[:, 1], hh_head_age_dist[:, 1]) * n_households,
+                      columns=hh_head_age_dist[:, 0], index=hh_size_dist[:, 0])
+
+    return df
