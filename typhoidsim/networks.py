@@ -147,10 +147,9 @@ class HouseholdNet(ss.DynamicNetwork):
 
 def adjust_households(delta_agents, nhh_by_hs, delta_hh_size):
     """
-    Adjusts the sizes of households based on a specified number of people that need
-    to be added or removed. The function selects a random household size that doesn't
-    exceed the remaining number of people that need to be adjusted, reduces the remaining
-    number by the chosen size
+    Adjusts the distribution of households sizes (and the total number of
+    households as a consequence) based on a specified number of people that need
+    to be added or removed.
 
     Args:
         delta_agents (int): Number of agents to be added or removed. If
