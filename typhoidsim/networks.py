@@ -21,8 +21,10 @@ class CommunityNet(ss.DynamicNetwork):
             dur=0  # Duration of zero ensures that new random edges are formed on each time step
         )
         self.update_pars(pars, **kwargs)
-        self.mixing_matrix = self.get_mixing_matrix()
+
+        # Get and track some useful variables
         self.n_contact_rate_by_age, self.contact_mixing_matrix = self.get_contact_rates()
+        self.avail_age_groups = np.arange(0, self.pars.age_mixing['age_lb'])
 
         self.add_states(
             ss.FloatArr('age_group', default=0, dtype=ss_int_, label='Age group')
@@ -33,7 +35,6 @@ class CommunityNet(ss.DynamicNetwork):
     def init_pre(self, sim):
         super().init_pre(sim)
         self.pars.age_mixing = tyi.get_age_mix_distribution(self.pars.location)
-
         return
 
     def init_post(self, add_pairs=True):
@@ -43,7 +44,7 @@ class CommunityNet(ss.DynamicNetwork):
 
     def get_contact_rates(self):
         """ """
-        contact_rate_matrix = self.age_mixing['matrix']  # in average contacts per day
+        contact_rate_matrix = self.pars.age_mixing['matrix']  # in average contacts per day
         n_contact_rate = sc.randround(contact_rate_matrix.sum(axis=1)
         # Transform number of daily contacts into proportion of contacts in each age bin
         contact_rate_probs = contact_rate_matrix / n_contact_rate.reshape(-1, 1)
@@ -60,21 +61,19 @@ class CommunityNet(ss.DynamicNetwork):
         born = people.alive & (people.age > 0)
 
         # Convert age into age group
-        born_age_group = tyu.digitize_ages(people.age[born.uids], self.pars.age_mixing['age_lb'])
+        born_age_group = self.age_group[born.uids]
 
-        # total (integer) number of average contacts per day for a given age group
+        # Total (integer) number of average contacts per day for a given age group
         n_contacts_by_age_grp = sc.randround(self.n_contact_rate_by_age)
 
-        avail_age_groups = np.arange(0, self.pars.age_mixing['age_lb'])
-
-        # Get n_contact per person
+        # Get n_contact for every person
         n_contacts = n_contacts_by_age_grp[born_age_group]
 
         p1, p2 = self.get_contacts(born.uids, n_contacts)
 
         for p1_uid in born.uids:
-            probs = self.mixing_matrix[born_age_group[p1_uid], :]
-            p2_age_group = np.random.choice(avail_age_groups,
+            probs = self.contact_mixing_matrix[born_age_group[p1_uid], :]
+            p2_age_group = np.random.choice(self.avail_age_groups,
                                             n_contacts_by_age_grp[born_age_group[p1_uid]],
                                             p=probs)
 
@@ -87,6 +86,8 @@ class CommunityNet(ss.DynamicNetwork):
 
     def update(self):
         self.end_pairs()
+        # Find the age group each person belongs to
+        self.age_group = tyu.digitize_ages(self.sim.people.age, self.pars.age_mixing['age_lb'])
         self.add_pairs()
         return
 
