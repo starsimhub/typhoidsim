@@ -42,6 +42,32 @@ class CommunityNet(ss.DynamicNetwork):
             self.add_pairs()
         return
 
+    @staticmethod
+    @nb.njit(cache=True)
+    def build_source_array(inds, n_contacts):
+        """
+        Create an array (source) that consists of multiple
+        repetitions of each source individual's identifier (person_id),
+        with the number of repetitions being equal to the number of their
+        contacts (n_contacts[i]).
+        """
+        total_number_of_half_edges = np.sum(n_contacts)
+        count = 0
+        source = np.zeros((total_number_of_half_edges,), dtype=ss_int_)
+        for i, person_id in enumerate(inds):
+            n = n_contacts[i]
+            source[count: count + n] = person_id
+            count += n
+        return source
+
+
+    def init_age_group_dists(self):
+        # Create a distribution per age group available
+        # for each age group available of p1, get a distribution for their contacts
+        # ss.histogram(values=age_group_probs, bins=age_lower_bounds, strict=False)
+        pass
+
+
     def get_contact_rates(self):
         """ """
         contact_rate_matrix = self.pars.age_mixing['matrix']  # in average contacts per day
@@ -51,9 +77,19 @@ class CommunityNet(ss.DynamicNetwork):
         return n_contact_rate, contact_rate_probs
 
     def get_contacts(self, uids, n_contacts):
-        a = []
-        b = []
-        return a, b
+        # p1 indices
+        source = self.build_source_array(uids, n_contacts)
+        #target_age_group = self.get_target_age_group(uids, n_contacts)
+
+        for p1_uid in uids:
+            probs = self.contact_mixing_matrix[self.age_group[p1_uid], :]
+            p2_age_group = np.random.choice(self.avail_age_groups,
+                                            n_contacts[p1_uid],
+                                            p=probs)
+
+        p1 = []
+        p2 = []
+        return p1, p2
 
     def add_pairs(self):
         """ Generate contacts using a specific age mixing pattern """
@@ -70,13 +106,6 @@ class CommunityNet(ss.DynamicNetwork):
         n_contacts = n_contacts_by_age_grp[born_age_group]
 
         p1, p2 = self.get_contacts(born.uids, n_contacts)
-
-        for p1_uid in born.uids:
-            probs = self.contact_mixing_matrix[born_age_group[p1_uid], :]
-            p2_age_group = np.random.choice(self.avail_age_groups,
-                                            n_contacts_by_age_grp[born_age_group[p1_uid]],
-                                            p=probs)
-
 
         beta = np.ones(len(p1), dtype=ss_float_)
         dur = np.full(len(p1),  self.pars.dur)
