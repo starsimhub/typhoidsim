@@ -9,10 +9,22 @@ ss_int_ = ss.dtypes.int
 
 from .ingest import get_household_size_distribution, get_household_head_age_distribution
 
+__all__ = ["CommunityNet"]
+
+
+
+class CommunityNet(ss.DynamicNetwork):
+    def __init__(self, key_dict=None, **kwargs):
+        key_dict = sc.mergedicts({'age_mix': 1}, key_dict)
+        super().__init__(key_dict=key_dict, **kwargs)
+        self.debut = ss.FloatArr('debut', default=0)
+        return
+
+
 
 class HouseholdNet(ss.DynamicNetwork):
     """
-    Microstructured connectivity between agents. Households can change in size
+    [WIP]: Microstructured connectivity between agents. Households can change in size
     if one of their members die.
     """
 
@@ -107,6 +119,7 @@ class HouseholdNet(ss.DynamicNetwork):
        # Then for every household size:
        # we have to find size-1 contacts for the household heads
        # make adjustments as needed.
+       pass
 
     def init_location_hh_data(self):
         # Set class attributes to have the corresponding data
