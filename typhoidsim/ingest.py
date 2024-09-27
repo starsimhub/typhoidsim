@@ -4,15 +4,19 @@ loading data from files, parsing data and reformatting data, and processing
 so they tcan be consumed by typhoidsim or starsim.
 """
 import numpy as np
+import pandas as pd
 
 import sciris as sc
 
 from .data import country_household_size_distribution as household_size_distribution
 from .data import country_household_head_age_distribution as household_head_age_distribution
 
+from . import utils as tyu
+
 __all__ = ["get_age_distribution", "get_household_size",
            "get_household_size_distribution", "get_household_head_age_distribution",
-           "get_household_head_age_by_size_distribution"]
+           "get_household_head_age_by_size_distribution",
+           "get_age_mix_distribution"]
 
 
 def get_age_distribution(location):
@@ -164,3 +168,61 @@ def get_household_head_age_by_size_distribution(location):
                       columns=hh_head_age_dist[:, 0], index=hh_size_dist[:, 0])
 
     return df
+
+
+def get_age_mix_distribution(location, make_symmetric=True):
+    """
+    Return Prem et al.’s (2017) matrices, which project inferred age mixing
+    patterns.
+
+    Args:
+        location (str): name of the country to load contact age mixing
+        pattern of.
+
+        make_symmetric (bool): whether to make the age mixing matrix symmetric
+        or not. Defaults to True.
+
+    Returns:
+        age_mix_matrix: This is a contact pattern matrix. Each row i tells you
+        the average **daily** contacts for a person from age group i.
+        The columns stand for the age groups of those contacts. The element i,j
+        in the matrix, it's how often (or how many times) a typical person
+        from age group i interacts with someone from age group j in
+        that specific physical contact setting.
+    """
+
+    # Load the raw data
+    data_home = tyu.get_data_home()
+    prem_matrices_file = 'age_mix_contact.xlsx'
+
+    df = pd.read_excel(f"{data_home}/{prem_matrices_file}", sheet_name=location)
+
+    age_lb = [int(x.split('-')[0]) for x in df.age_group]  # lower age (in years) in bin
+    age_ub = [int(x.split('-')[1]) for x in df.age_group]  # upper age (in years) in bin
+    age_groups = df.age_group.tolist()
+
+    df = df.drop(columns=['age_group'])
+
+    mixing_matrix = np.zeros((len(age_lb), len(age_lb)))
+
+    for row, age_group in enumerate(age_groups):
+        mixing_matrix[row, :] = df.loc[row, :].to_numpy()
+
+
+    mixing_matrix = np.array(df)
+    if make_symmetric:
+        mixing_matrix = symmetrize(mixing_matrix)
+
+    age_mixing = sc.dictobj()
+    age_mixing['matrix'] = mixing_matrix
+    age_mixing['age_lb'] = age_lb  # lower bound age
+    age_mixing['age_ub'] = age_ub  # uper bound age
+    age_mixing['age_group'] = age_groups
+
+    return age_mixing
+
+
+def symmetrize(mixing_matrix):
+    """ Makes a square assymetric matrix, symmetric"""
+    matrix_sym = (mixing_matrix + np.transpose(mixing_matrix)) / 2.0
+    return matrix_sym
