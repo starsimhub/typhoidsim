@@ -3,23 +3,92 @@ import numba as nb
 import sciris as sc
 import starsim as ss
 
+from . import ingest as tyi
+from . import utils as tyu
 
 ss_float_ = ss.dtypes.float
 ss_int_ = ss.dtypes.int
 
-from .ingest import get_household_size_distribution, get_household_head_age_distribution
-
 __all__ = ["CommunityNet"]
 
 
-
 class CommunityNet(ss.DynamicNetwork):
-    def __init__(self, key_dict=None, **kwargs):
-        key_dict = sc.mergedicts({'age_mix': 1}, key_dict)
+    def __init__(self, pars=None, key_dict=None, **kwargs):
         super().__init__(key_dict=key_dict, **kwargs)
-        self.debut = ss.FloatArr('debut', default=0)
+        self.default_pars(
+            age_mixing=None,
+            location='Chile',
+            dur=0  # Duration of zero ensures that new random edges are formed on each time step
+        )
+        self.update_pars(pars, **kwargs)
+        self.mixing_matrix = self.get_mixing_matrix()
+        self.n_contact_rate_by_age, self.contact_mixing_matrix = self.get_contact_rates()
+
+        self.add_states(
+            ss.FloatArr('age_group', default=0, dtype=ss_int_, label='Age group')
+        )
+
         return
 
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.pars.age_mixing = tyi.get_age_mix_distribution(self.pars.location)
+
+        return
+
+    def init_post(self, add_pairs=True):
+        if add_pairs:
+            self.add_pairs()
+        return
+
+    def get_contact_rates(self):
+        """ """
+        contact_rate_matrix = self.age_mixing['matrix']  # in average contacts per day
+        n_contact_rate = sc.randround(contact_rate_matrix.sum(axis=1)
+        # Transform number of daily contacts into proportion of contacts in each age bin
+        contact_rate_probs = contact_rate_matrix / n_contact_rate.reshape(-1, 1)
+        return n_contact_rate, contact_rate_probs
+
+    def get_contacts(self, uids, n_contacts):
+        a = []
+        b = []
+        return a, b
+
+    def add_pairs(self):
+        """ Generate contacts using a specific age mixing pattern """
+        people = self.sim.people
+        born = people.alive & (people.age > 0)
+
+        # Convert age into age group
+        born_age_group = tyu.digitize_ages(people.age[born.uids], self.pars.age_mixing['age_lb'])
+
+        # total (integer) number of average contacts per day for a given age group
+        n_contacts_by_age_grp = sc.randround(self.n_contact_rate_by_age)
+
+        avail_age_groups = np.arange(0, self.pars.age_mixing['age_lb'])
+
+        # Get n_contact per person
+        n_contacts = n_contacts_by_age_grp[born_age_group]
+
+        p1, p2 = self.get_contacts(born.uids, n_contacts)
+
+        for p1_uid in born.uids:
+            probs = self.mixing_matrix[born_age_group[p1_uid], :]
+            p2_age_group = np.random.choice(avail_age_groups,
+                                            n_contacts_by_age_grp[born_age_group[p1_uid]],
+                                            p=probs)
+
+
+        beta = np.ones(len(p1), dtype=ss_float_)
+        dur = np.full(len(p1),  self.pars.dur)
+        self.append(p1=p1, p2=p2, beta=beta, dur=dur)
+        return
+
+
+    def update(self):
+        self.end_pairs()
+        self.add_pairs()
+        return
 
 
 class HouseholdNet(ss.DynamicNetwork):
@@ -135,8 +204,8 @@ class HouseholdNet(ss.DynamicNetwork):
         """
         requested_n_agents = self.sim.pars.n_agents
         if self.pars.location is not None:
-            hhs_dist = get_household_size_distribution(self.pars.location)
-            hhs_bins =  hhs_dist[:, 0]
+            hhs_dist = tyi.get_household_size_distribution(self.pars.location)
+            hhs_bins = hhs_dist[:, 0]
             hhs_props = hhs_dist[:, 1] / 100.0
 
         else:
@@ -175,7 +244,7 @@ class HouseholdNet(ss.DynamicNetwork):
         # someone is a household head or not
 
         if self.pars.location is not None:
-            hh_head_age_dist = get_household_head_age_distribution(self.pars.location)
+            hh_head_age_dist = tyi.get_household_head_age_distribution(self.pars.location)
         else:
             hh_head_age_dist = np.empty()
             hh_head_age_dist[:, 0] = np.arange(0, 101)
