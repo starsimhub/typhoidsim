@@ -104,23 +104,23 @@ class CommunityNet(ss.DynamicNetwork):
 
         n = 0
         for p1_uid in born.uids:
-            # Draw the age groups of p1's contacts
-            p2_age_group = tyu.digitize_ages(self.contact_samplers[
-                                                 self.age_group[p1_uid]
-                                             ].rvs(n_contacts[p1_uid]),
+            # Select the correct sampler based on p1's age group
+            sampler = self.contact_samplers[self.age_group[p1_uid]]
+            # Draw p1's n_contacts from different age groups
+            p2_age_group = tyu.digitize_ages(sampler.rvs(n_contacts[p1_uid]),
                                              self.pars.age_mixing['age_lb'])
+            # Count how many target contacts in each age group
+            n_contacts_ag = np.histogram(p2_age_group, bins=np.arange(self.avail_age_groups+1))[0]
             for ag in range(self.avail_age_groups):
                 mask = target_uids_by_age_group[ag] != p1_uid
                 # How many of each age group do we have to pick
-                n_contacts_ag = np.sum(p2_age_group == ag).astype(int)
+                nc = n_contacts_ag[ag]
                 # TODO: Remove indices that have no contact 'spots' left
                 if len(target_uids_by_age_group[ag]):
-                    target[n:n+n_contacts_ag] = np.random.choice(target_uids_by_age_group[ag][mask],
-                                                                 size=n_contacts_ag,
+                    target[n:n+nc] = np.random.choice(target_uids_by_age_group[ag][mask],
+                                                                 size=nc,
                                                                  replace=False)
-                n += n_contacts_ag
-
-        # TODO: remove self connections
+                n += nc
         return source, target
 
     def add_pairs(self):
