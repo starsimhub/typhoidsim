@@ -97,7 +97,10 @@ class CommunityNet(ss.DynamicNetwork):
     def get_contacts(self, born, n_contacts):
         # p1 indices repeated (len(source) == sum(n_contacts))
         source = self.build_source_array(born.uids, n_contacts)
-        target = np.zeros((len(source),), dtype=ss_int_)
+        target = -1*np.ones((len(source),), dtype=ss_int_)
+
+        # Group uids by age group
+        target_uids_by_age_group = {ag: (self.age_group == ag).uids for ag in range(self.avail_age_groups)}
 
         n = 0
         for p1_uid in born.uids:
@@ -106,16 +109,18 @@ class CommunityNet(ss.DynamicNetwork):
                                                  self.age_group[p1_uid]
                                              ].rvs(n_contacts[p1_uid]),
                                              self.pars.age_mixing['age_lb'])
-            # Remove p1 index
-            avail_p2 = (born.uids != p1_uid)
             for ag in range(self.avail_age_groups):
+                mask = target_uids_by_age_group[ag] != p1_uid
                 # How many of each age group do we have to pick
                 n_contacts_ag = np.sum(p2_age_group == ag).astype(int)
                 # TODO: Remove indices that have no contact 'spots' left
-                avail_p2_ag = (self.age_group == ag) & avail_p2
-                target[n:n+n_contacts_ag] = np.random.choice(avail_p2_ag.uids, size=n_contacts_ag, replace=False)
+                if len(target_uids_by_age_group[ag]):
+                    target[n:n+n_contacts_ag] = np.random.choice(target_uids_by_age_group[ag][mask],
+                                                                 size=n_contacts_ag,
+                                                                 replace=False)
                 n += n_contacts_ag
 
+        # TODO: remove self connections
         return source, target
 
     def add_pairs(self):
