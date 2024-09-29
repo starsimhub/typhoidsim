@@ -94,20 +94,23 @@ class CommunityNet(ss.DynamicNetwork):
 
         return
 
-    def get_contacts(self, uids, n_contacts):
+    def get_contacts(self, born, n_contacts):
 
         # p1 indices
-        source = self.build_source_array(uids, n_contacts)
+        source = self.build_source_array(born.uids, n_contacts)
         target = np.zeros((len(source),), dtype=ss_int_)
+
         n = 0
-        for p1_uid in uids:
+        for p1_uid in born.uids:
             p2_age_group = tyu.digitize_ages(self.contact_samplers[self.age_group[p1_uid]].rvs(n_contacts[p1_uid]),
                                         self.pars.age_mixing['age_lb'])
-
+            # Remove p1 index
+            avail_p2 = (born.uids != p1_uid)
             for ag in self.avail_age_groups:
+                # How many of each age group do we have to pick
                 n_contacts_ag = np.sum(p2_age_group == ag).astype(int)
-                avail_p2 = sc.findinds((self.age_group[uids] == ag))
-                target[n:n+n_contacts_ag] = np.random.choice(avail_p2, size=n_contacts_ag, replace=False)
+                avail_p2_ag = sc.findinds((self.age_group[avail_p2] == ag))
+                target[n:n+n_contacts_ag] = avail_p2.uids[np.random.choice(avail_p2_ag, size=n_contacts_ag, replace=False)]
                 n += n_contacts_ag
 
         return source, target
@@ -127,7 +130,7 @@ class CommunityNet(ss.DynamicNetwork):
         # TODO: this needs to be properly scaled by units of time
         n_contacts = n_contacts_by_age_grp[born_age_group]
 
-        p1, p2 = self.get_contacts(born.uids, n_contacts)
+        p1, p2 = self.get_contacts(born, n_contacts)
 
         beta = np.ones(len(p1), dtype=ss_float_)
         dur = np.full(len(p1),  self.pars.dur)
