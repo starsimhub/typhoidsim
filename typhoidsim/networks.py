@@ -22,9 +22,15 @@ class CommunityNet(ss.DynamicNetwork):
         )
         self.update_pars(pars, **kwargs)
 
+        if self.pars.age_mixing is None:
+            self.pars.age_mixing = tyi.get_age_mix_distribution(self.pars.location)
+
         # Get and track some useful variables
-        self.n_contact_rate_by_age, self.contact_mixing_matrix = self.get_contact_rates()
+        self.contact_rate_num_by_age, self.contact_mixing_matrix = self.get_contact_rates()
         self.avail_age_groups = np.arange(0, self.pars.age_mixing['age_lb'])
+
+        self.contact_samplers = None
+        self.init_age_group_dists()
 
         self.add_states(
             ss.FloatArr('age_group', default=0, dtype=ss_int_, label='Age group')
@@ -32,9 +38,20 @@ class CommunityNet(ss.DynamicNetwork):
 
         return
 
+    def get_contact_rates(self):
+        """
+        Get average number of total number of contacts per day, per age group
+        (num age groups x 1), and a matrix of the average proportion of
+        contacts per day of each age group (num age groups x num age groups).
+        """
+        contact_rate_matrix = self.pars.age_mixing['matrix']  # in average contacts per day
+        contact_rate_num = sc.randround(contact_rate_matrix.sum(axis=1))
+        # Transform number of daily contacts into proportion of contacts in each age bin
+        contact_rate_probs = contact_rate_matrix / contact_rate_num.reshape(-1, 1)
+        return contact_rate_num, contact_rate_probs
+
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.pars.age_mixing = tyi.get_age_mix_distribution(self.pars.location)
         return
 
     def init_post(self, add_pairs=True):
@@ -60,36 +77,40 @@ class CommunityNet(ss.DynamicNetwork):
             count += n
         return source
 
-
     def init_age_group_dists(self):
+        """
+        Create 'age-weighted contact' samplers for each age group of a
+        reference person
+        """
         # Create a distribution per age group available
-        # for each age group available of p1, get a distribution for their contacts
+        # for each age group available of p1, get a distribution for each age group for their contacts
         # ss.histogram(values=age_group_probs, bins=age_lower_bounds, strict=False)
-        pass
+        self.contact_samplers = dict()
+        for group_idx, p1_age_group in enumerate(self.age_mixing['age_groups']):
+            probs = self.contact_mixing_matrix[group_idx, :]
+            self.contact_samplers[group_idx] = ss.histogram(values=probs,
+                                                            bins=self.age_mixing['age_lb'],
+                                                            strict=False)  # TODO: check whether this is ok
 
-
-    def get_contact_rates(self):
-        """ """
-        contact_rate_matrix = self.pars.age_mixing['matrix']  # in average contacts per day
-        n_contact_rate = sc.randround(contact_rate_matrix.sum(axis=1)
-        # Transform number of daily contacts into proportion of contacts in each age bin
-        contact_rate_probs = contact_rate_matrix / n_contact_rate.reshape(-1, 1)
-        return n_contact_rate, contact_rate_probs
+        return
 
     def get_contacts(self, uids, n_contacts):
+
         # p1 indices
         source = self.build_source_array(uids, n_contacts)
-        #target_age_group = self.get_target_age_group(uids, n_contacts)
-
+        target = np.zeros((len(source),), dtype=ss_int_)
+        n = 0
         for p1_uid in uids:
-            probs = self.contact_mixing_matrix[self.age_group[p1_uid], :]
-            p2_age_group = np.random.choice(self.avail_age_groups,
-                                            n_contacts[p1_uid],
-                                            p=probs)
+            p2_age_group = tyu.digitize_ages(self.contact_samplers[self.age_group[p1_uid]].rvs(n_contacts[p1_uid]),
+                                        self.pars.age_mixing['age_lb'])
 
-        p1 = []
-        p2 = []
-        return p1, p2
+            for ag in self.avail_age_groups:
+                n_contacts_ag = np.sum(p2_age_group == ag).astype(int)
+                avail_p2 = sc.findinds((self.age_group[uids] == ag))
+                target[n:n+n_contacts_ag] = np.random.choice(avail_p2, size=n_contacts_ag, replace=False)
+                n += n_contacts_ag
+
+        return source, target
 
     def add_pairs(self):
         """ Generate contacts using a specific age mixing pattern """
@@ -99,10 +120,11 @@ class CommunityNet(ss.DynamicNetwork):
         # Convert age into age group
         born_age_group = self.age_group[born.uids]
 
-        # Total (integer) number of average contacts per day for a given age group
+        # Total (integer) number of average contacts **per day** for each available age group
         n_contacts_by_age_grp = sc.randround(self.n_contact_rate_by_age)
 
-        # Get n_contact for every person
+        # Get for every person
+        # TODO: this needs to be properly scaled by units of time
         n_contacts = n_contacts_by_age_grp[born_age_group]
 
         p1, p2 = self.get_contacts(born.uids, n_contacts)
@@ -111,7 +133,6 @@ class CommunityNet(ss.DynamicNetwork):
         dur = np.full(len(p1),  self.pars.dur)
         self.append(p1=p1, p2=p2, beta=beta, dur=dur)
         return
-
 
     def update(self):
         self.end_pairs()
