@@ -95,23 +95,25 @@ class CommunityNet(ss.DynamicNetwork):
         return
 
     def get_contacts(self, born, n_contacts):
-
-        # p1 indices
+        # p1 indices repeated (len(source) == sum(n_contacts))
         source = self.build_source_array(born.uids, n_contacts)
         target = np.zeros((len(source),), dtype=ss_int_)
 
         n = 0
         for p1_uid in born.uids:
-            p2_age_group = tyu.digitize_ages(self.contact_samplers[self.age_group[p1_uid]].rvs(n_contacts[p1_uid]),
-                                        self.pars.age_mixing['age_lb'])
+            # Draw the age groups of p1's contacts
+            p2_age_group = tyu.digitize_ages(self.contact_samplers[
+                                                 self.age_group[p1_uid]
+                                             ].rvs(n_contacts[p1_uid]),
+                                             self.pars.age_mixing['age_lb'])
             # Remove p1 index
             avail_p2 = (born.uids != p1_uid)
             for ag in range(self.avail_age_groups):
                 # How many of each age group do we have to pick
                 n_contacts_ag = np.sum(p2_age_group == ag).astype(int)
                 # TODO: Remove indices that have no contact 'spots' left
-                avail_p2_ag = sc.findinds((self.age_group[avail_p2] == ag))
-                target[n:n+n_contacts_ag] = avail_p2.uids[np.random.choice(avail_p2_ag, size=n_contacts_ag, replace=False)]
+                avail_p2_ag = (self.age_group == ag) & avail_p2
+                target[n:n+n_contacts_ag] = np.random.choice(avail_p2_ag.uids, size=n_contacts_ag, replace=False)
                 n += n_contacts_ag
 
         return source, target
@@ -129,6 +131,8 @@ class CommunityNet(ss.DynamicNetwork):
         n_contacts_by_age_grp = sc.randround(self.contact_rate_num_by_age)
 
         # Get the total number of contacts each person will have in one time step (1 day)
+        # TODO: There could be a dispersion parameter, such that each person within one age group
+        # could have a slightly different number of contacts
         n_contacts = n_contacts_by_age_grp[born_age_group]
 
         p1, p2 = self.get_contacts(born, n_contacts)
@@ -141,7 +145,7 @@ class CommunityNet(ss.DynamicNetwork):
     def update(self):
         self.end_pairs()
         # Find the age group each person belongs to
-        self.age_group = tyu.digitize_ages(self.sim.people.age, self.pars.age_mixing['age_lb'])
+        self.age_group[:] = tyu.digitize_ages(self.sim.people.age[:], self.pars.age_mixing['age_lb'])
         self.add_pairs()
         return
 
