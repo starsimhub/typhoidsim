@@ -27,13 +27,12 @@ class CommunityNet(ss.DynamicNetwork):
 
         # Get and track some useful variables
         self.contact_rate_num_by_age, self.contact_mixing_matrix = self.get_contact_rates()
-        self.avail_age_groups = np.arange(0, self.pars.age_mixing['age_lb'])
+        self.avail_age_groups = len(self.pars.age_mixing['age_lb'])
 
         self.contact_samplers = None
         self.init_age_group_dists()
-
         self.add_states(
-            ss.FloatArr('age_group', default=0, dtype=ss_int_, label='Age group')
+            ss.Arr('age_group', default=0, dtype=ss_int_, label='Age group')
         )
 
         return
@@ -55,6 +54,7 @@ class CommunityNet(ss.DynamicNetwork):
         return
 
     def init_post(self, add_pairs=True):
+        self.age_group[:] = tyu.digitize_ages(self.sim.people.age[:], self.pars.age_mixing['age_lb'])
         if add_pairs:
             self.add_pairs()
         return
@@ -86,10 +86,10 @@ class CommunityNet(ss.DynamicNetwork):
         # for each age group available of p1, get a distribution for each age group for their contacts
         # ss.histogram(values=age_group_probs, bins=age_lower_bounds, strict=False)
         self.contact_samplers = dict()
-        for group_idx, p1_age_group in enumerate(self.age_mixing['age_groups']):
+        for group_idx, p1_age_group in enumerate(self.pars.age_mixing['age_group']):
             probs = self.contact_mixing_matrix[group_idx, :]
             self.contact_samplers[group_idx] = ss.histogram(values=probs,
-                                                            bins=self.age_mixing['age_lb'],
+                                                            bins=self.pars.age_mixing['age_lb'],
                                                             strict=False)  # TODO: check whether this is ok
 
         return
@@ -106,9 +106,10 @@ class CommunityNet(ss.DynamicNetwork):
                                         self.pars.age_mixing['age_lb'])
             # Remove p1 index
             avail_p2 = (born.uids != p1_uid)
-            for ag in self.avail_age_groups:
+            for ag in range(self.avail_age_groups):
                 # How many of each age group do we have to pick
                 n_contacts_ag = np.sum(p2_age_group == ag).astype(int)
+                # TODO: Remove indices that have no contact 'spots' left
                 avail_p2_ag = sc.findinds((self.age_group[avail_p2] == ag))
                 target[n:n+n_contacts_ag] = avail_p2.uids[np.random.choice(avail_p2_ag, size=n_contacts_ag, replace=False)]
                 n += n_contacts_ag
@@ -124,10 +125,10 @@ class CommunityNet(ss.DynamicNetwork):
         born_age_group = self.age_group[born.uids]
 
         # Total (integer) number of average contacts **per day** for each available age group
-        n_contacts_by_age_grp = sc.randround(self.n_contact_rate_by_age)
+        # TODO: this does not have to be stochastic, could be fixed
+        n_contacts_by_age_grp = sc.randround(self.contact_rate_num_by_age)
 
-        # Get for every person
-        # TODO: this needs to be properly scaled by units of time
+        # Get the total number of contacts each person will have in one time step (1 day)
         n_contacts = n_contacts_by_age_grp[born_age_group]
 
         p1, p2 = self.get_contacts(born, n_contacts)
@@ -143,6 +144,8 @@ class CommunityNet(ss.DynamicNetwork):
         self.age_group = tyu.digitize_ages(self.sim.people.age, self.pars.age_mixing['age_lb'])
         self.add_pairs()
         return
+
+    # TODO: calculate density of matrix (percentage of edges of all available edges (N**2-N))
 
 
 class HouseholdNet(ss.DynamicNetwork):
