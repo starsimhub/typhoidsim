@@ -1,10 +1,11 @@
 import numpy as np
 import numba as nb
-import scipy.spatial as spsp
+import scipy.stats as spst
 
 import sciris as sc
 import starsim as ss
 
+from . import defaults as tyd
 from . import ingest as tyi
 from . import utils as tyu
 
@@ -32,8 +33,6 @@ class CommunityNet(ss.DynamicNetwork):
         self.contact_rate_num_by_ag_gr, self.age_mix_matrix_probs = self.get_contact_rates()
         self.avail_age_groups = len(self.pars.age_mixing['age_lb'])
 
-        self.contact_samplers = None
-        self.init_age_group_dists()
         self.add_states(
             ss.Arr('age_group', default=0, dtype=ss_int_, label='Age group')
         )
@@ -50,7 +49,9 @@ class CommunityNet(ss.DynamicNetwork):
         """
         contact_rate_matrix = self.pars.age_mixing['matrix']  # in average contacts per day
         # Transform number of daily contacts into proportion of contacts in each age bin
-        contact_rate_probs = contact_rate_matrix / contact_rate_matrix.sum(axis=1).reshape(-1, 1)
+        total_rate = contact_rate_matrix.sum(axis=1)
+        total_rate[total_rate == 0.0] = 1.0  # avoid division by zero
+        contact_rate_probs = contact_rate_matrix / total_rate.reshape(-1, 1)
         # Get integer number of contacts per age group
         contact_rate_num = sc.randround(contact_rate_matrix.sum(axis=1))
         return contact_rate_num, contact_rate_probs
@@ -93,65 +94,23 @@ class CommunityNet(ss.DynamicNetwork):
         self.age_group_size = np.bincount(self.age_group[:], weights=np.ones(len(self.age_group))/len(self.age_group))
         return
 
-    def init_age_group_dists(self):
-        """
-        Create 'age-weighted contact' samplers for each age group of a
-        reference person
-        """
-        # Create a distribution per age group available
-        # for each age group available of p1, get a distribution for each age group for their contacts
-        # ss.histogram(values=age_group_probs, bins=age_lower_bounds, strict=False)
-        self.contact_samplers = dict()
-        for group_idx, p1_age_group in enumerate(self.pars.age_mixing['age_group']):
-            probs = self.age_mix_matrix_probs[group_idx, :]
-            self.contact_samplers[group_idx] = ss.histogram(values=probs,
-                                                            bins=self.pars.age_mixing['age_lb'],
-                                                            strict=False)  # TODO: check whether this is ok
-
-        return
-
     def get_contacts(self, born, n_contacts):
         """ Generate contacts based on age mixing"""
         available_uids = born.uids
 
         # Get all possible connections in the networks (upper triangle)
         idx1, idx2 = np.triu_indices(n=len(available_uids), k=1)
-        # Weight probabilities by the propoportion of each age group in this specific population
+
+        # Weight age-group probabilities by the propoportion of each age group in this specific population
         probs = self.age_mix_matrix_probs * self.age_group_size.reshape(-1, 1)
 
         edge_probs = probs[self.age_group[available_uids[idx1]],
                            self.age_group[available_uids[idx2]]]
-        connected = np.random.rand(len(edge_probs)) <= edge_probs*0.5
+        connected = np.random.rand(len(edge_probs)) <= edge_probs
 
         source = idx1[connected]
         target = idx2[connected]
-
         return source, target
-
-    # def unused_pairs(self):
-    #     n = 0
-    #     for p1_uid in born.uids:
-    #         # Select the correct sampler based on p1's age group
-    #         sampler = self.contact_samplers[self.age_group[p1_uid]]
-    #         # TODO: these numbers can be fixed too, and we only have 17 different numbers, so each person in group X, has n1 of group A and n2 of group B
-    #         # Draw p1's n_contacts from different age groups
-    #         p2_age_group = tyu.digitize_ages(sampler.rvs(n_contacts[p1_uid]),
-    #                                          self.pars.age_mixing['age_lb'])
-    #         # Count how many target contacts in each age group
-    #         n_contacts_ag = np.histogram(p2_age_group, bins=np.arange(self.avail_age_groups+1))[0]
-    #         #
-    #         for ag in range(self.avail_age_groups):
-    #             mask = target_uids_by_age_group[ag] != p1_uid
-    #             # How many of each age group do we have to pick
-    #             nc = n_contacts_ag[ag]
-    #             # TODO: Remove indices that have no contact 'spots' left
-    #             if len(target_uids_by_age_group[ag]):
-    #                 target[n:n+nc] = np.random.choice(target_uids_by_age_group[ag][mask],
-    #                                                              size=nc,
-    #                                                              replace=False)
-    #             n += nc
-    #
-    #     return
 
     def add_pairs(self):
         """ Generate contacts using a specific age mixing pattern """
@@ -183,13 +142,33 @@ class CommunityNet(ss.DynamicNetwork):
         self.add_pairs()
         return
 
-    def estimate_density(self):
-        from . import defaults as tyd
+    def estimate_age_mixing_density(self):
+        """Perform a 2d KDE on ages of p1 and p2"""
+        # TODO: pefrom kde on age groups rather than ages, to enable comparison with
+        # original mixing matrix.
         X, Y = np.mgrid[tyd.min_age:tyd.max_age, tyd.min_age:tyd.max_age]
+        ages = np.vstack([X.ravel(), Y.ravel()])
+        values = np.vstack([self.sim.people.age[self.p1], self.sim.people.age[self.p2]])
+        kernel = spst.gaussian_kde(values)
+        Z = np.reshape(kernel(ages).T, X.shape)
+        return Z
 
-        values = np.vstack([m1, m2])
-
-        kernel = stats.gaussian_kde(values)
+    def plot_age_mixing_density(self):
+        """ Plot the age-group by age-group density matrix"""
+        kde = self.estimate_age_mixing_density()
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        p1a, p2a = self.sim.people.age[self.p1], self.sim.people.age[self.p2]
+        xmin, xmax = p1a.min(), p1a.max()
+        ymin, ymax = p2a.min(), p2a.max()
+        ax.imshow(np.rot90(kde), cmap=plt.cm.Blues,
+                  extent=[xmin, xmax, ymin, ymax])
+        ax.plot(self.sim.people.age[self.p1], self.sim.people.age[self.p2], 'k.',
+                markerfacecolor='dodgerblue', alpha=0.05,
+                markersize=1)
+        ax.set_xlabel('Age of individual (years)')
+        ax.set_ylabel('Age of contact (years)')
+        return fig
 
 
 class HouseholdNet(ss.DynamicNetwork):
