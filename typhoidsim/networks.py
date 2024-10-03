@@ -163,8 +163,8 @@ class CommunityNet(ss.DynamicNetwork):
         ymin, ymax = p2a.min(), p2a.max()
         ax.imshow(np.rot90(kde), cmap=plt.cm.Blues,
                   extent=[xmin, xmax, ymin, ymax])
-        ax.plot(self.sim.people.age[self.p1], self.sim.people.age[self.p2], 'k.',
-                markerfacecolor='dodgerblue', alpha=0.05,
+        ax.plot(self.sim.people.age[self.p1], self.sim.people.age[self.p2], '.',
+                markerfacecolor='dodgerblue', alpha=0.1,
                 markersize=1)
         ax.set_xlabel('Age of individual (years)')
         ax.set_ylabel('Age of contact (years)')
