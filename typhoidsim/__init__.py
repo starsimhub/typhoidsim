@@ -3,6 +3,7 @@ from .defaults import *
 from .environment import *
 from .interventions import *
 from .ingest import *
+from .networks import *
 from .patterns import *
 from .settings import *
 from .typhoid import *
