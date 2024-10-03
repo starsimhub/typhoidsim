@@ -111,16 +111,16 @@ class CommunityNet(ss.DynamicNetwork):
         return
 
     def get_contacts(self, born, n_contacts):
-        # p1 indices repeated (len(source) == sum(n_contacts))
-        source = self.build_source_array(born.uids, n_contacts)
-        target = -1*np.ones((len(source),), dtype=ss_int_)
+        """ Generate contacts based on age mixing"""
+        available_uids = born.uids
 
         # Get all possible connections in the networks (upper triangle)
-        idx1, idx2 = np.triu_indices(n=len(born), k=1)
+        idx1, idx2 = np.triu_indices(n=len(available_uids), k=1)
         # Weight probabilities by the propoportion of each age group in this specific population
         probs = self.age_mix_matrix_probs * self.age_group_size.reshape(-1, 1)
 
-        edge_probs = probs[self.age_group[ss.uids(idx1)], self.age_group[ss.uids(idx2)]]
+        edge_probs = probs[self.age_group[available_uids[idx1]],
+                           self.age_group[available_uids[idx2]]]
         connected = np.random.rand(len(edge_probs)) <= edge_probs*0.5
 
         source = idx1[connected]
@@ -182,6 +182,14 @@ class CommunityNet(ss.DynamicNetwork):
         self.get_age_groups()
         self.add_pairs()
         return
+
+    def estimate_density(self):
+        from . import defaults as tyd
+        X, Y = np.mgrid[tyd.min_age:tyd.max_age, tyd.min_age:tyd.max_age]
+
+        values = np.vstack([m1, m2])
+
+        kernel = stats.gaussian_kde(values)
 
 
 class HouseholdNet(ss.DynamicNetwork):
