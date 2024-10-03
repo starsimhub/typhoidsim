@@ -18,6 +18,7 @@ __all__ = ['get_data_home', 'load_dataset', 'get_dataset_names']
 __all__ += ['digitize_ages_1yr']
 __all__ += ['test_cpu_performance']
 
+
 @nb.jit((nb.float64[:], ), cache=True, nopython=True)
 def digitize_ages_1yr(ages):
     """
@@ -25,9 +26,17 @@ def digitize_ages_1yr(ages):
     (0, tyd.max_age). The bin index is used as an integer representation
     of the agent's age.
     """
-    # Create 1-y age bins because ppl.age is a continous variable
+    # Create 1y age bins because ppl.age is a continous variable
     age_cutoffs = np.arange(0, tyd.max_age)
-    return np.digitize(ages, age_cutoffs) - 1  # "rounds to the integer part of age"
+    return np.digitize(ages, age_cutoffs) - 1  # "rounds to the integer part of age
+
+
+@nb.jit(cache=True, nopython=True)
+def digitize_ages(ages, age_group_lb):
+    """
+    This function returns the 0-based indices of the age bins passed in age_group_lb
+    """
+    return np.digitize(ages, age_group_lb) - 1  # returns 0-based indices of the group
 
 
 def get_data_home(data_home=None):
