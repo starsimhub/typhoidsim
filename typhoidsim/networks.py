@@ -89,9 +89,13 @@ class CommunityNet(ss.DynamicNetwork):
         self.age_group[:] = tyu.digitize_ages(self.sim.people.age[:],
                                               np.concatenate([self.pars.age_mixing['age_lb'],
                                                               self.pars.age_mixing['age_ub'][-1:]]))
+
+        people = self.sim.people
+        born = people.alive & (people.age > 0)
+
         # Size in fraction of total population size
-        # TODO: the group size needs to be calculated on the alive peeps
-        self.age_group_size = np.bincount(self.age_group[:], weights=np.ones(len(self.age_group))/len(self.age_group))
+        self.age_group_size = np.bincount(self.age_group[born.uids],
+                                          weights=np.ones(len(born.uids))/len(born.uids))
         return
 
     def get_contacts(self, born, n_contacts):
@@ -140,7 +144,6 @@ class CommunityNet(ss.DynamicNetwork):
         self.end_pairs()
         self.get_age_groups()
         self.add_pairs()
-        self.plot_age_mixing_density(to_plot="age_group")
         return
 
     def estimate_age_mixing_density(self, to_plot=None):
