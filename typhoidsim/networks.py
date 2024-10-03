@@ -1,5 +1,7 @@
 import numpy as np
 import numba as nb
+import scipy.spatial as spsp
+
 import sciris as sc
 import starsim as ss
 
@@ -13,6 +15,7 @@ __all__ = ["CommunityNet"]
 
 
 class CommunityNet(ss.DynamicNetwork):
+    """ Create an age-assortative network based on a 2D age-mixing pattern."""
     def __init__(self, pars=None, key_dict=None, **kwargs):
         super().__init__(key_dict=key_dict, **kwargs)
         self.default_pars(
@@ -26,7 +29,7 @@ class CommunityNet(ss.DynamicNetwork):
             self.pars.age_mixing = tyi.get_age_mix_distribution(self.pars.location)
 
         # Get and track some useful variables
-        self.contact_rate_num_by_age, self.contact_mixing_matrix = self.get_contact_rates()
+        self.contact_rate_num_by_ag_gr, self.age_mix_matrix_probs = self.get_contact_rates()
         self.avail_age_groups = len(self.pars.age_mixing['age_lb'])
 
         self.contact_samplers = None
@@ -34,6 +37,8 @@ class CommunityNet(ss.DynamicNetwork):
         self.add_states(
             ss.Arr('age_group', default=0, dtype=ss_int_, label='Age group')
         )
+        # Store the size of each age group
+        self.age_group_size = None
 
         return
 
@@ -44,9 +49,10 @@ class CommunityNet(ss.DynamicNetwork):
         contacts per day of each age group (num age groups x num age groups).
         """
         contact_rate_matrix = self.pars.age_mixing['matrix']  # in average contacts per day
-        contact_rate_num = sc.randround(contact_rate_matrix.sum(axis=1))
         # Transform number of daily contacts into proportion of contacts in each age bin
-        contact_rate_probs = contact_rate_matrix / contact_rate_num.reshape(-1, 1)
+        contact_rate_probs = contact_rate_matrix / contact_rate_matrix.sum(axis=1).reshape(-1, 1)
+        # Get integer number of contacts per age group
+        contact_rate_num = sc.randround(contact_rate_matrix.sum(axis=1))
         return contact_rate_num, contact_rate_probs
 
     def init_pre(self, sim):
@@ -54,7 +60,7 @@ class CommunityNet(ss.DynamicNetwork):
         return
 
     def init_post(self, add_pairs=True):
-        self.age_group[:] = tyu.digitize_ages(self.sim.people.age[:], self.pars.age_mixing['age_lb'])
+        self.get_age_groups()
         if add_pairs:
             self.add_pairs()
         return
@@ -77,6 +83,16 @@ class CommunityNet(ss.DynamicNetwork):
             count += n
         return source
 
+    def get_age_groups(self):
+        """ Find the age group each person belongs to, and the size of each group"""
+        self.age_group[:] = tyu.digitize_ages(self.sim.people.age[:],
+                                              np.concatenate([self.pars.age_mixing['age_lb'],
+                                                              self.pars.age_mixing['age_ub'][-1:]]))
+        # Size in fraction of total population size
+        # TODO: the group size needs to be calculated on the alive peeps
+        self.age_group_size = np.bincount(self.age_group[:], weights=np.ones(len(self.age_group))/len(self.age_group))
+        return
+
     def init_age_group_dists(self):
         """
         Create 'age-weighted contact' samplers for each age group of a
@@ -87,7 +103,7 @@ class CommunityNet(ss.DynamicNetwork):
         # ss.histogram(values=age_group_probs, bins=age_lower_bounds, strict=False)
         self.contact_samplers = dict()
         for group_idx, p1_age_group in enumerate(self.pars.age_mixing['age_group']):
-            probs = self.contact_mixing_matrix[group_idx, :]
+            probs = self.age_mix_matrix_probs[group_idx, :]
             self.contact_samplers[group_idx] = ss.histogram(values=probs,
                                                             bins=self.pars.age_mixing['age_lb'],
                                                             strict=False)  # TODO: check whether this is ok
@@ -99,29 +115,43 @@ class CommunityNet(ss.DynamicNetwork):
         source = self.build_source_array(born.uids, n_contacts)
         target = -1*np.ones((len(source),), dtype=ss_int_)
 
-        # Group uids by age group
-        target_uids_by_age_group = {ag: (self.age_group == ag).uids for ag in range(self.avail_age_groups)}
+        # Get all possible connections in the networks (upper triangle)
+        idx1, idx2 = np.triu_indices(n=len(born), k=1)
+        # Weight probabilities by the propoportion of each age group in this specific population
+        probs = self.age_mix_matrix_probs * self.age_group_size.reshape(-1, 1)
 
-        n = 0
-        for p1_uid in born.uids:
-            # Select the correct sampler based on p1's age group
-            sampler = self.contact_samplers[self.age_group[p1_uid]]
-            # Draw p1's n_contacts from different age groups
-            p2_age_group = tyu.digitize_ages(sampler.rvs(n_contacts[p1_uid]),
-                                             self.pars.age_mixing['age_lb'])
-            # Count how many target contacts in each age group
-            n_contacts_ag = np.histogram(p2_age_group, bins=np.arange(self.avail_age_groups+1))[0]
-            for ag in range(self.avail_age_groups):
-                mask = target_uids_by_age_group[ag] != p1_uid
-                # How many of each age group do we have to pick
-                nc = n_contacts_ag[ag]
-                # TODO: Remove indices that have no contact 'spots' left
-                if len(target_uids_by_age_group[ag]):
-                    target[n:n+nc] = np.random.choice(target_uids_by_age_group[ag][mask],
-                                                                 size=nc,
-                                                                 replace=False)
-                n += nc
+        edge_probs = probs[self.age_group[ss.uids(idx1)], self.age_group[ss.uids(idx2)]]
+        connected = np.random.rand(len(edge_probs)) <= edge_probs*0.5
+
+        source = idx1[connected]
+        target = idx2[connected]
+
         return source, target
+
+    # def unused_pairs(self):
+    #     n = 0
+    #     for p1_uid in born.uids:
+    #         # Select the correct sampler based on p1's age group
+    #         sampler = self.contact_samplers[self.age_group[p1_uid]]
+    #         # TODO: these numbers can be fixed too, and we only have 17 different numbers, so each person in group X, has n1 of group A and n2 of group B
+    #         # Draw p1's n_contacts from different age groups
+    #         p2_age_group = tyu.digitize_ages(sampler.rvs(n_contacts[p1_uid]),
+    #                                          self.pars.age_mixing['age_lb'])
+    #         # Count how many target contacts in each age group
+    #         n_contacts_ag = np.histogram(p2_age_group, bins=np.arange(self.avail_age_groups+1))[0]
+    #         #
+    #         for ag in range(self.avail_age_groups):
+    #             mask = target_uids_by_age_group[ag] != p1_uid
+    #             # How many of each age group do we have to pick
+    #             nc = n_contacts_ag[ag]
+    #             # TODO: Remove indices that have no contact 'spots' left
+    #             if len(target_uids_by_age_group[ag]):
+    #                 target[n:n+nc] = np.random.choice(target_uids_by_age_group[ag][mask],
+    #                                                              size=nc,
+    #                                                              replace=False)
+    #             n += nc
+    #
+    #     return
 
     def add_pairs(self):
         """ Generate contacts using a specific age mixing pattern """
@@ -133,7 +163,7 @@ class CommunityNet(ss.DynamicNetwork):
 
         # Total (integer) number of average contacts **per day** for each available age group
         # TODO: this does not have to be stochastic, could be fixed
-        n_contacts_by_age_grp = sc.randround(self.contact_rate_num_by_age)
+        n_contacts_by_age_grp = sc.randround(self.contact_rate_num_by_ag_gr)
 
         # Get the total number of contacts each person will have in one time step (1 day)
         # TODO: There could be a dispersion parameter, such that each person within one age group
@@ -149,12 +179,9 @@ class CommunityNet(ss.DynamicNetwork):
 
     def update(self):
         self.end_pairs()
-        # Find the age group each person belongs to
-        self.age_group[:] = tyu.digitize_ages(self.sim.people.age[:], self.pars.age_mixing['age_lb'])
+        self.get_age_groups()
         self.add_pairs()
         return
-
-    # TODO: calculate density of matrix (percentage of edges of all available edges (N**2-N))
 
 
 class HouseholdNet(ss.DynamicNetwork):
