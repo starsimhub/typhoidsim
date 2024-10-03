@@ -215,8 +215,8 @@ def get_age_mix_distribution(location, make_symmetric=True):
 
     age_mixing = sc.dictobj()
     age_mixing['matrix'] = mixing_matrix
-    age_mixing['age_lb'] = age_lb  # lower bound age
-    age_mixing['age_ub'] = age_ub  # uper bound age
+    age_mixing['age_lb'] = np.array(age_lb).astype(float)  # lower bound age
+    age_mixing['age_ub'] = np.array(age_ub).astype(float)  # uper bound age
     age_mixing['age_group'] = age_groups
 
     return age_mixing
