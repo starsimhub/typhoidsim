@@ -31,7 +31,7 @@ class CommunityNet(ss.DynamicNetwork):
 
         # Get and track some useful variables
         self.contact_rate_num_by_ag_gr, self.age_mix_matrix_probs = self.get_contact_rates()
-        self.avail_age_groups = len(self.pars.age_mixing['age_lb'])
+        self.num_age_groups = len(self.pars.age_mixing['age_lb'])
 
         self.add_states(
             ss.Arr('age_group', default=0, dtype=ss_int_, label='Age group')
@@ -140,32 +140,67 @@ class CommunityNet(ss.DynamicNetwork):
         self.end_pairs()
         self.get_age_groups()
         self.add_pairs()
+        self.plot_age_mixing_density(to_plot="age_group")
         return
 
-    def estimate_age_mixing_density(self):
-        """Perform a 2d KDE on ages of p1 and p2"""
-        # TODO: pefrom kde on age groups rather than ages, to enable comparison with
-        # original mixing matrix.
-        X, Y = np.mgrid[tyd.min_age:tyd.max_age, tyd.min_age:tyd.max_age]
-        ages = np.vstack([X.ravel(), Y.ravel()])
-        values = np.vstack([self.sim.people.age[self.p1], self.sim.people.age[self.p2]])
-        kernel = spst.gaussian_kde(values)
-        Z = np.reshape(kernel(ages).T, X.shape)
-        return Z
+    def estimate_age_mixing_density(self, to_plot=None):
+        """Perform a 2d KDE on rither ages or age groups of p1 and p2"""
 
-    def plot_age_mixing_density(self):
-        """ Plot the age-group by age-group density matrix"""
-        kde = self.estimate_age_mixing_density()
+        if to_plot in ['age', 'ages']:
+            X, Y = np.mgrid[tyd.min_age:tyd.max_age, tyd.min_age:tyd.max_age]
+            p1a = self.sim.people.age[self.p1]
+            p2a = self.sim.people.age[self.p2]
+        elif to_plot in ['age_group', 'age_groups', 'age_bins']:
+            X, Y = np.mgrid[0:self.num_age_groups, 0:self.num_age_groups]
+            p1a = self.age_group[self.p1]
+            p2a = self.age_group[self.p2]
+        else:
+            raise ValueError(f"Uknown option to_plot={to_plot}")
+
+        ages = np.vstack([X.ravel(), Y.ravel()])
+        values = np.vstack([p1a, p2a])
+        kernel = spst.gaussian_kde(values)
+        kde = np.reshape(kernel(ages).T, X.shape)
+        return kde
+
+    def plot_age_mixing_density(self, to_plot=None):
+        """ Plot the age-group by age-group density matrix """
         import matplotlib.pyplot as plt
+
+        if to_plot is None:
+            to_plot = "age_group"
+
+        if to_plot in ['age', 'ages']:
+            p1a = self.sim.people.age[self.p1]
+            p2a = self.sim.people.age[self.p2]
+        elif to_plot in ['age_group', 'age_groups', 'age_bins']:
+            p1a = self.age_group[self.p1]
+            p2a = self.age_group[self.p2]
+        else:
+            raise ValueError(f"Uknown option to_plot={to_plot}")
+
+        kde = self.estimate_age_mixing_density(to_plot=to_plot)
+
         fig, ax = plt.subplots()
-        p1a, p2a = self.sim.people.age[self.p1], self.sim.people.age[self.p2]
-        xmin, xmax = p1a.min(), p1a.max()
-        ymin, ymax = p2a.min(), p2a.max()
-        ax.imshow(np.rot90(kde), cmap=plt.cm.Blues,
-                  extent=[xmin, xmax, ymin, ymax])
-        ax.plot(self.sim.people.age[self.p1], self.sim.people.age[self.p2], '.',
-                markerfacecolor='dodgerblue', alpha=0.1,
-                markersize=1)
+
+        if to_plot in ['age', 'ages']:
+            ax.plot(p1a, p2a, '.',
+                    markerfacecolor='dodgerblue', alpha=0.1,
+                    markersize=1)
+            xmin, xmax = p1a.min(), p1a.max()
+            ymin, ymax = p2a.min(), p2a.max()
+            # Plot density
+            ax.imshow(np.rot90(kde), cmap=plt.cm.Blues, extent=[xmin, xmax, ymin, ymax])
+
+        if to_plot in ['age_group', 'age_groups', 'age_bins']:
+            ax.imshow(np.rot90(kde), cmap=plt.cm.Blues)
+            plt.xticks(np.arange(self.num_age_groups),
+                       self.pars.age_mixing['age_group'],
+                       rotation=30)
+            plt.yticks(np.arange(self.num_age_groups),
+                       self.pars.age_mixing['age_group'][::-1],
+                       rotation=30)
+
         ax.set_xlabel('Age of individual (years)')
         ax.set_ylabel('Age of contact (years)')
         return fig
