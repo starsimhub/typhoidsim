@@ -66,24 +66,6 @@ class CommunityNet(ss.DynamicNetwork):
             self.add_pairs()
         return
 
-    @staticmethod
-    @nb.njit(cache=True)
-    def build_source_array(inds, n_contacts):
-        """
-        Create an array (source) that consists of multiple
-        repetitions of each source individual's identifier (person_id),
-        with the number of repetitions being equal to the number of their
-        contacts (n_contacts[i]).
-        """
-        total_number_of_half_edges = np.sum(n_contacts)
-        count = 0
-        source = np.zeros((total_number_of_half_edges,), dtype=ss_int_)
-        for i, person_id in enumerate(inds):
-            n = n_contacts[i]
-            source[count: count + n] = person_id
-            count += n
-        return source
-
     def get_age_groups(self):
         """ Find the age group each person belongs to, and the size of each group"""
         self.age_group[:] = tyu.digitize_ages(self.sim.people.age[:],
@@ -182,9 +164,10 @@ class CommunityNet(ss.DynamicNetwork):
         else:
             raise ValueError(f"Uknown option to_plot={to_plot}")
 
-        kde = self.estimate_age_mixing_density(to_plot=to_plot)
+        kde = self.estimate_age_mixing_density(to_plot=to_plot) / self.age_group_size.reshape(-1, 1)
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(18, 11))
+        vmin, vmax = 0.0, 0.5
 
         if to_plot in ['age', 'ages']:
             ax.plot(p1a, p2a, '.',
@@ -193,17 +176,21 @@ class CommunityNet(ss.DynamicNetwork):
             xmin, xmax = p1a.min(), p1a.max()
             ymin, ymax = p2a.min(), p2a.max()
             # Plot density
-            ax.imshow(np.rot90(kde), cmap=plt.cm.Blues, extent=[xmin, xmax, ymin, ymax])
+            im = ax.imshow(np.rot90(kde), cmap=plt.cm.Blues,
+                      extent=[xmin, xmax, ymin, ymax],
+                      vmin=vmin, vmax=vmax)
 
         if to_plot in ['age_group', 'age_groups', 'age_bins']:
-            ax.imshow(np.rot90(kde), cmap=plt.cm.Blues)
+            im = ax.imshow(np.rot90(kde), cmap=plt.cm.Blues,
+                      vmin=vmin, vmax=vmax)
             plt.xticks(np.arange(self.num_age_groups),
                        self.pars.age_mixing['age_group'],
                        rotation=30)
             plt.yticks(np.arange(self.num_age_groups),
                        self.pars.age_mixing['age_group'][::-1],
                        rotation=30)
-
+        cb = plt.colorbar(im)
+        plt.suptitle('Community Network age mixing density (single time step)')
         ax.set_xlabel('Age of individual (years)')
         ax.set_ylabel('Age of contact (years)')
         return fig

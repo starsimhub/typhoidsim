@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 import sciris as sc
 
-__all__ = ["plot_age_histogram"]
+__all__ = ["plot_age_histogram", "plot_age_mixing"]
 
 
 def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
@@ -24,6 +24,9 @@ def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
         axis_args (dict)  : passed to pl.subplots_adjust()
         plot_args (dict)  : passed to pl.plot()
         fig       (fig)   : handle of existing figure to plot into
+
+    Returns:
+        fig       (fig)   : handle of figure where data has been plotted
     """
 
     if not people.initialized:
@@ -42,8 +45,7 @@ def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
 
     # Handle other arguments
     fig_args  = sc.mergedicts(dict(figsize=(18 ,11)), fig_args)
-    axis_args = sc.mergedicts(dict(left=0.05, right=0.95, bottom=0.05, top=0.95,
-                                    wspace=0.3, hspace=0.35), axis_args)
+    axis_args = sc.mergedicts(dict(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.35), axis_args)
     plot_args = sc.mergedicts(dict(lw=1.5, alpha=0.6, c=color, zorder=10), plot_args)
 
     # Compute statistics
@@ -80,4 +82,66 @@ def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
     plt.xlabel('Age')
     plt.ylabel('Cumulative proportion (%)')
     plt.title(f'Cumulative age distribution (mean age: {people.age.mean():0.2f} years)')
+    return fig
+
+
+def plot_age_mixing(network, width=1.0, fig_args=None, axis_args=None, plot_args=None, fig=None):
+
+    """
+    Plot the empirical age mixing matrix and optionally the
+    simulated age mixing matrix.
+
+    Args:
+        location (str)    : the geographical location of the age mixing we want to plot
+        people    (starsim People): the people object. Must be intialized.
+        bins      (arr)   : age bins to use (default, 0-100 in one-year bins)
+        width     (float) : bar width
+        alpha     (float) : transparency of the plots
+        fig_args  (dict)  : passed to pl.figure()
+        axis_args (dict)  : passed to pl.subplots_adjust()
+        plot_args (dict)  : passed to pl.plot()
+        fig       (fig)   : handle of existing figure to plot into
+
+    Returns:
+        fig       (fig)   : handle of figure where data has been plotted
+    """
+
+
+    if not network.initialized:
+        ValueError("People must have been initialized via a simulation.")
+
+    # Set defaults
+    color = [0.1, 0.1, 0.1]  # Color for the age distribution
+    n_rows = 1  # Number of rows of plots
+
+    # Handle other arguments
+    fig_args = sc.mergedicts(dict(figsize=(18, 11)), fig_args)
+    axis_args = sc.mergedicts(
+        dict(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.35),
+        axis_args)
+    plot_args = sc.mergedicts(dict(lw=1.5, alpha=0.6, c=color, zorder=10),
+                              plot_args)
+
+    # Create the figure
+    if fig is None:
+        fig = plt.figure(**fig_args)
+
+    plt.subplots_adjust(**axis_args)
+    plt.subplot(n_rows, 1, 1)
+
+    # Plot the density
+    im = plt.imshow(np.rot90(network.age_mix_matrix_probs), cmap=plt.cm.Blues, vmin=0.0, vmax=0.5)
+    cb = plt.colorbar(im)
+    plt.xticks(np.arange(network.num_age_groups),
+               network.pars.age_mixing['age_group'],
+               rotation=30)
+    plt.yticks(np.arange(network.num_age_groups),
+               network.pars.age_mixing['age_group'][::-1],
+               rotation=30)
+
+    plt.xlabel('Age of individual (years)')
+    plt.ylabel('Age of contact (years)')
+    plt.suptitle('Empirical age mixing density')
+
+    fig_net = network.plot_age_mixing_density()
     return fig
