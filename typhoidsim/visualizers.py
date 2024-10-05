@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 
 import sciris as sc
 
+from .networks import CommunityNet
+
 __all__ = ["plot_age_histogram", "plot_age_mixing"]
 
 
@@ -85,7 +87,7 @@ def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
     return fig
 
 
-def plot_age_mixing(network, width=1.0, fig_args=None, axis_args=None, plot_args=None, fig=None):
+def plot_age_mixing(network, fig_args=None, axis_args=None, fig=None):
 
     """
     Plot the empirical age mixing matrix and optionally the
@@ -93,13 +95,9 @@ def plot_age_mixing(network, width=1.0, fig_args=None, axis_args=None, plot_args
 
     Args:
         location (str)    : the geographical location of the age mixing we want to plot
-        people    (starsim People): the people object. Must be intialized.
-        bins      (arr)   : age bins to use (default, 0-100 in one-year bins)
-        width     (float) : bar width
-        alpha     (float) : transparency of the plots
+        network   (starsim Network): the network object,must be intialized and must be an instance of CommunityNet.
         fig_args  (dict)  : passed to pl.figure()
         axis_args (dict)  : passed to pl.subplots_adjust()
-        plot_args (dict)  : passed to pl.plot()
         fig       (fig)   : handle of existing figure to plot into
 
     Returns:
@@ -108,7 +106,10 @@ def plot_age_mixing(network, width=1.0, fig_args=None, axis_args=None, plot_args
 
 
     if not network.initialized:
-        ValueError("People must have been initialized via a simulation.")
+        ValueError("Newtork must have been initialized via a simulation.")
+
+    if not isinstance(network, CommunityNet):
+        TypeError(f"Network must be an instance of CommunityNet. Got {type(network)}")
 
     # Set defaults
     color = [0.1, 0.1, 0.1]  # Color for the age distribution
@@ -116,11 +117,7 @@ def plot_age_mixing(network, width=1.0, fig_args=None, axis_args=None, plot_args
 
     # Handle other arguments
     fig_args = sc.mergedicts(dict(figsize=(18, 11)), fig_args)
-    axis_args = sc.mergedicts(
-        dict(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.35),
-        axis_args)
-    plot_args = sc.mergedicts(dict(lw=1.5, alpha=0.6, c=color, zorder=10),
-                              plot_args)
+    axis_args = sc.mergedicts(dict(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.35), axis_args)
 
     # Create the figure
     if fig is None:

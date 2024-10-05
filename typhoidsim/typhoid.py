@@ -652,6 +652,7 @@ class Typhoid(ss.Disease):
         # NOTE: typhoid can get very low mortality (in particular with treatment),
         # so there is a high chance of getting empty dead_uids. If that happens,
         # the line below may seg fault . Just in case check first.
+        # the line below may seg fault . Just in case check first.
         dead_uids = can_die_uids[will_die]
         if dead_uids.size:
             dur_acu = self.get_acute_duration_by_age(dead_uids)
@@ -696,7 +697,6 @@ class Typhoid(ss.Disease):
             edges = net.edges
 
             # Relevant for sources
-            breakpoint()
             rel_trans = self.rel_trans.asnew(self.infectious * self.rel_trans)
             # Relevant for targets
             rel_sus = self.rel_sus.asnew(self.susceptible * self.rel_sus)
