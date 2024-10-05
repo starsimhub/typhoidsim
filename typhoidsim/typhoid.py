@@ -442,7 +442,7 @@ class Typhoid(ss.Disease):
         self.chronic[sub2chro] = True
         self.subclinical[sub2chro] = False
         # https://github.com/starsimhub/typhoidsim/issues/53
-        self.infectiousness[sub2chro] = self.pars.tai * self.pars.tsri * self.pars.tcri
+        self.infectiousness[sub2chro] = self.pars.tai * self.pars.tcri
 
     def progress_to_dead(self, ti):
         # Trigger deaths

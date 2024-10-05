@@ -28,6 +28,7 @@ typhoid = ty.Typhoid()
 
 # How
 network = ty.CommunityNet(pars={'location': location})
+#network = ss.RandomNet({'n_contacts': 10})
 
 sim = ss.Sim(
     pars=pars,
@@ -35,7 +36,9 @@ sim = ss.Sim(
     networks=network
     )
 
+sc.tic()
 sim.run()
+sc.toc()
 net = sim.networks['communitynet']
 ty.plot_age_mixing(net)
 plt.show()
