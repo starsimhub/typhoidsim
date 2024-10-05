@@ -87,10 +87,11 @@ class Typhoid(ss.Disease):
             d_chro=ss.bernoulli(p=self.chronic_gall_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection modulated by gallstone prevalence
             p_gall=tyu.load_dataset("gallstone_probs"),    # Probability of having gallstones by age and sex
             gall_prev=tyu.load_dataset("gallstone_prev"),  # Biological sex gallstone prevalence (expressed in fraction of the population, value between 0 and 1)
-            dur_chro_dist=ss.constant(v=102),  # Duration of recovered state, in weeks.
+            p_rec=ss.bernoulli(p=0.0),           # Prob of recovering from chronic state. Default 0 means everyone becomes a chronic carrier (duration of chronic state is inifinite)
+            dur_chro_dist=ss.constant(v=102.0),  # Duration of chronic state, in weeks. 102 weeks is slightly over 2 years. In a sim shorter than this duration, it behaves as if chronic carriers never recover,
 
             # Recovered
-            dur_rec_dist=ss.constant(v=1),  # Duration of recovered state, in days.
+            dur_rec_dist=ss.constant(v=1.0),  # Duration of recovered state, in days.
 
             # Death
             p_death=ss.bernoulli(p=0.01),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
@@ -484,7 +485,7 @@ class Typhoid(ss.Disease):
         """ Get durations in number of timesteps"""
         dt = self.sim.dt
         dur_prep = self.pars.dur_prep_dist.rvs(uids.size).astype(float)  # in days
-        dur_prep *= tyd.day2year  # in years
+        dur_prep = dur_prep * tyd.day2year  # in years
         return sc.randround(dur_prep / dt)  # in number of timesteps
 
     def get_acute_duration_by_age(self, uids):
@@ -494,7 +495,7 @@ class Typhoid(ss.Disease):
         p = self.pars
         dt = self.sim.dt
         dur_acu = p.dur_symp_dist.rvs(uids.size) * tyd.days_per_week  # in days
-        dur_acu *= tyd.day2year  # in years
+        dur_acu = dur_acu * tyd.day2year  # in years
         return sc.randround(dur_acu / dt)  # in number of timesteps
 
     def get_subclinical_duration_by_age(self, uids):
@@ -504,7 +505,7 @@ class Typhoid(ss.Disease):
         p = self.pars
         dt = self.sim.dt
         dur_scl = p.dur_symp_dist.rvs(uids.size) * tyd.days_per_week  # in days
-        dur_scl *= tyd.day2year
+        dur_scl = dur_scl * tyd.day2year
         return sc.randround(dur_scl / dt)
 
     def get_wait_duration(self, uids):
@@ -515,14 +516,14 @@ class Typhoid(ss.Disease):
         p = self.pars
         dt = self.sim.dt
         dur_wait = p.dur_wait2treatment.rvs(uids).astype(float)
-        dur_wait *= tyd.day2year
+        dur_wait = dur_wait * tyd.day2year
         return sc.randround(dur_wait / dt)
 
     def get_recovered_duration(self, uids):
         p = self.pars
         dt = self.sim.dt
         dur_rec = p.dur_rec_dist.rvs(uids.size)  # duration in days
-        dur_rec *= tyd.day2year                  # duration in years
+        dur_rec = dur_rec * tyd.day2year                  # duration in years
         return sc.randround(dur_rec / dt)        # duration in integer number of timesteps
 
     def get_chronic_duration(self, uids):
@@ -533,7 +534,7 @@ class Typhoid(ss.Disease):
         p = self.pars
         dt = self.sim.dt
         dur_chro = p.dur_chro_dist.rvs(uids.size) * tyd.days_per_week  # duration in in days
-        dur_chro *= tyd.day2year                  # duration in years
+        dur_chro = dur_chro * tyd.day2year                  # duration in years
         return sc.randround(dur_chro / dt)        # duration in integer number of timesteps
 
 
@@ -658,6 +659,12 @@ class Typhoid(ss.Disease):
         dur_scl = self.get_subclinical_duration_by_age(scl2chro_uids)
         self.ti_chronic[scl2chro_uids] = self.ti_subclinical[scl2chro_uids] + dur_scl
 
+        # Determine which carriers will recover and when
+        # See: https://github.com/starsimhub/typhoidsim/issues/66
+        chro2rec_uids = acu2chro_uids[p.p_rec.rvs(acu2chro_uids)].concat(scl2chro_uids[p.p_rec.rvs(scl2chro_uids)])
+        dur_chro = self.get_chronic_duration(chro2rec_uids)
+        self.ti_recovered[chro2rec_uids] = self.ti_chronic[chro2rec_uids] + dur_chro
+
         # Death:        # From the acutes who do not become carriers, determine who recovers and who dies
         can_die_uids = np.setdiff1d(acute_uids, acu2chro_uids)
         will_die = p.p_death.rvs(can_die_uids)
@@ -665,11 +672,9 @@ class Typhoid(ss.Disease):
 
         # Recovery: Get sublinical cases that recover because they won't become carriers
         scl2rec_uids = np.setdiff1d(subcl_uids, scl2chro_uids)
-        will_recover_uids = acu2rec_uids.concat(scl2rec_uids)
+        will_recover_uids = acu2rec_uids.concat(scl2rec_uids).concat(chro2rec_uids)
 
-        # Determine when non-carriers recover and become susceptible again,
-        # NOTE: we do not have to track a recovered state, we can simply output results
-        # that track the 'concept' of a recovered state
+        # Determine when non-carriers who recover will become susceptible again,
         dur_acu = self.get_acute_duration_by_age(acu2rec_uids)
         dur_scl = self.get_subclinical_duration_by_age(scl2rec_uids)
         self.ti_recovered[acu2rec_uids] = self.ti_acute[acu2rec_uids]       + dur_acu
