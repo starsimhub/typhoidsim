@@ -82,10 +82,17 @@ class Typhoid(ss.Disease):
             dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, stdev=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
 
             # Long-term stages
+            # Chronic
             p_cpg=0.15,    # Base prob of becoming chronic after subclinical or acute with gallstones. Same for female and male, but does not have to be.
             d_chro=ss.bernoulli(p=self.chronic_gall_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection modulated by gallstone prevalence
             p_gall=tyu.load_dataset("gallstone_probs"),    # Probability of having gallstones by age and sex
             gall_prev=tyu.load_dataset("gallstone_prev"),  # Biological sex gallstone prevalence (expressed in fraction of the population, value between 0 and 1)
+            dur_chro_dist=ss.constant(v=102),  # Duration of recovered state, in weeks.
+
+            # Recovered
+            dur_rec_dist=ss.constant(v=1),  # Duration of recovered state, in days.
+
+            # Death
             p_death=ss.bernoulli(p=0.01),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
@@ -356,7 +363,6 @@ class Typhoid(ss.Disease):
         self.unexposed[never_exposed] = ~self.susceptible[never_exposed]
         return
 
-
     def update_death(self, uids):
         """Reset states for dead agents"""
         for state in [
@@ -389,6 +395,7 @@ class Typhoid(ss.Disease):
         self.make_susceptible()
 
         # Age-based susceptibility in children <= 6 years old
+        # TODO: this is use-case dependent
         # self.increase_childhood_susceptibility()
 
         # The infection life cycle or natural history flow
@@ -440,7 +447,6 @@ class Typhoid(ss.Disease):
         sub2chro = (self.subclinical & (self.ti_chronic <= ti)).uids
         self.chronic[sub2chro] = True
         self.subclinical[sub2chro] = False
-        # https://github.com/starsimhub/typhoidsim/issues/53
         self.infectiousness[sub2chro] = self.pars.tai * self.pars.tcri
 
     def progress_to_dead(self, ti):
@@ -483,10 +489,7 @@ class Typhoid(ss.Disease):
 
     def get_acute_duration_by_age(self, uids):
         """
-        acute and subclinical durations?, though that would prevent
-        further differentiating between those two stages (ie, if the
-        if we wanted to change the 'threshold' age in one of the
-        stages but not the other. )
+        Duration of the acute stage
         """
         p = self.pars
         dt = self.sim.dt
@@ -495,6 +498,9 @@ class Typhoid(ss.Disease):
         return sc.randround(dur_acu / dt)  # in number of timesteps
 
     def get_subclinical_duration_by_age(self, uids):
+        """
+        Determine duration of the sublinical stage
+        """
         p = self.pars
         dt = self.sim.dt
         dur_scl = p.dur_symp_dist.rvs(uids.size) * tyd.days_per_week  # in days
@@ -511,6 +517,25 @@ class Typhoid(ss.Disease):
         dur_wait = p.dur_wait2treatment.rvs(uids).astype(float)
         dur_wait *= tyd.day2year
         return sc.randround(dur_wait / dt)
+
+    def get_recovered_duration(self, uids):
+        p = self.pars
+        dt = self.sim.dt
+        dur_rec = p.dur_rec_dist.rvs(uids.size)  # duration in days
+        dur_rec *= tyd.day2year                  # duration in years
+        return sc.randround(dur_rec / dt)        # duration in integer number of timesteps
+
+    def get_chronic_duration(self, uids):
+        """
+        Determine duration of chronic stage
+        See: https://github.com/starsimhub/typhoidsim/issues/66
+        """
+        p = self.pars
+        dt = self.sim.dt
+        dur_chro = p.dur_chro_dist.rvs(uids.size) * tyd.days_per_week  # duration in in days
+        dur_chro *= tyd.day2year                  # duration in years
+        return sc.randround(dur_chro / dt)        # duration in integer number of timesteps
+
 
     @staticmethod
     def prepatent_mean_dur_function(module, sim, uids):
@@ -583,11 +608,14 @@ class Typhoid(ss.Disease):
 
     def set_prognoses(self, uids, source_uids=None):
         """
-        Here we define the whole natural history for every agent
-        that has been infected, specifically when agents transition from
-        one stage (state) to the next. The progression of this natural
-        history can be altered by the environment, interventions, or
-        other diseases.
+        Here we define the whole natural history for every agent that has been infected.
+        Specifically, we define *how long* each agent will stay in each stage
+        of the disease, thus define *when* agents transition from one stage (state)
+        to the next. This function also uses the probability distributions passes
+        as parameters of the model to determine whol will become acute/sublinical/chronic, etc.
+
+        The progression of this natural history can be altered by the environment,
+        interventions, or other diseases.
         """
         p = self.pars
         ti = self.sim.ti
@@ -630,10 +658,8 @@ class Typhoid(ss.Disease):
         dur_scl = self.get_subclinical_duration_by_age(scl2chro_uids)
         self.ti_chronic[scl2chro_uids] = self.ti_subclinical[scl2chro_uids] + dur_scl
 
-        # Death: From the acute cases, determine who can die because they don't become carriers
+        # Death:        # From the acutes who do not become carriers, determine who recovers and who dies
         can_die_uids = np.setdiff1d(acute_uids, acu2chro_uids)
-
-        # From the acutes who do not become carriers, determine who recovers and who dies
         will_die = p.p_death.rvs(can_die_uids)
         acu2rec_uids = can_die_uids[~will_die]
 
@@ -651,16 +677,15 @@ class Typhoid(ss.Disease):
 
         # NOTE: typhoid can get very low mortality (in particular with treatment),
         # so there is a high chance of getting empty dead_uids. If that happens,
-        # the line below may seg fault . Just in case check first.
-        # the line below may seg fault . Just in case check first.
+        # the line below may seg fault (or maybe that was bad luck).
+        # Just in case check first.
         dead_uids = can_die_uids[will_die]
         if dead_uids.size:
             dur_acu = self.get_acute_duration_by_age(dead_uids)
             self.ti_dead[dead_uids] = self.ti_acute[dead_uids] + dur_acu
 
-        # Become susceptible the next day, just to make things tidy
-        dur = sc.randround(tyd.day2year / dt)
-        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + dur
+        dur_rec = self.get_recovered_duration(will_recover_uids)
+        self.ti_susceptible[will_recover_uids] = self.ti_recovered[will_recover_uids] + dur_rec
         return
 
     #  Transmission-realated methods - interaction between agents and "else" (other agents)
