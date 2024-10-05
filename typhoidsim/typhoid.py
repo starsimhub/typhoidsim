@@ -47,7 +47,7 @@ class Typhoid(ss.Disease):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=1.0,
+            beta=365.0,
             init_prev=ss.bernoulli(0.01),
             contagion_pool_prev=ss.bernoulli(0.0),  # individual contagion pool maintained at non-negative value
 
@@ -326,7 +326,7 @@ class Typhoid(ss.Disease):
         # Initial cases
         new_cases = self.pars.contagion_pool_prev.filter()   # Use prevalence value
         self.set_prognoses(new_cases)
-        self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of initial cases
+        self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of new cases
         return
 
     # Methods that are specific to a single stage of infection
