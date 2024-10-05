@@ -238,7 +238,6 @@ class Typhoid(ss.Disease):
                         x_12=th1, x_23=th2))
 
     @property
-    @property
     def infectious(self):
         return self.infected
 
@@ -697,6 +696,7 @@ class Typhoid(ss.Disease):
             edges = net.edges
 
             # Relevant for sources
+            breakpoint()
             rel_trans = self.rel_trans.asnew(self.infectious * self.rel_trans)
             # Relevant for targets
             rel_sus = self.rel_sus.asnew(self.susceptible * self.rel_sus)
