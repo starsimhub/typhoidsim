@@ -67,18 +67,18 @@ class Typhoid(ss.Disease):
             cfu_lo_me=5_050_000,   # Threshold CFU value to determine whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose'  (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
             cfu_me_hi=55_000_000,  # Threshold CFU value to determine whether  to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
 
-            # Symptomatic stage, (acute and sublinical)
+            # Infected/Diseased stage, (acute and sublinical)
             p_acute=ss.bernoulli(p=0.234),  # Prob of becoming acute
             # Age-dependent acute and subclincial duration distribution parameters
-            symp_dur_th_age=30.0,        # Symptomatic duration age threshold.
+            inf_dur_th_age=30.0,        # Duration of clinically diagnosable cases (acute/subclinical) age threshold.
             # For people aged less than threshold
-            symp_dur_mean_le=1.172,   # Symptomatic duration mean if age < age_threshold, in weeks.
-            symp_dur_std_le=0.483,    # Symptomatic duration std  if age < age_threshold, in weeks.
+            inf_dur_mean_le=1.172,   # Acute/subclinical duration mean if age < age_threshold, in weeks.
+            inf_dur_std_le=0.483,    # Acute/subclinical duration std  if age < age_threshold, in weeks.
             # For people aged threshold value and over
-            symp_dur_mean_geq=1.172,  # Symptomatic duration mean if age >= age_threshold, in weeks.
-            symp_dur_std_geq=0.788,   # Symptomatic duration std if age  >= age_threshold, in weeks.
-            dur_symp_dist=ss.lognorm_ex(mean=self.symp_dur_mean,
-                                        stdev=self.symp_dur_std),     # Symptomatic (acute or subclinical duration), depends on age, expressed in weeks.
+            inf_dur_mean_geq=1.172,  # Acute/subclinical duration mean if age >= age_threshold, in weeks.
+            inf_dur_std_geq=0.788,   # Acute/subclinical duration std if age  >= age_threshold, in weeks.
+            dur_inf_dist=ss.lognorm_ex(mean=self.inf_dur_mean,
+                                       stdev=self.inf_dur_std),     #  acute or subclinical duration, depends on age, expressed in weeks.
             dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, stdev=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
 
             # Long-term stages
@@ -493,7 +493,7 @@ class Typhoid(ss.Disease):
         """
         p = self.pars
         dt = self.sim.dt
-        dur_acu = p.dur_symp_dist.rvs(uids.size) * tyd.days_per_week  # in days
+        dur_acu = p.dur_inf_dist.rvs(uids.size) * tyd.days_per_week  # in days
         dur_acu = dur_acu * tyd.day2year  # in years
         return sc.randround(dur_acu / dt)  # in number of timesteps
 
@@ -503,7 +503,7 @@ class Typhoid(ss.Disease):
         """
         p = self.pars
         dt = self.sim.dt
-        dur_scl = p.dur_symp_dist.rvs(uids.size) * tyd.days_per_week  # in days
+        dur_scl = p.dur_inf_dist.rvs(uids.size) * tyd.days_per_week  # in days
         dur_scl = dur_scl * tyd.day2year
         return sc.randround(dur_scl / dt)
 
@@ -847,33 +847,33 @@ class Typhoid(ss.Disease):
         return np.array(p_infc)
 
     @staticmethod
-    def symp_dur_mean(module, sim, uids):
+    def inf_dur_mean(module, sim, uids):
         """_
         Age-dependent mean of the distribution of durations of the
-        symptomatic stage. Assumes a lognormal_ex distribution.
+        acute or subclinical stage. Assumes a lognormal_ex distribution.
         """
         if uids is None:
             mean_arr = np.array([])
         else:
-            th_age = module.pars.symp_dur_th_age
+            th_age = module.pars.inf_dur_th_age
             mean_arr = np.ones(1 if isinstance(uids, int) else uids.size)
-            mean_arr[sim.people.age[uids] < th_age]  = module.pars.symp_dur_mean_le
-            mean_arr[sim.people.age[uids] >= th_age] = module.pars.symp_dur_mean_geq
+            mean_arr[sim.people.age[uids] < th_age]  = module.pars.inf_dur_mean_le
+            mean_arr[sim.people.age[uids] >= th_age] = module.pars.inf_dur_mean_geq
         return mean_arr
 
     @staticmethod
-    def symp_dur_std(module, sim, uids):
+    def inf_dur_std(module, sim, uids):
         """
         Age-dependent standard deviation of the distribution of durations of the
-        symptomatic stage. Assumes a lognormal_ex distribution.
+        acute or subclinical stage. Assumes a lognormal_ex distribution.
         """
         if uids is None:
             std_arr = np.array([])
         else:
-            th_age = module.pars.symp_dur_th_age
+            th_age = module.pars.inf_dur_th_age
             std_arr = np.zeros(1 if isinstance(uids, int) else uids.size)
-            std_arr[sim.people.age[uids] < th_age]  = module.pars.symp_dur_std_le
-            std_arr[sim.people.age[uids] >= th_age] = module.pars.symp_dur_std_geq
+            std_arr[sim.people.age[uids] < th_age]  = module.pars.inf_dur_std_le
+            std_arr[sim.people.age[uids] >= th_age] = module.pars.inf_dur_std_geq
         return std_arr
 
     def update_immunity(self, uids):
