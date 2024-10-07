@@ -47,5 +47,6 @@ setup(
         'matplotlib',
         'numba',
         'networkx',
+        'numexpr',
     ],
 )
