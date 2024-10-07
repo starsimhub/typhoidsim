@@ -47,7 +47,7 @@ class Typhoid(ss.Disease):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=365.0,
+            beta=365.0,  # The traditional infectivity rate in disease models
             init_prev=ss.bernoulli(0.01),
             contagion_pool_prev=ss.bernoulli(0.0),  # individual contagion pool maintained at non-negative value
 
@@ -141,14 +141,13 @@ class Typhoid(ss.Disease):
             # and depend on infection states
             ss.FloatArr("n_exposures", 0, label="Number of Exposures"),    # average daily exposures from a given source/route
             ss.FloatArr("cfu_dose", 0, label="Exposure amount (CFUs)"),    # exposure amount (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
-            ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of cfu during different stages of the disease (infected phase, within host). Could be rel_trans?
+            ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of cfu during different stages of the disease (infected phase, within host).
             ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
-            ss.FloatArr("p_chronic", label="p(chronic)"),                       # probability of becoming chronic
             ss.FloatArr("immunity", 1, label="Immunity Level"),            # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
-            ss.FloatArr('rel_sus', default=1.0, label='Relative susceptibility'),  # TODO: remove immunity state and use rel_sus instead?
-            ss.FloatArr('rel_trans', default=1.0, label='Relative transmission'),
+            ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),  # TODO: remove immunity state and use rel_sus instead?
+            ss.FloatArr("rel_trans", default=1.0, label="Relative transmission"),
             # States that track timing of events
-            ss.FloatArr('ti_infected', label='Time of infection'),
+            ss.FloatArr("ti_infected", label="Time of infection"),
             ss.FloatArr("ti_susceptible", label="Start of susceptible state"),
             ss.FloatArr("ti_prepatent", label="Start of prepatent stage"),
             ss.FloatArr("ti_subclinical", label="Start of subclinical stage"),
