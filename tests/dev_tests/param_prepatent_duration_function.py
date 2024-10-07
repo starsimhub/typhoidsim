@@ -41,7 +41,7 @@ sim.run()
 
 
 fig, axs = plt.subplots(1, 2)
-exposure_dose = np.linspace(0, 55000000, 1024)
+exposure_dose = np.linspace(0, 65000000, 1024)
 
 mean_dur = sim.diseases.typhoid.partial_prep_dur_mean(exposure_dose)
 std_dur  = sim.diseases.typhoid.partial_prep_dur_mean(exposure_dose)
