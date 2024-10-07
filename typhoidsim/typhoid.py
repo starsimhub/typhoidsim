@@ -48,11 +48,11 @@ class Typhoid(ss.Disease):
         self.default_pars(
             # Initial conditions and transmissibility beta
             beta=365.0,  # The traditional infectivity rate in disease models
-            init_prev=ss.bernoulli(0.01),
-            contagion_pool_prev=ss.bernoulli(0.0),  # individual contagion pool maintained at non-negative value
+            init_prev=ss.bernoulli(p=0.01),
+            contagion_pool_prev=ss.bernoulli(p=0.0),  # individual contagion pool maintained at non-negative value
 
             # NATURAL HISTORY PARAMETERS
-            # From immune (never exposed) to susceptible
+            # From never exposed/invulnerable to susceptible
             p_unexp2sus_6m=ss.bernoulli(p=0.14),  # Proportion of never exposed/completely immune population at 6 months that moves to susceptible state
             p_unexp2sus_3y=ss.bernoulli(p=0.29),  # Proportion of never exposed/completely immune population at 3 years that moves to susceptible state
             p_unexp2sus_6y=ss.bernoulli(p=0.61),  # Proportion of never exposed/completely immune population at 6 years that moves to susceptible state
@@ -64,12 +64,12 @@ class Typhoid(ss.Disease):
             dur_prep_dist=ss.lognorm_ex(mean=self.prepatent_mean_dur_function,
                                         stdev=self.prepatent_std_dur_function),
 
-            cfu_lo_me=5_050_000,   # Threshold cfu value that distinguishes whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose' mean/std duration (cfu_dose > cfu_lo_me).
-            cfu_me_hi=55_000_000,  # Threshold cfu value that distinguishes whether to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' mean/std duration (cfu_dose > cfu_lo_me).
+            cfu_lo_me=5_050_000,   # Threshold CFU value to determine whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose'  (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
+            cfu_me_hi=55_000_000,  # Threshold CFU value to determine whether  to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
 
             # Symptomatic stage, (acute and sublinical)
-            p_acute=ss.bernoulli(p=0.234),  # Prob of becoming acute ()
-            # Age-dependent duration distribution parameters
+            p_acute=ss.bernoulli(p=0.234),  # Prob of becoming acute
+            # Age-dependent acute and subclincial duration distribution parameters
             symp_dur_th_age=30.0,        # Symptomatic duration age threshold.
             # For people aged less than threshold
             symp_dur_mean_le=1.172,   # Symptomatic duration mean if age < age_threshold, in weeks.
