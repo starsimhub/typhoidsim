@@ -129,13 +129,13 @@ class Typhoid(ss.Disease):
         self.add_states(
             # Infection life cycle states
             ss.BoolArr("susceptible", default=False, label="Susceptible"),
-            ss.BoolArr("infected", label="Infectious"),
-            ss.BoolArr("unexposed", True, label="Unexposed"),  # People are born into this state, naive and never exposed
-            ss.BoolArr("prepatent", label="Prepatent"),  # Also known as exposed state (incubation stage)
-            ss.BoolArr("acute", label="Acute"),
-            ss.BoolArr("subclinical", label="Subclinical"),
-            ss.BoolArr("chronic", label="Chronic"),
-            ss.BoolArr("recovered", label="Recovered"),
+            ss.BoolArr("infected", default=False, label="Infectious"),
+            ss.BoolArr("unexposed", default=True, label="Unexposed"),  # People are born into this state, naive and never exposed
+            ss.BoolArr("prepatent", default=False, label="Prepatent"),  # Also known as exposed state (incubation stage)
+            ss.BoolArr("acute", default=False, label="Acute"),
+            ss.BoolArr("subclinical", default=False, label="Subclinical"),
+            ss.BoolArr("chronic", default=False, label="Chronic"),
+            ss.BoolArr("recovered", default=False, label="Recovered"),
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
@@ -923,8 +923,8 @@ class Typhoid(ss.Disease):
 
 
 # Functions that are typhoid-specific but are context dependent (ie, location)
-def unexp2sus_youth_prob_function_gauld2018(module, sim, uids, sus_saturation_age=50.0,
-                                            sus_age_exposure_slope=0.5):
+def unexp2sus_youth_prob_function_gauld2018(module, sim, uids, sus_saturation_age=20.0,
+                                            sus_age_exposure_slope=1.0):
     """
     Estimate the age-dependent probability of transistioning from
     unexposed to susceptible. From Gauld et al 2018, Fig. 2B.
@@ -943,6 +943,7 @@ def unexp2sus_youth_prob_function_gauld2018(module, sim, uids, sus_saturation_ag
     """
     p_sus = tyum.sigmoid(sim.people.age[uids], sus_saturation_age, sus_age_exposure_slope)
     return np.array(p_sus)
+
 
 def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
     """
