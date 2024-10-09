@@ -21,3 +21,6 @@ default_plot_granularity = 512  # How many points between x-min and x-max we wil
 # Age
 min_age = 0
 max_age = 120
+
+# Average blood volume per kilo of body weight
+average_bv_bw = 75  # ml/kg
