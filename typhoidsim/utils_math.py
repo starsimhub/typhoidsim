@@ -13,7 +13,7 @@ import pandas as pd
 
 
 # Specify all externally visible things this file defines
-__all__ = ['sigmoid', 'gompertz', 'gompertz_dfun']
+__all__ = ['sigmoid', 'gompertz', 'gompertz_dfun', 'double_sigmoid_exp', 'double_sigmoid_tanh']
 
 
 def sigmoid(x, max_x, slope):
