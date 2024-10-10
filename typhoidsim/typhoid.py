@@ -113,10 +113,10 @@ class Typhoid(ss.Disease):
             transmission=ss.Pars(
                 # Behavioural interaction parameters between people and environment
                 exposure2env_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route
-                env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
+                env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_env),
                 # Bejavioural interaction parameters for the contact route (people 2 people)
                 exposure2contact_rate=ss.poisson(lam=0.18),
-                ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
+                ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),
             ),
 
         beta=None, # Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
@@ -760,8 +760,9 @@ class Typhoid(ss.Disease):
                 # Units are (n_exposures * volume unit) / day
                 # This exposure rate means that not every (infected) contact will be succesful in transmiting pathogens
                 exposure_amount = (self.pars.transmission.exposure2contact_rate.rvs(len(trg)) / tyd.day2year) * self.sim.dt    ## units in n_exposures * unit_volume
-                self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt  # TODO: to remove? beta should be 1 for typhoid model
+                self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt  # TODO: to remove? beta_per_dt should be 1 for typhoid model
                 self.n_exposures[trg] = exposure_amount
+
                 new_cases_bool = self.pars.transmission.ppl2ppl_p_inf(trg)
 
                 # Append new cases
@@ -825,8 +826,7 @@ class Typhoid(ss.Disease):
         # TODO: exposure would now be exposure frequency (num_exposures) x exposure volume (volume of exposure) per day,
         #  the volume of exposure would determine the total number of CFUs
         self.n_exposures[susc_uids] = (environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt # number of exposures on the time interval "dt"
-        # TODO: cfu_dose is still in number of pathogens
-        exposure_amount = environment.sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # Units cfu level in pathogens/volume * (n_exposures * volume) --> total pathogens
+        exposure_amount = environment.sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_level [pathogens/volume] * (n_exposures * volume) --> total pathogens
         self.cfu_dose[susc_uids] = environment.pars.rel_trans*exposure_amount
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
@@ -840,15 +840,17 @@ class Typhoid(ss.Disease):
             self.set_prognoses(new_cases, source_uids=None)
             self.progress_to_prepatent(ti)
 
-        # Infectious individuals shed contagion into the contagion pool.
-        # Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
-        # or due to sanitation interventions.
+        # Transmission people->environment:
+        #     Infectious individuals shed contagion into the contagion pool.
+        #     Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
+        #     or due to sanitation interventions ().
         # TODO: shedding would be interpreted as shedding per unit volume
         effective_shedding = ((environment.pars.transmission.shedding_rate / tyd.day2year) * dt)   # transform to yearly rate, then multiply by dt to get the effective shedding on the time interval dt
+        #
         shedded_cfu = effective_shedding * (self.rel_trans[self.infected] * self.infectiousness[self.infected]).sum()
 
         # CFU level increases due to people shedding into the environment
-        self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] += shedded_cfu / environment.volume
+        self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] += shedded_cfu
         return new_cases
 
     @staticmethod
@@ -857,7 +859,7 @@ class Typhoid(ss.Disease):
         return np.array(p_resp)
 
     @staticmethod
-    def infection_prob_function(module, sim, uids):
+    def infection_prob_function_env(module, sim, uids):
         """
         Calculate the probability of infection for environmental route
         In EMOD (https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/IndividualTyphoid.cpp):
