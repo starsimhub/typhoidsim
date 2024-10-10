@@ -26,6 +26,7 @@ class EnvironmentalPool(ss.Demographics):
             b=0.0297,              # fraction of change (increase or decrease) in growth rate/degree Celsius
             volume=1e8,            # TODO: temporary parameter: assumed volume of the environmental pool
             transmission=ss.Pars(
+                rel_trans=0.5,     # Long-cycle exposure (to the environment) multiplier, targeted by interventions, mEL in Gauld et al 2018
                 shedding_rate=0.1,                          # Rate at which infectious people shed colony-forming units to the environment (per day)
                 env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (size ppl)
             ),

@@ -82,7 +82,7 @@ class Typhoid(ss.Disease):
 
             # Long-term stages
             # Chronic
-            p_cpg=0.15,    # Base prob of becoming chronic after subclinical or acute with gallstones. Same for female and male, but does not have to be.
+            p_cpg=0.15,    # Base prob of becoming chronic after subclinical or acute given gallstones. Same for female and male, but does not have to be.
             d_chro=ss.bernoulli(p=self.chronic_gall_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection modulated by gallstone prevalence
             p_gall=tyu.load_dataset("gallstone_probs"),    # Probability of having gallstones by age and sex
             gall_prev=tyu.load_dataset("gallstone_prev"),  # Biological sex gallstone prevalence (expressed in fraction of the population, value between 0 and 1)
@@ -827,7 +827,7 @@ class Typhoid(ss.Disease):
         self.n_exposures[susc_uids] = (environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt # number of exposures on the time interval "dt"
         # TODO: cfu_dose is still in number of pathogens
         exposure_amount = environment.sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # Units cfu level in pathogens/volume * (n_exposures * volume) --> total pathogens
-        self.cfu_dose[susc_uids] = exposure_amount
+        self.cfu_dose[susc_uids] = environment.pars.rel_trans*exposure_amount
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
