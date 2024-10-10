@@ -47,7 +47,6 @@ class Typhoid(ss.Disease):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            beta=365.0,  # The traditional infectivity rate in disease models
             init_prev=ss.bernoulli(p=0.01),
             contagion_pool_prev=ss.bernoulli(p=0.0),  # individual contagion pool maintained at non-negative value
 
@@ -92,6 +91,7 @@ class Typhoid(ss.Disease):
 
             # Recovered
             dur_rec_dist=ss.constant(v=1.0),  # Duration of recovered state, in days.
+            # TODO: do we need a parameter that embodies the probability of clinical immunity after acute infection?
 
             # Death
             p_death=ss.bernoulli(p=0.01),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
@@ -111,7 +111,6 @@ class Typhoid(ss.Disease):
             has_environment=None,
             # Tranmission parameters
             transmission=ss.Pars(
-                beta=1.0,  # Beta environment
                 # Behavioural interaction parameters between people and environment
                 exposure2env_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
@@ -119,6 +118,9 @@ class Typhoid(ss.Disease):
                 exposure2contact_rate=ss.poisson(lam=0.18),
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function),
             ),
+
+        beta=None, # Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
+                   # Its value will be updated to be dt during validation, so the net effect is a beta=1 per time step.
         )
         self.update_pars(pars, **kwargs)
 
@@ -146,6 +148,7 @@ class Typhoid(ss.Disease):
             ss.FloatArr("immunity", 1, label="Immunity Level"),            # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
             ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),  # TODO: remove immunity state and use rel_sus instead?
             ss.FloatArr("rel_trans", default=1.0, label="Relative transmission"),
+
             # States that track timing of events
             ss.FloatArr("ti_infected", label="Time of infection"),
             ss.FloatArr("ti_susceptible", label="Start of susceptible state"),
@@ -181,6 +184,13 @@ class Typhoid(ss.Disease):
             if 'beta' not in self.pars:
                 errormsg = f'Disease {self.name} is missing beta; pars are: {sc.strjoin(self.pars.keys())}'
                 raise sc.KeyNotFoundError(errormsg)
+
+            if self.pars.beta is None:
+                #NOTE: Typhoid does not have/ does not use beta, but starsim's networks
+                # expect this parameter to exist. To cancel out the effect we set
+                # beta to be the time step, such that when beta_per_dt is calculated
+                # the effective value is 1.0
+                self.pars.beta = self.sim.dt
 
             # If beta is a scalar, apply this bi-directionally to all networks
             if sc.isnumber(self.pars.beta):
@@ -318,11 +328,11 @@ class Typhoid(ss.Disease):
         return
 
     def contagion_pool(self):
-        """ From specs:
+        """
+        From Typhoid (EMOD) specs:
         Individual contagion populations are maintained at non-negative values in all typhoid
         simulations.
         """
-        # Initial cases
         new_cases = self.pars.contagion_pool_prev.filter()   # Use prevalence value
         self.set_prognoses(new_cases)
         self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of new cases
@@ -381,16 +391,13 @@ class Typhoid(ss.Disease):
     # Update progression of disease, handle transitions
     def update_pre(self):
         """
-        Update the progression of the disease -- handles disease
-        state transitions. In the typical simulation flow this method is called
-        before propagating the infection/disease is propagated via
-        make_new_cases()
+        Update the progression of the disease -- handles disease state transitions.
+        In a typical simulation flow this method is called before propagating
+        the infection/disease is propagated via make_new_cases()
         """
 
         ti = self.sim.ti  # current timestep
 
-        # Check who becomes susceptible in this timestep age 0-20
-        # TODO: Handle the case where there is no aging, or document that vital dynamics be enabled for typhoid simulations.
         # If the population does not age, then over a long simulation, eventually all people aged 0-20 will transition to the susceptible state.
         self.make_susceptible()
 
@@ -739,7 +746,8 @@ class Typhoid(ss.Disease):
                 if beta == 0:
                     continue
 
-                # In typhoid source->target transmission is guaranteed, but infection is not.
+                # In typhoid source->target 'physical contact' is guaranteed,
+                # but transmission of pathogens and probability of infection are not.
                 beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.sim.dt)
 
                 # Make sure new cases due to contagion contact route get assigned the correct
@@ -747,8 +755,13 @@ class Typhoid(ss.Disease):
                 # From EMOD: Currently, all infections from the Contact route are assumed to be a
                 # high dose prepatent duration, meaning that the characteristic dose a
                 # target agent receives has to be set to be at least self.pars.cfu_me_hi + 1
-                self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt
-                self.n_exposures[trg] = (self.pars.transmission.exposure2contact_rate.rvs(len(trg)) / tyd.day2year) * self.sim.dt
+
+                # Exposure encompasses exposure frequency * exposure volume) per unit of time
+                # Units are (n_exposures * volume unit) / day
+                # This exposure rate means that not every (infected) contact will be succesful in transmiting pathogens
+                exposure_amount = (self.pars.transmission.exposure2contact_rate.rvs(len(trg)) / tyd.day2year) * self.sim.dt    ## units in n_exposures * unit_volume
+                self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt  # TODO: to remove? beta should be 1 for typhoid model
+                self.n_exposures[trg] = exposure_amount
                 new_cases_bool = self.pars.transmission.ppl2ppl_p_inf(trg)
 
                 # Append new cases
@@ -809,9 +822,11 @@ class Typhoid(ss.Disease):
         susc_uids = (susc).uids
 
         # Increase cfu doses in susceptible people by exposing them to the environment
-        # TODO: check whether the multiplication by dt makes sense. I think it does in particular if dt < 1 day
-        self.n_exposures[susc_uids] = (environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt  # number of exposured on the time interval "dt"
-        self.cfu_dose[susc_uids] = self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # beta is used to simulate reduction in exposure amount due to behavioural changes
+        # TODO: exposure would now be exposure frequency (num_exposures) x exposure volume (volume of exposure) per day,
+        #  the volume of exposure would determine
+        self.n_exposures[susc_uids] = (environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt     # number of exposures on the time interval "dt"
+        # TODO: cfu_dose is still in number of pathogens
+        self.cfu_dose[susc_uids]    = environment.pars.volume * environment.sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
@@ -827,11 +842,12 @@ class Typhoid(ss.Disease):
         # Infectious individuals shed contagion into the contagion pool.
         # Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
         # or due to sanitation interventions.
+        # TODO: shedding would be interpreted as shedding per unit volume
         effective_shedding = ((environment.pars.transmission.shedding_rate / tyd.day2year) * dt)   # transform to yearly rate, then multiply by dt to get the effective shedding on the time interval dt
         shedded_cfu = effective_shedding * (self.rel_trans[self.infected] * self.infectiousness[self.infected]).sum()
 
         # CFU level increases due to people shedding into the environment
-        self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] += shedded_cfu
+        self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] += shedded_cfu / environment.volume
         return new_cases
 
     @staticmethod
@@ -841,9 +857,27 @@ class Typhoid(ss.Disease):
 
     @staticmethod
     def infection_prob_function(module, sim, uids):
+        """
+        Calculate the probability of infection for environmental route
+        In EMOD (https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/IndividualTyphoid.cpp):
+        NonNegativeFloat infects = 1.0f-pow( 1.0f + exposure * ( pow( 2.0f, (1/alpha) ) -1.0f )/N50, -alpha ); // Dose-response for prob of infection
+        prob = 1.0f - pow(1.0f - immunity * infects * ira, number_of_exposures);
+        """
         # Evoke an immunity-like response
         p_resp = module.drc(module.cfu_dose[uids])
         p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.immunity[uids] * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
+        return np.array(p_infc)
+
+    @staticmethod
+    def infection_prob_function_contact(module, sim, uids):
+        """
+        Calculate the probability of infection for contact routes
+        In EMOD (https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/IndividualTyphoid.cpp):
+        ProbabilityNumber infects = fContact / IndividualHumanTyphoidConfig::typhoid_acute_infectiousness;
+        prob = 1.0f - pow(1.0f - immunity * infects * ira, number_of_exposures);
+        """
+        p_resp = module.cfu_dose[uids] / module.pars.tai
+        p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.immunity[uids] * p_resp) ** module.n_exposures[uids]  # total number of exposure volume
         return np.array(p_infc)
 
     @staticmethod
