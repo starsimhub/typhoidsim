@@ -823,10 +823,11 @@ class Typhoid(ss.Disease):
 
         # Increase cfu doses in susceptible people by exposing them to the environment
         # TODO: exposure would now be exposure frequency (num_exposures) x exposure volume (volume of exposure) per day,
-        #  the volume of exposure would determine
-        self.n_exposures[susc_uids] = (environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt     # number of exposures on the time interval "dt"
+        #  the volume of exposure would determine the total number of CFUs
+        self.n_exposures[susc_uids] = (environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt # number of exposures on the time interval "dt"
         # TODO: cfu_dose is still in number of pathogens
-        self.cfu_dose[susc_uids]    = environment.pars.volume * environment.sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]
+        exposure_amount = environment.sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # Units cfu level in pathogens/volume * (n_exposures * volume) --> total pathogens
+        self.cfu_dose[susc_uids] = exposure_amount
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
