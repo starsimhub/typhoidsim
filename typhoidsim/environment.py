@@ -24,8 +24,9 @@ class EnvironmentalPool(ss.Demographics):
             bs_temp=6.0,           # Baseline temperature at which bacteria would stop growing, in degree Celsius
             av_temp=14.0,          # typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
             b=0.0297,              # fraction of change (increase or decrease) in growth rate/degree Celsius
+            volume=1e8,            # TODO: temporary parameter: assumed volume of the environmental pool
             transmission=ss.Pars(
-                shedding_rate=0.1,                  # Rate at which infectious people shed colony-forming units to the environment (per day)
+                shedding_rate=0.1,                          # Rate at which infectious people shed colony-forming units to the environment (per day)
                 env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (size ppl)
             ),
 
@@ -60,7 +61,10 @@ class EnvironmentalPool(ss.Demographics):
         """
         npts = self.sim.npts
         self.sv += [typ.StateVariable(self.name, "cfu_level", npts, dtype=float),]
+        self.sv += [typ.StateVariable(self.name, "cfu_num", npts, dtype=float),]
         self.sv += [typ.StateVariable(self.name, "temperature", npts, dtype=float),]
+        self.sv += [typ.StateVariable(self.name, "cfu_concentration", npts, dtype=float),]
+
         return
 
     def init_env_pool(self, sim):
