@@ -141,12 +141,13 @@ class Typhoid(ss.Disease):
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
-            ss.FloatArr("n_exposures", 0, label="Number of Exposures"),    # average daily exposures from a given source/route
-            ss.FloatArr("cfu_dose", 0, label="Exposure amount (CFUs)"),    # exposure amount (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
-            ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of cfu during different stages of the disease (infected phase, within host).
+            ss.FloatArr("n_exposures", 0, label="Number of Exposures"),    # average number of exposures from a given source/route over the interval of one timestep (usually 1 day)
+            ss.FloatArr("exposure_amount", 0, label="Number of Exposures"),# average (number of exposures * vollume) from a given source/route over the interval of one timestep (usually 1 day)
+            ss.FloatArr("cfu_dose", 0, label="Exposure amount (CFUs)"),    # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
+            ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of CFUs during different stages of the disease (infected phase, within host).
             ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
             ss.FloatArr("immunity", 1, label="Immunity Level"),            # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
-            ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),  # TODO: remove immunity state and use rel_sus instead?
+            ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),
             ss.FloatArr("rel_trans", default=1.0, label="Relative transmission"),
 
             # States that track timing of events
@@ -768,9 +769,7 @@ class Typhoid(ss.Disease):
                 # Append new cases
                 new_cases.append(trg[new_cases_bool])
                 sources.append(src[new_cases_bool])
-                networks.append(
-                    np.full(np.count_nonzero(new_cases_bool), dtype=ss_int_,
-                            fill_value=i))
+                networks.append(np.full(np.count_nonzero(new_cases_bool), dtype=ss_int_, fill_value=i))
 
         # Tidy up
         if len(new_cases) and len(sources):
@@ -823,11 +822,10 @@ class Typhoid(ss.Disease):
         susc_uids = (susc).uids
 
         # Increase cfu doses in susceptible people by exposing them to the environment
-        # TODO: exposure would now be exposure frequency (num_exposures) x exposure volume (volume of exposure) per day,
-        #  the volume of exposure would determine the total number of CFUs
-        self.n_exposures[susc_uids] = (environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt # number of exposures on the time interval "dt"
-        exposure_amount = environment.sv.cfu_conc[ti - 1] * self.n_exposures[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
-        self.cfu_dose[susc_uids] = environment.pars.rel_trans*exposure_amount
+        self.exposure_amount[susc_uids] = ((environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt)  # expoosure amount expressed in (n_exposures * volume) on the time interval "dt"
+        # We still ned the number of exposures for the probability of infection function
+        self.n_exposures[susc_uids] = self.exposure_amount[susc_uids] / environment.pars.volume  # Units n_exposures t [# of exposures] =  (n_exposures * volume) / volume
+        self.cfu_dose[susc_uids] = environment.pars.rel_trans * environment.sv.cfu_conc[ti - 1] * self.exposure_amount[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
@@ -845,12 +843,12 @@ class Typhoid(ss.Disease):
         #     Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
         #     or due to sanitation interventions ().
         # TODO: shedding would be interpreted as shedding per unit volume
-        effective_shedding = ((environment.pars.transmission.shedding_rate / tyd.day2year) * dt)   # transform to yearly rate, then multiply by dt to get the effective shedding on the time interval dt
-        #
-        shedded_cfu = effective_shedding * (self.rel_trans[self.infected] * self.infectiousness[self.infected]).sum()
+        effective_shedding = ((environment.pars.transmission.shedding_rate / tyd.day2year) * dt)   # transform to yearly rate, then multiply by dt to get the effective shedding on the time interval dt in change/volume
+        shedded_cfu = (self.rel_trans[self.infected] * self.infectiousness[self.infected]).sum()   # number of CFUs
+        concentration_change = effective_shedding * shedded_cfu  # CFUs / volume
 
         # CFU level increases due to people shedding into the environment
-        self.sim.demographics['environmentalpool'].sv.cfu_conc[ti - 1] += shedded_cfu
+        self.sim.demographics['environmentalpool'].sv.cfu_conc[ti - 1] += concentration_change
         return new_cases
 
     @staticmethod
