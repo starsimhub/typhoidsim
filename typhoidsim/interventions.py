@@ -399,7 +399,7 @@ class environmental_cleanup(WASH):
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.target_attr_path = ['demographics', 'environmentalpool', 'sv', 'cfu_level']
+        self.target_attr_path = ['demographics', 'environmentalpool', 'sv', 'cfu_conc']
         return
 
     def apply(self, sim):
@@ -480,8 +480,8 @@ class environmental_seasonality(ss.Intervention):
         if sim.year >= self.start and len(self.time):
             seasonal_cfu = self.pattern(self.time[0])
             self.time = self.time[1:]
-            val = sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1]
-            sim.demographics['environmentalpool'].sv.cfu_level[sim.ti-1] = val + seasonal_cfu
+            val = sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1]
+            sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1] = val + seasonal_cfu
             self.results['seasonal_cfu'][self.ti] = seasonal_cfu
             self.ti += 1
         return

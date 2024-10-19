@@ -20,17 +20,17 @@ class EnvironmentalPool(ss.Demographics):
         self.default_pars(
             init_cfu=0,            # Initial level of CFUs in the environment.
             decay_rate=0.3,        # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
-            acceptable_level=600,  # CFU/ml (not used at the moment)
-            bs_temp=6.0,           # Baseline temperature at which bacteria would stop growing, in degree Celsius
-            av_temp=14.0,          # typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
-            b=0.0297,              # fraction of change (increase or decrease) in growth rate/degree Celsius
-            volume=1e8,            # TODO: temporary parameter: assumed volume of the environmental pool
+            volume=1e8,            # Assumed volume of the environmental pool. Units: to be defined: See https://www.pnas.org/doi/full/10.1073/pnas.1719579115
+            acceptable_level=600,  # CFU/volume: usually CFU/ml (not used at the moment) #TODO: to be used with an environmental monitor intervention
             transmission=ss.Pars(
                 rel_trans=0.5,     # Long-cycle exposure (to the environment) multiplier, targeted by interventions, mEL in Gauld et al 2018
                 shedding_rate=0.1,                          # Rate at which infectious people shed colony-forming units to the environment (per day)
                 env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (size ppl)
             ),
-
+        # Temperature-parameters, not used at the moment
+            bs_temp=6.0,   # Baseline temperature at which bacteria would stop growing, in degree Celsius
+            av_temp=14.0,  # typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
+            b=0.0297,      # fraction of change (increase or decrease) in [growth rate/degree Celsius]
         )
         self.update_pars(pars, **kwargs)
 
@@ -43,7 +43,8 @@ class EnvironmentalPool(ss.Demographics):
         npts = self.sim.npts
         self.results += [
             ss.Result(self.name, 'temperature', npts, dtype=int, scale=True, label='Environmental temperature'),
-            ss.Result(self.name, 'cfu', npts, dtype=int, scale=True, label='Current CFU levels'),
+            ss.Result(self.name, 'cfu_conc', npts, dtype=int, scale=True, label='Current CFU concentration'),
+            ss.Result(self.name, 'cfu_num', npts, dtype=int, scale=True,label='Current number of CFUs'),
         ]
         return
 
@@ -61,16 +62,13 @@ class EnvironmentalPool(ss.Demographics):
         Initialise StateVariable objects
         """
         npts = self.sim.npts
-        self.sv += [typ.StateVariable(self.name, "cfu_level", npts, dtype=float),]
-        self.sv += [typ.StateVariable(self.name, "cfu_num", npts, dtype=float),]
+        self.sv += [typ.StateVariable(self.name, "cfu_conc", npts, dtype=float),]
         self.sv += [typ.StateVariable(self.name, "temperature", npts, dtype=float),]
-        self.sv += [typ.StateVariable(self.name, "cfu_concentration", npts, dtype=float),]
-
         return
 
     def init_env_pool(self, sim):
         ti = 0  # initial time step
-        self.sv.cfu_level[sim.ti-1] = self.pars.init_cfu
+        self.sv.cfu_conc[sim.ti-1] = self.pars.init_cfu
         return
 
     def get_growth_rate(self):
@@ -90,10 +88,11 @@ class EnvironmentalPool(ss.Demographics):
         growth_rate = self.get_growth_rate()
         change_rate = (p.decay_rate-growth_rate)
         effective_rate = (change_rate / tyd.day2year)  # transform to yearly rate
-        self.sv.cfu_level[ti-1] = self.sv.cfu_level[ti-2] * np.exp(-effective_rate*self.sim.dt)  # + shedded into environment + decay
+        self.sv.cfu_conc[ti-1] = self.sv.cfu_conc[ti-2] * np.exp(-effective_rate*self.sim.dt)  # + shedded into environment + decay
         return
 
     def update_results(self):
-        self.results['cfu'][self.sim.ti] = self.sv.cfu_level[self.sim.ti-1]
+        self.results['cfu_conc'][self.sim.ti] = self.sv.cfu_conc[self.sim.ti-1]
+        self.results['cfu_num'][self.sim.ti]  = self.sv.cfu_conc[self.sim.ti-1] * self.pars.volume
         self.results['temperature'][self.sim.ti] = self.sv.temperature[self.sim.ti-1]
         return

@@ -826,7 +826,7 @@ class Typhoid(ss.Disease):
         # TODO: exposure would now be exposure frequency (num_exposures) x exposure volume (volume of exposure) per day,
         #  the volume of exposure would determine the total number of CFUs
         self.n_exposures[susc_uids] = (environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt # number of exposures on the time interval "dt"
-        exposure_amount = environment.sv.cfu_level[ti - 1] * self.n_exposures[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_level [pathogens/volume] * (n_exposures * volume) --> total pathogens
+        exposure_amount = environment.sv.cfu_conc[ti - 1] * self.n_exposures[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
         self.cfu_dose[susc_uids] = environment.pars.rel_trans*exposure_amount
 
         ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
@@ -850,7 +850,7 @@ class Typhoid(ss.Disease):
         shedded_cfu = effective_shedding * (self.rel_trans[self.infected] * self.infectiousness[self.infected]).sum()
 
         # CFU level increases due to people shedding into the environment
-        self.sim.demographics['environmentalpool'].sv.cfu_level[ti - 1] += shedded_cfu
+        self.sim.demographics['environmentalpool'].sv.cfu_conc[ti - 1] += shedded_cfu
         return new_cases
 
     @staticmethod
