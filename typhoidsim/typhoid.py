@@ -48,7 +48,6 @@ class Typhoid(ss.Disease):
         self.default_pars(
             # Initial conditions and transmissibility beta
             init_prev=ss.bernoulli(p=0.01),
-            contagion_pool_prev=ss.bernoulli(p=0.0),  # individual contagion pool maintained at non-negative value
 
             # NATURAL HISTORY PARAMETERS
             # From never exposed/invulnerable to susceptible
@@ -325,17 +324,6 @@ class Typhoid(ss.Disease):
                 self.pars.has_environment = False
                 msg = "'environmentalpool' module not found. Will run simulation without environmental transmission."
                 ss.warn(msg)
-        return
-
-    def contagion_pool(self):
-        """
-        From Typhoid (EMOD) specs:
-        Individual contagion populations are maintained at non-negative values in all typhoid
-        simulations.
-        """
-        new_cases = self.pars.contagion_pool_prev.filter()   # Use prevalence value
-        self.set_prognoses(new_cases)
-        self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of new cases
         return
 
     # Methods that are specific to a single stage of infection
@@ -706,10 +694,6 @@ class Typhoid(ss.Disease):
         Handle transmission of the infections, includes contact and transmission
         routes
         """
-        # From EMOD:
-        # Contagion in the contact route is 100% per timestep (1 day in the typhoid model)
-        # Contagion is a level of CFU transmitted by the the pool of contagion to a target
-        self.contagion_pool()
         self.make_new_cases_contact()
         self.make_new_cases_environmental()
         return
@@ -750,16 +734,10 @@ class Typhoid(ss.Disease):
                 # but transmission of pathogens and probability of infection are not.
                 beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.sim.dt)
 
-                # Make sure new cases due to contagion contact route get assigned the correct
-                # dose of cfu to determine their prepatent duration
-                # From EMOD: Currently, all infections from the Contact route are assumed to be a
-                # high dose prepatent duration, meaning that the characteristic dose a
-                # target agent receives has to be set to be at least self.pars.cfu_me_hi + 1
-
                 # Exposure encompasses exposure frequency * exposure volume) per unit of time
                 # Units are (n_exposures * volume unit) / day
                 # This exposure rate means that not every (infected) contact will be succesful in transmiting pathogens
-                exposure_amount = (self.pars.transmission.exposure2contact_rate.rvs(len(trg)) / tyd.day2year) * self.sim.dt    ## units in n_exposures * unit_volume
+                exposure_amount = (self.pars.transmission.exposure2contact_rate.rvs(len(trg)) / tyd.day2year) * self.sim.dt    ## units in (n_exposures)
                 self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt  # TODO: to remove? beta_per_dt should be 1 for typhoid model
                 self.n_exposures[trg] = exposure_amount
 
@@ -767,7 +745,10 @@ class Typhoid(ss.Disease):
                 new_cases_bool = self.pars.transmission.ppl2ppl_p_inf(trg)
 
                 # "Adjust" cfu_dose of agents who got cases so they the high dose mu/sigma parameters for prepatent duration
-                self.cfu_dose[trg[new_cases_bool]] = self.pars.cfu_me_hi + 1
+                # From EMOD: Currently, all infections from the Contact route are assumed to be a
+                # high dose prepatent duration, meaning that the characteristic dose a
+                # target agent receives has to be set to be larger than self.pars.cfu_me_hi
+                self.cfu_dose[trg[new_cases_bool]] = self.pars.cfu_me_hi + 0.1*self.pars.cfu_me_hi
 
                 # Append new cases
                 new_cases.append(trg[new_cases_bool])
