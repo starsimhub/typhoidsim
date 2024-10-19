@@ -105,7 +105,6 @@ class Typhoid(ss.Disease):
             tppi=0.99,   # Decrease in susceptibility per infection (exponential decrease)
             drc_alpha=0.175,  # parameter in the Dose Response Curve
             drc_n50=1.11e6,   # parameter in the Dose Response Curve
-            p_resp=ss.bernoulli(p=self.response_prob_function),
 
             # ENVIRONMENT PARAMETERS
             has_environment=None,
@@ -764,7 +763,11 @@ class Typhoid(ss.Disease):
                 self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt  # TODO: to remove? beta_per_dt should be 1 for typhoid model
                 self.n_exposures[trg] = exposure_amount
 
+                # Decide who got infected
                 new_cases_bool = self.pars.transmission.ppl2ppl_p_inf(trg)
+
+                # "Adjust" cfu_dose of agents who got cases so they the high dose mu/sigma parameters for prepatent duration
+                self.cfu_dose[trg[new_cases_bool]] = self.pars.cfu_me_hi + 1
 
                 # Append new cases
                 new_cases.append(trg[new_cases_bool])
@@ -852,11 +855,6 @@ class Typhoid(ss.Disease):
         return new_cases
 
     @staticmethod
-    def response_prob_function(module, sim, uids):
-        p_resp = module.drc(module.cfu_dose[uids])
-        return np.array(p_resp)
-
-    @staticmethod
     def infection_prob_function_env(module, sim, uids):
         """
         Calculate the probability of infection for environmental route
@@ -924,7 +922,7 @@ class Typhoid(ss.Disease):
 
     def drc(self, cfu_dose):
         """
-        The probability of infection is mediated by the dose-response curve (drc),
+        The probability of infection due to environmental exposure is mediated by the dose-response curve (drc),
         taking in the contagion population as a value of colony-forming units (CFU)
         and returning a probability of infection.
 
