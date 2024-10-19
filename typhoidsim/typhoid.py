@@ -115,6 +115,7 @@ class Typhoid(ss.Disease):
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_env),
                 exposure2contact_rate=ss.poisson(lam=0.18),  # Poisson rate determining the daily number of exposures for the contact route (num exposures)
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),
+                p_route=ss.uniform()
             ),
 
         beta=None, # Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
@@ -145,6 +146,9 @@ class Typhoid(ss.Disease):
             ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),          # average number of CFUs during different stages of the disease (infected phase, within host).
             ss.FloatArr("n_infections", 0.0, label="Number of Infections"),      # number of infections over the lifespan of this agent
             ss.FloatArr("immunity", default=1.0, label="Immunity Level"),             # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
+            ss.FloatArr("p_infc", default=0.0, label="Probability of Infection"),     # Track probability of infection
+            ss.FloatArr("p_route", default=0.0, label="Probability Route Draw"),      # Probability to determine which route will be the route if infection
+
             ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),
             ss.FloatArr("rel_trans", default=1.0, label="Relative transmission"),
 
@@ -694,8 +698,70 @@ class Typhoid(ss.Disease):
         Handle transmission of the infections, includes contact and transmission
         routes
         """
+        self.make_new_cases_selective()
+        return
+
+    def make_new_cases_sequential(self):
         self.make_new_cases_contact()
         self.make_new_cases_environmental()
+        return
+
+    def make_new_cases_selective(self):
+        """
+        Handle route transmission, decide with route to pick (ignore) based on max probabilities.
+        #TODO: WIP not functional
+        #TODO: I think we need to define a max prob as a parameter of each route, not based on the p_infc of each individual
+        """
+        new_cases = []
+        # TODO: WIP: WIP: WIP: non functional code to select route of transmission based on probabilitiesa
+        # Draw probabilities to decide the route of transmission
+        self.p_route[:] = self.pars.transmission.p_route.rvs(len(self.susceptible))*self.susceptible
+        self.p_route[:] = self.pars.transmission.p_route.rvs(len(self.susceptible)) * self.susceptible
+
+        #Get prob of infectio from self.expose_to_contacts()
+        self.p_infc[:] = self.pars.transmission.p_route.rvs(len(self.susceptible))
+        p_infc_net = self.p_infc.asnew(self.p_infc)
+        #Get prob of infection self.expose_to_environment()
+        self.p_infc[:] = self.pars.transmission.p_route.rvs(len(self.susceptible))
+        p_infc_env = self.p_infc.asnew(self.p_infc)
+
+        # Select contact route, but not environmental
+        temp = (self.p_route < sc.safedivide(p_infc_net / (p_infc_net + p_infc_env)))
+        contact_only_uids = (temp).uids
+        self.p_infc[contact_only_uids] = p_infc_net[contact_only_uids]
+
+        temp = (self.p_route >= (1.0 - p_infc_env) / (1.0 - ((1.0 - p_infc_net) * (1.0 - p_infc_env))))
+        # Select environmental route only,
+        env_only_uids = (~temp).uids
+        self.p_infc[env_only_uids] = p_infc_env[env_only_uids]
+
+        # The rest can be exposed to both routes
+        both_uids = (temp).uids
+
+        # Assess individual routes
+        temp_dist = ss.bernoulli(p=self.p_infc, strict=False)
+
+        got_infected_net = temp_dist(contact_only_uids)
+        got_infected_env = temp_dist(env_only_uids)
+
+        new_cases.append(contact_only_uids[got_infected_net])
+        new_cases.append(env_only_uids[got_infected_env])
+
+        # Assess sequentially for the ones that can be exposed to both
+        # Environment
+        self.p_infc[both_uids] = p_infc_env[both_uids]
+        got_infected_env = temp_dist(both_uids)
+        new_cases.append(both_uids[got_infected_env])
+        # Network
+        self.p_infc[both_uids[~got_infected_env]] = p_infc_net[both_uids[~got_infected_env]]
+
+        got_infected_net = temp_dist(both_uids[~got_infected_env])
+        new_cases.append(both_uids[got_infected_net])
+
+        if len(new_cases):
+            self.set_prognoses(new_cases, source_uids=None)
+            self.progress_to_prepatent(self.sim.ti)
+        breakpoint()
         return
 
     def make_new_cases_contact(self):
@@ -716,14 +782,13 @@ class Typhoid(ss.Disease):
             nbetas = betamap[nkey]
             edges = net.edges
 
-            # Relevant for sources
+            # Relative Transmissibility: Relevant for sources
             rel_trans = self.rel_trans.asnew(self.infectious * self.rel_trans)
-            # Relevant for targets
-            rel_sus = self.rel_sus.asnew(self.susceptible * self.rel_sus)
+            # Relative Susceptibility: Relevant for targets
+            rel_sus   = self.rel_sus.asnew(self.susceptible * self.rel_sus)
 
             p1p2b0 = [edges.p1, edges.p2, nbetas[0]]
-            p2p1b1 = [edges.p2, edges.p1, nbetas[1]]
-            for src, trg, beta in [p1p2b0, p2p1b1]:
+            for src, trg, beta in [p1p2b0]:
 
                 # Transmission of infection
                 # Skip networks with no transmission
