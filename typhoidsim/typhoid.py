@@ -63,8 +63,8 @@ class Typhoid(ss.Disease):
             dur_prep_dist=ss.lognorm_ex(mean=self.prepatent_mean_dur_function,
                                         stdev=self.prepatent_std_dur_function),
 
-            cfu_lo_me=5_050_000,   # Threshold CFU value to determine whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose'  (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
-            cfu_me_hi=55_000_000,  # Threshold CFU value to determine whether  to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
+            cfu_lo_me=5_050_000.0,   # Threshold CFU value to determine whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose'  (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
+            cfu_me_hi=55_000_000.0,  # Threshold CFU value to determine whether  to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
 
             # Infected/Diseased stage, (acute and sublinical)
             p_acute=ss.bernoulli(p=0.234),  # Prob of becoming acute
@@ -98,11 +98,11 @@ class Typhoid(ss.Disease):
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Infectiousness parameters
-            tai=40_000,  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
-            tpri=0.4,    # Typhoid relative (to acute) prepatent infectiousness
-            tsri=0.8,    # Typhoid relative (to acute) subclinic infectiousness
-            tcri=0.1,    # Typhoid relative (to acute) chronic infectiousness
-            tppi=0.99,   # Decrease in susceptibility per infection (exponential decrease)
+            tai=40_000.0,  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
+            tpri=0.4,      # Typhoid relative (to acute) prepatent infectiousness
+            tsri=0.8,      # Typhoid relative (to acute) subclinic infectiousness
+            tcri=0.1,      # Typhoid relative (to acute) chronic infectiousness
+            tppi=0.99,     # Decrease in susceptibility per infection (exponential decrease)
             drc_alpha=0.175,  # parameter in the Dose Response Curve
             drc_n50=1.11e6,   # parameter in the Dose Response Curve
 
@@ -111,12 +111,10 @@ class Typhoid(ss.Disease):
             # Tranmission parameters
             transmission=ss.Pars(
                 # Behavioural interaction parameters between people and environment
-                #exposure2env_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route
-                exposure2env_rate=ss.poisson(lam=5e5),# Poisson rate determining the daily number of exposures for environment route
+                #exposure2env_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (num exposures)
+                exposure2env_rate=ss.poisson(lam=5e5),   # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_env),
-                # Bejavioural interaction parameters for the contact route (people 2 people)
-                #exposure2contact_rate=ss.poisson(lam=0.18),
-                exposure2contact_rate=ss.poisson(lam=1.8e5),
+                exposure2contact_rate=ss.poisson(lam=0.18),  # Poisson rate determining the daily number of exposures for the contact route (num exposures)
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),
             ),
 
@@ -142,12 +140,12 @@ class Typhoid(ss.Disease):
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
-            ss.FloatArr("n_exposures", 0, label="Number of Exposures"),    # average number of exposures from a given source/route over the interval of one timestep (usually 1 day)
-            ss.FloatArr("exposure_amount", 0, label="Number of Exposures"),# average (number of exposures * vollume) from a given source/route over the interval of one timestep (usually 1 day)
-            ss.FloatArr("cfu_dose", 0, label="Exposure amount (CFUs)"),    # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
-            ss.FloatArr("infectiousness", 0, label="Infectiousness"),      # average number of CFUs during different stages of the disease (infected phase, within host).
-            ss.FloatArr("n_infections", 0, label="Number of Infections"),  # number of infections over the lifespan of this agent
-            ss.FloatArr("immunity", 1, label="Immunity Level"),            # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
+            ss.FloatArr("n_exposures", default=0.0, label="Number of Exposures"),     # average number of exposures from a given source/route over the interval of one timestep (usually 1 day)
+            ss.FloatArr("exposure_amount", default=0.0, label="Number of Exposures"), # average (number of exposures * vollume) from a given source/route over the interval of one timestep (usually 1 day)
+            ss.FloatArr("cfu_dose", default=0.0, label="Exposure amount (CFUs)"),     # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
+            ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),          # average number of CFUs during different stages of the disease (infected phase, within host).
+            ss.FloatArr("n_infections", 0.0, label="Number of Infections"),      # number of infections over the lifespan of this agent
+            ss.FloatArr("immunity", default=1.0, label="Immunity Level"),             # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
             ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),
             ss.FloatArr("rel_trans", default=1.0, label="Relative transmission"),
 
@@ -192,7 +190,7 @@ class Typhoid(ss.Disease):
                 # expect this parameter to exist. To cancel out the effect we set
                 # beta to be the time step, such that when beta_per_dt is calculated
                 # the effective value is 1.0
-                self.pars.beta = self.sim.dt
+                self.pars.beta = 1./self.sim.dt
 
             # If beta is a scalar, apply this bi-directionally to all networks
             if sc.isnumber(self.pars.beta):
@@ -877,7 +875,7 @@ class Typhoid(ss.Disease):
         ProbabilityNumber infects = fContact / IndividualHumanTyphoidConfig::typhoid_acute_infectiousness;
         prob = 1.0f - pow(1.0f - immunity * infects * ira, number_of_exposures);
         """
-        p_resp = module.cfu_dose[uids] / module.pars.tai
+        p_resp = np.minimum(module.cfu_dose[uids] / module.pars.tai, 1.0)
         p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.immunity[uids] * p_resp) ** module.n_exposures[uids]  # total number of exposure volume
         return np.array(p_infc)
 
