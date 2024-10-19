@@ -111,10 +111,12 @@ class Typhoid(ss.Disease):
             # Tranmission parameters
             transmission=ss.Pars(
                 # Behavioural interaction parameters between people and environment
-                exposure2env_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route
+                #exposure2env_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route
+                exposure2env_rate=ss.poisson(lam=5e5),# Poisson rate determining the daily number of exposures for environment route
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_env),
                 # Bejavioural interaction parameters for the contact route (people 2 people)
-                exposure2contact_rate=ss.poisson(lam=0.18),
+                #exposure2contact_rate=ss.poisson(lam=0.18),
+                exposure2contact_rate=ss.poisson(lam=1.8e5),
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),
             ),
 
