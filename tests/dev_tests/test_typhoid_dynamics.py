@@ -44,7 +44,7 @@ efficacy_pattern = ty.Pattern("average_efficacy + amp * cos((2*pi/period)*var)",
 # efficacy_pattern = ty.Pattern("where((var == 0.0), average_efficacy, 0.0)",
 #                               pars={'average_efficacy': 0.9})
 
-my_intervention = ty.environmental_cleanup(efficacy=efficacy_pattern, start_day=2500, dur_days=1)
+my_intervention = ty.environmental_cleanup(efficacy=efficacy_pattern, start=2500, dur=1)
 
 sim = ss.Sim(
     pars=pars,
