@@ -24,8 +24,9 @@ ppl = ss.People(10_000)
 
 # Treatment
 my_product      = ty.infectiousness_clearence(clearence_rate=0.05)
-my_intervention = ty.infection_clearence(product=my_product),   # use basic treatment that reduces infectiousness by product mutiplier
+my_intervention = ty.infection_clearence(product=my_product)   # use basic treatment that reduces infectiousness by product mutiplier
 
+breakpoint()
 sim = ss.Sim(
     pars=pars,
     diseases=typhoid,
