@@ -480,8 +480,9 @@ class environmental_seasonality(ss.Intervention):
         if sim.year >= self.start and len(self.time):
             seasonal_cfu = self.pattern(self.time[0])
             self.time = self.time[1:]
-            val = sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1]
-            sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1] = val + seasonal_cfu
+            val = (sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1] *
+                   sim.demographics['environmentalpool'].pars.volume)
+            sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1] = (val + seasonal_cfu) / sim.demographics['environmentalpool'].pars.volume
             self.results['seasonal_cfu'][self.ti] = seasonal_cfu
             self.ti += 1
         return
