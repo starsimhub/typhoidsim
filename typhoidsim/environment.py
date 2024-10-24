@@ -19,13 +19,14 @@ class EnvironmentalPool(ss.Demographics):
         super().__init__()
         self.default_pars(
             init_cfu=0,            # Initial level of CFUs in the environment.
-            decay_rate=0.3,        # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
+            decay_rate=0.2,        # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
             volume=1e4,            # Assumed volume of the environmental pool. Units: to be defined: See https://www.pnas.org/doi/full/10.1073/pnas.1719579115
             acceptable_level=600,  # CFU/volume, usually expressed in CFU/ml (not used at the moment) #TODO: to be used with an environmental monitor intervention
             transmission=ss.Pars(
-                rel_trans=0.5,     # Long-cycle exposure (to the environment) multiplier, targeted by interventions, mEL in Gauld et al 2018
-                shedding_rate=0.1,                          # Rate at which infectious people shed colony-forming units to the environment (per day)
-                env2ppl_exposure_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (size ppl)
+                rel_trans=1.0,     # Long-cycle exposure (to the environment) multiplier, targeted by interventions, mEL in Gauld et al 2018
+                shedding_rate=0.7,                          # Rate at which infectious people shed colony-forming units to the environment (per day)
+                env2ppl_exposure_rate=ss.poisson(lam=5e2),   # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)
+
             ),
         # Temperature-parameters, not used at the moment
             bs_temp=6.0,   # Baseline temperature at which bacteria would stop growing, in degree Celsius

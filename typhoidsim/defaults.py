@@ -3,8 +3,7 @@ Define some default values, constants for use throughout Typhoidsim
 """
 
 import numpy as np
-import sciris as sc
-
+import enum
 
 # Datetime
 months_per_year = 12.0   # Months per year
@@ -24,3 +23,9 @@ max_age = 120
 
 # Average blood volume per kilo of body weight
 average_bv_bw = 75  # ml/kg
+
+
+# Enumeration to track origin of infections
+class TransmissionRoute(enum.Enum):
+    ENVIRONMENT = 0
+    CONTACT = 1
