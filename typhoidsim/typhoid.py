@@ -728,17 +728,20 @@ class Typhoid(ss.Disease):
                 # but transmission of pathogens and probability of infection are not.
                 beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.sim.dt)
 
-                # Exposure encompasses exposure frequency * exposure volume) per unit of time
-                # Units are (n_exposures * volume unit) / day
+                # EXPOSURE: Exposure encompasses exposure frequency per unit of time
+                # Units are (n_exposures ) / day
                 # This exposure rate means that not every (infected) contact will be succesful in transmiting pathogens
                 exposure_amount = (self.pars.transmission.exposure2contact_rate.rvs(len(trg)) / tyd.day2year) * self.sim.dt    ## units in (n_exposures)
+
+                # TODO: This is is model A, but I think EMOD is model B. Couldn't figure out which one it is though.
+                # See: https://github.com/starsimhub/typhoidsim/issues/90
                 self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt  # TODO: to remove? beta_per_dt should be 1 for typhoid model
                 self.n_exposures[trg] = exposure_amount
 
-                # Decide who got infected
+                # INFECTION: Decide who got infected
                 new_cases_bool = self.pars.transmission.ppl2ppl_p_inf(trg)
 
-                # "Adjust" cfu_dose of agents who got cases so they the high dose mu/sigma parameters for prepatent duration
+                # "Adjust" cfu_dose of agents who got infected. This will guarantee the high dose mu/sigma parameters for prepatent duration
                 # From EMOD: Currently, all infections from the Contact route are assumed to be a
                 # high dose prepatent duration, meaning that the characteristic dose a
                 # target agent receives has to be set to be larger than self.pars.cfu_me_hi
@@ -852,7 +855,7 @@ class Typhoid(ss.Disease):
         ProbabilityNumber infects = fContact / IndividualHumanTyphoidConfig::typhoid_acute_infectiousness;
         prob = 1.0f - pow(1.0f - immunity * infects * ira, number_of_exposures);
         """
-        p_resp = np.minimum(module.cfu_dose[uids] / module.pars.tai, 1.0)
+        p_resp = np.minimum(module.cfu_dose[uids] / module.pars.tai, 1.0)  # This number is the equivalent of the dose-response-curve for the environment
         p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.immunity[uids] * p_resp) ** module.n_exposures[uids]  # total number of exposure volume
         return np.array(p_infc)
 
