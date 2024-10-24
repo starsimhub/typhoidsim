@@ -23,23 +23,7 @@ __all__ += ["unexp2sus_youth_prob_function_gauld2018",
 class Typhoid(ss.Disease):
     """
     Typhoid module that includes the natural history of the disease in a human
-    agent and also environmental 'state' variables and parameters that
-    capture the growth and decay of S. typhii bacteria in contaminated resources.
-
-    This is an early-stage 'monolithic' implementation.
-
-    The parent class ss.Infection has the following states
-
-    ss.BoolArr('susceptible', default=True) -- for typhoid we may need to reset
-    this to False
-    ss.BoolArr('infected'), -- default False
-    ss.FloatArr('rel_sus', default=1.0),
-    ss.FloatArr('rel_trans', default=1.0),
-    ss.FloatArr('ti_infected'),)
-
-    # TODO: add link to specification document
-    Unless otherwise specified, parameters come from: XXX
-
+    agent.
     """
 
     def __init__(self, pars=None, *args, **kwargs):
@@ -68,7 +52,7 @@ class Typhoid(ss.Disease):
             # Infected/Diseased stage, (acute and sublinical)
             p_acute=ss.bernoulli(p=0.234),  # Prob of becoming acute
             # Age-dependent acute and subclincial duration distribution parameters
-            inf_dur_th_age=30.0,        # Duration of clinically diagnosable cases (acute/subclinical) age threshold.
+            inf_dur_th_age=30.0,     # Duration of clinically diagnosable cases (acute/subclinical) age threshold.
             # For people aged less than threshold
             inf_dur_mean_le=1.172,   # Acute/subclinical duration mean if age < age_threshold, in weeks.
             inf_dur_std_le=0.483,    # Acute/subclinical duration std  if age < age_threshold, in weeks.
@@ -110,15 +94,14 @@ class Typhoid(ss.Disease):
             # Tranmission parameters
             transmission=ss.Pars(
                 # Behavioural interaction parameters between people and environment
-                #exposure2env_rate=ss.poisson(lam=0.5),  # Poisson rate determining the daily number of exposures for environment route (num exposures)
                 exposure2env_rate=ss.poisson(lam=5e5),   # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_env),
                 exposure2contact_rate=ss.poisson(lam=0.18),  # Poisson rate determining the daily number of exposures for the contact route (num exposures)
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),
-                p_route=ss.uniform()
+                p_route=ss.uniform()  # NOTE: currently unused, but stub for transmission route selection. See: https://github.com/starsimhub/typhoidsim/issues/102
             ),
 
-        beta=None, # Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
+        beta=None, # NOTE: Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
                    # Its value will be updated to be dt during validation, so the net effect is a beta=1 per time step.
         )
         self.update_pars(pars, **kwargs)
@@ -292,7 +275,7 @@ class Typhoid(ss.Disease):
     def _check_betas(self):
         """ Check that there's a network for each beta key """
         # Ensure keys are lowercase
-        if isinstance(self.pars.beta, dict): # TODO: check if needed
+        if isinstance(self.pars.beta, dict):  # TODO: check if needed
             self.pars.beta = {k.lower(): v for k, v in self.pars.beta.items()}
 
         # Create a mapping between beta and networks, and populate it
@@ -302,7 +285,7 @@ class Typhoid(ss.Disease):
         if netkeys: # Skip if no networks
             for bkey in betapars.keys():
                 orig_bkey = bkey[:]
-                if bkey in netkeys: # TODO: CK: could tidy up logic
+                if bkey in netkeys:  # TODO: CK: could tidy up logic
                     betamap[bkey] = betapars[orig_bkey]
                 else:
                     if 'net' not in bkey:
@@ -394,7 +377,7 @@ class Typhoid(ss.Disease):
         self.make_susceptible()
 
         # Age-based susceptibility in children <= 6 years old
-        # TODO: this is use-case dependent
+        # TODO: age-based susceptibility depends on the use-case
         # self.increase_childhood_susceptibility()
 
         # The infection life cycle or natural history flow
@@ -695,73 +678,19 @@ class Typhoid(ss.Disease):
     #  or the environment
     def make_new_cases(self):
         """
-        Handle transmission of the infections, includes contact and transmission
-        routes
+        Handle transmission of pathogens and who becomes infected,
+        includes all transmission routes.
         """
-        self.make_new_cases_selective()
+        self.make_new_cases_sequential()
         return
 
     def make_new_cases_sequential(self):
+        """
+        This function exist to allow for testing different mechanisms
+        that handle multiroute transmission.
+        """
         self.make_new_cases_contact()
         self.make_new_cases_environmental()
-        return
-
-    def make_new_cases_selective(self):
-        """
-        Handle route transmission, decide with route to pick (ignore) based on max probabilities.
-        #TODO: WIP not functional
-        #TODO: I think we need to define a max prob as a parameter of each route, not based on the p_infc of each individual
-        """
-        new_cases = []
-        # TODO: WIP: WIP: WIP: non functional code to select route of transmission based on probabilitiesa
-        # Draw probabilities to decide the route of transmission
-        self.p_route[:] = self.pars.transmission.p_route.rvs(len(self.susceptible))*self.susceptible
-        self.p_route[:] = self.pars.transmission.p_route.rvs(len(self.susceptible)) * self.susceptible
-
-        #Get prob of infectio from self.expose_to_contacts()
-        self.p_infc[:] = self.pars.transmission.p_route.rvs(len(self.susceptible))
-        p_infc_net = self.p_infc.asnew(self.p_infc)
-        #Get prob of infection self.expose_to_environment()
-        self.p_infc[:] = self.pars.transmission.p_route.rvs(len(self.susceptible))
-        p_infc_env = self.p_infc.asnew(self.p_infc)
-
-        # Select contact route, but not environmental
-        temp = (self.p_route < sc.safedivide(p_infc_net / (p_infc_net + p_infc_env)))
-        contact_only_uids = (temp).uids
-        self.p_infc[contact_only_uids] = p_infc_net[contact_only_uids]
-
-        temp = (self.p_route >= (1.0 - p_infc_env) / (1.0 - ((1.0 - p_infc_net) * (1.0 - p_infc_env))))
-        # Select environmental route only,
-        env_only_uids = (~temp).uids
-        self.p_infc[env_only_uids] = p_infc_env[env_only_uids]
-
-        # The rest can be exposed to both routes
-        both_uids = (temp).uids
-
-        # Assess individual routes
-        temp_dist = ss.bernoulli(p=self.p_infc, strict=False)
-
-        got_infected_net = temp_dist(contact_only_uids)
-        got_infected_env = temp_dist(env_only_uids)
-
-        new_cases.append(contact_only_uids[got_infected_net])
-        new_cases.append(env_only_uids[got_infected_env])
-
-        # Assess sequentially for the ones that can be exposed to both
-        # Environment
-        self.p_infc[both_uids] = p_infc_env[both_uids]
-        got_infected_env = temp_dist(both_uids)
-        new_cases.append(both_uids[got_infected_env])
-        # Network
-        self.p_infc[both_uids[~got_infected_env]] = p_infc_net[both_uids[~got_infected_env]]
-
-        got_infected_net = temp_dist(both_uids[~got_infected_env])
-        new_cases.append(both_uids[got_infected_net])
-
-        if len(new_cases):
-            self.set_prognoses(new_cases, source_uids=None)
-            self.progress_to_prepatent(self.sim.ti)
-        breakpoint()
         return
 
     def make_new_cases_contact(self):
@@ -842,8 +771,8 @@ class Typhoid(ss.Disease):
         At each time step:
         1. Individuals get exposed by the environment (env->ppl)
             - They receive a cfu dose, which depends on:
-                 - the level of cfu in the environment, and
-                 - the number of exposures to the environment.
+                 - the cfu concentration in the environment, and
+                 - the exposures amouint to the environment.
 
         2. New individuals may become infected, based on the cfu dose received
             and their past history with the disease. This is mediated by the
@@ -859,7 +788,6 @@ class Typhoid(ss.Disease):
         """
         if not self.pars.has_environment:
             return []
-
         trans_pars = self.pars.transmission
         ti = self.sim.ti
         dt = self.sim.dt
@@ -870,13 +798,14 @@ class Typhoid(ss.Disease):
         susc = self.susceptible.asnew(self.susceptible * self.rel_sus)
         susc_uids = (susc).uids
 
-        # Increase cfu doses in susceptible people by exposing them to the environment
+        # EXPOSURE: Increase cfu doses in susceptible people by exposing them to the environment
         self.exposure_amount[susc_uids] = ((environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt)  # expoosure amount expressed in (n_exposures * volume) on the time interval "dt"
         # We still ned the number of exposures for the probability of infection function
         self.n_exposures[susc_uids] = self.exposure_amount[susc_uids] / environment.pars.volume  # Units n_exposures t [# of exposures] =  (n_exposures * volume) / volume
         self.cfu_dose[susc_uids] = environment.pars.rel_trans * environment.sv.cfu_conc[ti - 1] * self.exposure_amount[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
+        # TODO: there is an off-by-1 issue in the environment that I can't figure out yet, some initialisation issue. If we use [ti], it doesn't work, the environment remains at 0.
 
-        ## The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
+        # INFECTION: The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
         # the immunity responses of the hosts (drc) due to a certain amount of
         # exposure doses (cfu_dose). Then, infection_...() it estimates
@@ -887,17 +816,17 @@ class Typhoid(ss.Disease):
             self.set_prognoses(new_cases, source_uids=None)
             self.progress_to_prepatent(ti)
 
-        # Transmission people->environment:
+        # SHEDDING: Transmission people->environment:
         #     Infectious individuals shed contagion into the contagion pool.
         #     Reduction in shedding can happen due to per-agent interventions (reduces individual level of infectiousness),
         #     or due to sanitation interventions ().
         # TODO: shedding would be interpreted as shedding per unit volume
         effective_shedding = ((environment.pars.transmission.shedding_rate / tyd.day2year) * dt)   # transform to yearly rate, then multiply by dt to get the effective shedding on the time interval dt in change/volume
         shedded_cfu = (self.rel_trans[self.infected] * self.infectiousness[self.infected]).sum()   # number of CFUs
-        concentration_change = effective_shedding * shedded_cfu  # CFUs / volume
+        current_level = environment.sv.cfu_conc[ti - 1] * environment.pars.volume + shedded_cfu * effective_shedding
 
         # CFU level increases due to people shedding into the environment
-        self.sim.demographics['environmentalpool'].sv.cfu_conc[ti - 1] += concentration_change
+        environment.sv.cfu_conc[ti - 1] = current_level / environment.pars.volume
         return new_cases
 
     @staticmethod
@@ -979,6 +908,8 @@ class Typhoid(ss.Disease):
         data by QMRA (Enger, 2013), where:
 
         P(response) = 1- [1 + cfu_dose * (2^(1/ α)- 1)/N50] ^(-α)
+        TODO: this particular functional form of drc can exist somewhere else,
+        and self.drc() could be a method to be defined by the user.
         """
         p_response = 1.0 - (1.0 + cfu_dose * ((2.0**(1.0/self.pars.drc_alpha) - 1.0)/self.pars.drc_n50))**(-self.pars.drc_alpha)
         return p_response
