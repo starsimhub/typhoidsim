@@ -31,7 +31,7 @@ class Typhoid(ss.Disease):
         super().__init__()
         self.default_pars(
             # Initial conditions and transmissibility beta
-            init_prev=ss.bernoulli(p=0.01),
+            init_prev=ss.bernoulli(p=0.005),
 
             # NATURAL HISTORY PARAMETERS
             # From never exposed/invulnerable to susceptible
@@ -94,7 +94,6 @@ class Typhoid(ss.Disease):
             # Tranmission parameters
             transmission=ss.Pars(
                 # Behavioural interaction parameters between people and environment
-                exposure2env_rate=ss.poisson(lam=5e5),   # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_env),
                 exposure2contact_rate=ss.poisson(lam=0.18),  # Poisson rate determining the daily number of exposures for the contact route (num exposures)
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),
@@ -131,6 +130,7 @@ class Typhoid(ss.Disease):
             ss.FloatArr("immunity", default=1.0, label="Immunity Level"),             # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
             ss.FloatArr("p_infc", default=0.0, label="Probability of Infection"),     # Track probability of infection
             ss.FloatArr("p_route", default=0.0, label="Probability Route Draw"),      # Probability to determine which route will be the route if infection
+            ss.FloatArr("infc_origin", label="Origin of infection"),                  # Track origin of infection
 
             ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),
             ss.FloatArr("rel_trans", default=1.0, label="Relative transmission"),
@@ -269,6 +269,9 @@ class Typhoid(ss.Disease):
             ss.Result(self.name, "new_chronic", npts, dtype=int, label="New Chronic"),
             ss.Result(self.name, "new_recovered", npts, dtype=int, label="New Recovered"),
             ss.Result(self.name, "new_deaths", npts, dtype=int, label="New Dead"),
+            ss.Result(self.name, 'perc_infections_con', npts, dtype=float, scale=True, label='Percentage of infections from contact route'),
+            ss.Result(self.name, 'perc_infections_env', npts, dtype=float, scale=True, label='Percentage of infections from environmental route'),
+
         ]
         return
 
@@ -766,6 +769,7 @@ class Typhoid(ss.Disease):
         if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
             self.progress_to_prepatent(self.sim.ti)
+            self.infc_origin[new_cases] = tyd.TransmissionRoute.CONTACT.value
 
         return new_cases, sources, networks
 
@@ -820,6 +824,8 @@ class Typhoid(ss.Disease):
         if len(new_cases):
             self.set_prognoses(new_cases, source_uids=None)
             self.progress_to_prepatent(ti)
+            self.infc_origin[new_cases] = tyd.TransmissionRoute.ENVIRONMENT.value
+
 
         # SHEDDING: Transmission people->environment:
         #     Infectious individuals shed contagion into the contagion pool.
@@ -923,7 +929,8 @@ class Typhoid(ss.Disease):
         super().update_results()
         res = self.results
         ti = self.sim.ti
-        res.prevalence[ti] = res.n_infected[ti] / np.count_nonzero(self.sim.people.alive)
+        n = np.count_nonzero(self.sim.people.alive)
+        res.prevalence[ti] = res.n_infected[ti] / n
         res.new_infections[ti] = np.count_nonzero(self.ti_infected == ti)
         res.cum_infections[ti] = np.sum(res['new_infections'][:ti+1])
         res.new_susceptible[ti] = np.count_nonzero(self.ti_susceptible == ti)
@@ -933,6 +940,10 @@ class Typhoid(ss.Disease):
         res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
+        res.perc_infections_env[ti] = 100.0*np.count_nonzero((self.infc_origin == tyd.TransmissionRoute.ENVIRONMENT.value) &
+                                                       (self.ti_infected == ti)) / res.new_infections[ti]
+        res.perc_infections_con[ti] = 100.0*np.count_nonzero((self.infc_origin == tyd.TransmissionRoute.CONTACT.value) &
+                                                       (self.ti_infected == ti)) / res.new_infections[ti]
         return
 
 
