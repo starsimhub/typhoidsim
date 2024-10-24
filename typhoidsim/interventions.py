@@ -308,7 +308,7 @@ class WASH(ss.Intervention):
         for attr_name in self.target_attr_path[:-1]:
             attr = getattr(attr, attr_name)
         target_attr = self.target_attr_path[-1]
-        val = getattr(attr[idx], target_attr)
+        val = getattr(attr, target_attr[idx])
         return val
 
     def _set_target_val_par(self, sim, val):
@@ -438,8 +438,8 @@ class behavioral_change(WASH):
         if sim.year >= self.start and len(self.time):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            val = super()._get_target_val_arr(sim, Ellipsis)
-            super()._set_target_val_arr(sim, Ellipsis, (1.0 - efficacy)*val)
+            val = super()._get_target_baseline(sim)
+            super()._set_target_val_par(sim, (1.0 - efficacy)*val)
             self.results['efficacy'][self.ti] = efficacy
             self.ti += 1
         return
