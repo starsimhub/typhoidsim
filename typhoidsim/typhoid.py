@@ -803,7 +803,9 @@ class Typhoid(ss.Disease):
         # We still ned the number of exposures for the probability of infection function
         self.n_exposures[susc_uids] = self.exposure_amount[susc_uids] / environment.pars.volume  # Units n_exposures t [# of exposures] =  (n_exposures * volume) / volume
         self.cfu_dose[susc_uids] = environment.pars.transmission.rel_trans * environment.sv.cfu_conc[ti - 1] * self.exposure_amount[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
-        # TODO: there is an off-by-1 issue in the environment that I can't figure out yet, some initialisation issue. If we use [ti], it doesn't work, the environment remains at 0.
+        # TODO: there is an off-by-1 issue in the environment that I can't figure out yet,
+        #  some initialisation issue that will require the state variable to be npts+1,
+        #  because it needs 'memory' If we use [ti], it doesn't work, the environment remains at 0.
 
         # INFECTION: The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
