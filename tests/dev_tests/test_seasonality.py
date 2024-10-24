@@ -33,11 +33,12 @@ seasonal_pattern = ty.Pattern("baseline_cfu + amp_cfu * cos((2*pi/period)*var)",
                                     'period': 0.25,  # in years
                                     'pi': 3.141592653589793})
 
+my_intervention = ty.environmental_seasonality(seasonal_pattern=seasonal_pattern)
 sim = ss.Sim(
     pars=pars,
     diseases=typhoid,
     demographics=environment,
-    interventions=ty.environmental_seasonality(seasonal_pattern=seasonal_pattern)
+    interventions=my_intervention
     )
 
 sim.run()
