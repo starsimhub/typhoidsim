@@ -802,7 +802,7 @@ class Typhoid(ss.Disease):
         self.exposure_amount[susc_uids] = ((environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt)  # expoosure amount expressed in (n_exposures * volume) on the time interval "dt"
         # We still ned the number of exposures for the probability of infection function
         self.n_exposures[susc_uids] = self.exposure_amount[susc_uids] / environment.pars.volume  # Units n_exposures t [# of exposures] =  (n_exposures * volume) / volume
-        self.cfu_dose[susc_uids] = environment.pars.rel_trans * environment.sv.cfu_conc[ti - 1] * self.exposure_amount[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
+        self.cfu_dose[susc_uids] = environment.pars.transmission.rel_trans * environment.sv.cfu_conc[ti - 1] * self.exposure_amount[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
         # TODO: there is an off-by-1 issue in the environment that I can't figure out yet, some initialisation issue. If we use [ti], it doesn't work, the environment remains at 0.
 
         # INFECTION: The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
