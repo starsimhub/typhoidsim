@@ -28,7 +28,6 @@ typhoid = ty.Typhoid()
 
 # How
 network = ty.CommunityNet(pars={'location': location})
-#network = ss.RandomNet({'n_contacts': 10})
 
 sim = ss.Sim(
     pars=pars,
