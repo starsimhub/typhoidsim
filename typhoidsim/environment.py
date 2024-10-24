@@ -20,8 +20,8 @@ class EnvironmentalPool(ss.Demographics):
         self.default_pars(
             init_cfu=0,            # Initial level of CFUs in the environment.
             decay_rate=0.3,        # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
-            volume=1e8,            # Assumed volume of the environmental pool. Units: to be defined: See https://www.pnas.org/doi/full/10.1073/pnas.1719579115
-            acceptable_level=600,  # CFU/volume: usually CFU/ml (not used at the moment) #TODO: to be used with an environmental monitor intervention
+            volume=1e4,            # Assumed volume of the environmental pool. Units: to be defined: See https://www.pnas.org/doi/full/10.1073/pnas.1719579115
+            acceptable_level=600,  # CFU/volume, usually expressed in CFU/ml (not used at the moment) #TODO: to be used with an environmental monitor intervention
             transmission=ss.Pars(
                 rel_trans=0.5,     # Long-cycle exposure (to the environment) multiplier, targeted by interventions, mEL in Gauld et al 2018
                 shedding_rate=0.1,                          # Rate at which infectious people shed colony-forming units to the environment (per day)
@@ -43,8 +43,8 @@ class EnvironmentalPool(ss.Demographics):
         npts = self.sim.npts
         self.results += [
             ss.Result(self.name, 'temperature', npts, dtype=int, scale=True, label='Environmental temperature'),
-            ss.Result(self.name, 'cfu_conc', npts, dtype=int, scale=True, label='Current CFU concentration'),
-            ss.Result(self.name, 'cfu_num', npts, dtype=int, scale=True,label='Current number of CFUs'),
+            ss.Result(self.name, 'cfu_conc', npts, dtype=float, scale=True, label='Current CFU concentration'),
+            ss.Result(self.name, 'cfu_num', npts, dtype=int, scale=True, label='Current number of CFUs'),
         ]
         return
 
@@ -62,7 +62,7 @@ class EnvironmentalPool(ss.Demographics):
         Initialise StateVariable objects
         """
         npts = self.sim.npts
-        self.sv += [typ.StateVariable(self.name, "cfu_conc", npts, dtype=float),]
+        self.sv += [typ.StateVariable(self.name, "cfu_conc",    npts, dtype=float),]
         self.sv += [typ.StateVariable(self.name, "temperature", npts, dtype=float),]
         return
 
