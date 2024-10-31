@@ -17,7 +17,7 @@ Installation
 - via PyPI (not available yet):
    - ``pip install typhoidsim``.
 
-More detailed instructions can be found at `https://github.com/starsimhub/typhoidsim/issues/87`_.
+More detailed instructions can be found `<here>`__.
 
 Usage and documentation
 -----------------------
@@ -44,3 +44,4 @@ modeling needs as permitted under the MIT License.
 
 .. _MIT: https://github.com/starsimhub/typhoidsim/blob/main/LICENSE
 .. _Tutorials: https://github.com/starsimhub/typhoidsim/tree/main/docs/tutorials
+.. _here: https://github.com/starsimhub/typhoidsim/issues/87
