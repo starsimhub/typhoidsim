@@ -17,11 +17,14 @@ Installation
 - via PyPI (not available yet):
    - ``pip install typhoidsim``.
 
+More detailed instructions can be found at `https://github.com/starsimhub/typhoidsim/issues/87`_.
+
 Usage and documentation
 -----------------------
 
 Documentation is available at <PLACEHOLDER>.
-Tutorials (ipython notebooks)
+`<Tutorials>`__ (ipython notebooks) are available.
+
 
 Contributing
 ------------
@@ -33,9 +36,11 @@ Disclaimer
 ----------
 
 The code in this repository was developed by IDM. It wil be made public under
-the MIT License. We make no representations that the code works as intended or
+the `<MIT>`__ License. We make no representations that the code works as intended or
 that we will provide support, address issues that are found, or accept pull requests.
 You are welcome to create your own fork and modify the code to suit your own
 modeling needs as permitted under the MIT License.
 
 
+.. _MIT: https://github.com/starsimhub/typhoidsim/blob/main/LICENSE
+.. _Tutorials: https://github.com/starsimhub/typhoidsim/tree/main/docs/tutorials
