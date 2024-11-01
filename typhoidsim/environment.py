@@ -25,7 +25,7 @@ class EnvironmentalPool(ss.Demographics):
             transmission=ss.Pars(
                 rel_trans=1.0,     # Long-cycle exposure (to the environment) multiplier, targeted by interventions, mEL in Gauld et al 2018
                 shedding_rate=0.7,                          # Rate at which infectious people shed colony-forming units to the environment (per day)
-                env2ppl_exposure_rate=ss.poisson(lam=5e2),   # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)
+                env2ppl_exposure_rate=ss.poisson(lam=5e2),   # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)/day -- lam is equivalent to typhoid_environmental_exposure_rate
 
             ),
         # Temperature-parameters, not used at the moment
