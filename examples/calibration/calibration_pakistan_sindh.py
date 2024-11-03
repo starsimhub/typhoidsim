@@ -22,6 +22,7 @@ Target:
 
 import matplotlib.pyplot as plt
 import optuna
+import pandas as pd
 from functools import partial
 
 import starsim as ss
@@ -48,12 +49,10 @@ def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
 # will be identical except for the the value of the parameter we are exploring.
 def make_sim(tai=None, lam=None):
     """
-    Create a simulation instance of typhoid with a simple vaccination intervention.
+    Specify the complete model, and create a simulation instance of typhoid
+    with a simple vaccination intervention.
 
     Args:
-        vax_eff (float): The efficacy of the typhoid vaccine. A value between 0 and 1 where 1 represents 100% efficacy.
-        vax_cov (float): The coverage of the vaccination. A value between 0 and 1 where 1 represents 100% of population coverage.
-        start (float): The year when the vaccination intervention starts.
 
     Returns:
     sim (starsim.Sim): a starsim simulation configured with the same high level parameters for
@@ -61,23 +60,30 @@ def make_sim(tai=None, lam=None):
 
     """
 
-    # Define high-level simulation parameters
-    start_year = 2018
+    # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =1990,          # Starting year
-        n_years  =50.0,          # Duration of the simulation in years
+        start    =2018,          # Starting year
+        n_years  =2.0,           # Duration of the simulation in years
         dt       =1.0/365.0,     # Timestep of 1 day, expressed in years
         verbose  =0,             # Do not print details of the run
     )
 
-    # The population
+    # POPULATION
     ppl = ss.People(10_000)
 
-    # Demographics
-    # TODO: add life expectancy 66.51 year
-    # TODO: population growth rate 2.74%/year
+    # DEMOGRAPHICS
+    # Load age-specific mortality rate, expressed in deaths per 1000 people
+    ty_data = ty.get_data_home()
+    death_rates = pd.read_csv(ty_data / 'pakistan_2020_deaths.csv')
 
-    # Transition to susceptible
+    # Crude birth rate in Pakistan 2020 per 1000 people
+    cbr = 27
+    vital_dynamics = [
+        ss.Births(birth_rate=cbr, units=1e-3),
+        ss.Deaths(death_rate=death_rates, units=1e-3)
+    ]
+
+    # DISEASE CONFIGURATION
 
     # Define the susceptible introduction curve
     # This curve defines an age-based transition from completeley immune to susceptible.
@@ -89,7 +95,6 @@ def make_sim(tai=None, lam=None):
         sus_saturation_age=sus_saturation_age,
         sus_age_exposure_slope=sus_age_exposure_slope)
 
-    # The disease
     typhoids_pars = {'tai': tai,
                      'tpri': 0.5,
                      'tsri': 1.0,
@@ -101,18 +106,19 @@ def make_sim(tai=None, lam=None):
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
+    # CONTAMINATED VEHICLE
     environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars(env2ppl_exposure_rate=ss.poisson(lam=lam))})
 
     # Create seasonal pattern ramp
 
-    # Create intervention for reporting to get positive cases 'cases'
+    # OBSERVATIONS AND REPORTING
 
     # Create an analyzer that will provide the results we need to compare to target empirical data
     age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
     age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
 
-    # Create the simulation
-    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=environment)
+    # CREATE THE SIMULATION
+    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment])
     # Run multisim with 100 sims?
 
     return sim
