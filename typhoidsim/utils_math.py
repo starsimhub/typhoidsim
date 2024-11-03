@@ -10,7 +10,8 @@ from . import defaults as tyd
 
 
 # Specify all externally visible things this file defines
-__all__ = ['sigmoid', 'gompertz', 'gompertz_dfun', 'double_sigmoid_exp', 'double_sigmoid_tanh']
+__all__ = ['sigmoid', 'gompertz', 'gompertz_dfun', 'double_sigmoid_exp', 'double_sigmoid_tanh',
+           'asym_trapezoidal']
 
 
 def sigmoid(x, max_x, slope):
