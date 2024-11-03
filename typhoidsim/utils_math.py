@@ -3,13 +3,10 @@ Numerical and mathy utilities like math function that can be used
 for parametrisation of otherwise constant parameters. .
 """
 
-import warnings
 import numpy as np
-import sciris as sc
-import starsim as ss
-import numba as nb
-import pandas as pd
+import scipy.signal as signal
 
+from . import defaults as tyd
 
 
 # Specify all externally visible things this file defines
@@ -141,3 +138,57 @@ def gompertz_dfun(x, a, b, c):
        (ndarray): An array of derivative values corresponding to the input x values.
     """
     return a*b*c*np.exp(-(b/np.exp(c*x)) - c*x)
+
+
+def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
+                     ramp_dw_dur=25.0, cutoff_dur=0.0, amp=1.0):
+    """
+    Specify an asymmetric trapezoidal 'wave' profile like the one used
+    in Gauld et al 2018 and Kraay et al 2024.
+    Args:
+        x (array-like): The array of x values at which the function is evaluated, usually time.
+        period (float): The period, in days, over which the seasonal repeats.
+        peak_start_doy (float): The day of the year at which the environmental exposure reaches its peak.
+        ramp_up_dur (float): Duration, in days, of the period over which the environmental exposure route increases seasonally.
+        ramp_dw_dur (float): Duration, in days, of the period over which the environmental exposure route descreases seasonally.
+        cutoff_dur (float): Duration, in days, in which environmental exposure halts during the low season
+        amp (float): usually a numvber between 0 and 1 with the modulating scaling factor of exposure to the environment
+    Returns:
+         (ndarray): An array of values corresponding to the input asym_trapezoidal(x) values.
+    """
+
+    shift_days = ramp_up_dur - peak_start_doy
+    half_day = 0.5
+
+    # Adjust in case the "start of the ramp up period" starts before what would usually be the first of january
+    ramp_up_start_doy = ((peak_start_doy - ramp_up_dur) + shift_days) % period
+    peak_start_doy = (peak_start_doy + shift_days) % period
+    peak_dur = (period - cutoff_dur) - (ramp_dw_dur + ramp_up_dur)
+    peak_end_doy = ((peak_start_doy + peak_dur) + shift_days) % period
+    ramp_dw_end_doy = ((peak_end_doy + ramp_dw_dur) + shift_days) % period
+
+    time_mod = (x + shift_days) % period
+
+    # Define slope_up and slope_dw as vectorized operations instead of direct operations
+    slope_up = np.where(
+        ((time_mod >= ramp_up_start_doy) & (time_mod < peak_start_doy)),
+        ((time_mod - (ramp_up_start_doy)) + half_day) * (amp / ramp_up_dur),
+        0
+    )
+
+    slope_dw = np.where(
+        ((time_mod > peak_end_doy) & (time_mod <= ramp_dw_end_doy)),
+        amp - (((time_mod - peak_end_doy) - half_day) * (amp / ramp_dw_dur)),
+        0
+    )
+
+    trapezoidal_pulse = np.where(
+        (time_mod < ramp_up_start_doy),
+        0,
+        np.where(
+            ((time_mod >= peak_start_doy) & (time_mod <= peak_end_doy)),
+            amp,
+            slope_up + slope_dw
+        )
+    )
+    return trapezoidal_pulse
