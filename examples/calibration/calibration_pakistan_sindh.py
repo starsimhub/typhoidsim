@@ -41,13 +41,13 @@ def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
     Returns:
         callable: A partially applied function of unexp2susc_prob_function_gauld2018.
     """
-    return partial(ty.unexp2susc_youth_prob_function_gauld2018, sus_saturation_age=sus_saturation_age,
+    return partial(ty.unexp2sus_youth_prob_function_gauld2018, sus_saturation_age=sus_saturation_age,
                    sus_age_exposure_slope=sus_age_exposure_slope)
 
 
 # We will make a function that will return an instance of Sim(). All instances
 # will be identical except for the the value of the parameter we are exploring.
-def make_sim(tai=None, lam=None):
+def make_sim(tai=None, teer=None):
     """
     Specify the complete model, and create a simulation instance of typhoid
     with a simple vaccination intervention.
@@ -62,10 +62,10 @@ def make_sim(tai=None, lam=None):
 
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =2018,          # Starting year
-        n_years  =2.0,           # Duration of the simulation in years
+        start    =1990.0,         # Starting year
+        n_years  =10.0,           # Duration of the simulation in years
         dt       =1.0/365.0,     # Timestep of 1 day, expressed in years
-        verbose  =0,             # Do not print details of the run
+        verbose  =1,             # Do not print details of the run
     )
 
     # POPULATION
@@ -73,8 +73,8 @@ def make_sim(tai=None, lam=None):
 
     # DEMOGRAPHICS
     # Load age-specific mortality rate, expressed in deaths per 1000 people
-    ty_data = ty.get_data_home()
-    death_rates = pd.read_csv(ty_data / 'pakistan_2020_deaths.csv')
+    ty_data = ty.get_data_home()  # Get's the directory of the data directory within typhoidsim
+    death_rates = pd.read_csv(ty_data + '/pakistan_2020_deaths.csv')
 
     # Crude birth rate in Pakistan 2020 per 1000 people
     cbr = 27
@@ -88,7 +88,7 @@ def make_sim(tai=None, lam=None):
     # Define the susceptible introduction curve
     # This curve defines an age-based transition from completeley immune to susceptible.
     sus_saturation_age = 20.0
-    sus_age_exposure_slope = 2.0
+    sus_age_exposure_slope = 6.94
 
     # Partially evaluated function with the parameters defined above
     p_unexp2sus_parc_fun = partial_unexp2susc(
@@ -101,13 +101,15 @@ def make_sim(tai=None, lam=None):
                      'tcri': 0.241,
                      'tppi': 0.98,
                      'p_cpg': 0.108,
+                     'p_acute': ss.bernoulli(p=0.16),
                      'init_prev': ss.bernoulli(0.1),
                      'p_unexp2sus': ss.bernoulli(p=p_unexp2sus_parc_fun)}
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
     # CONTAMINATED VEHICLE
-    environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars(env2ppl_exposure_rate=ss.poisson(lam=lam))})
+    environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars(env2ppl_exposure_rate=ss.poisson(lam=teer)),  #TEER: Typhoid environmental exposure rate
+                                             'volume': 1})  # We set the volume to 1 to try to reproduce from EMOD
 
     # Create seasonal pattern ramp
 
@@ -134,3 +136,6 @@ def objective_step_1(trial):
     cost = None
     return cost
 
+
+sim = make_sim(tai=42808.0, teer=6.94)
+sim.run()
