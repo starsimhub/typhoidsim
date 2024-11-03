@@ -8,7 +8,7 @@ import sciris as sc
 import starsim as ss
 
 from .patterns import Pattern
-from .defaults import day2year
+from .defaults import day2year, days_per_year
 
 # Interventions
 # Diagnostics
@@ -17,7 +17,7 @@ __all__  = ['base_test']
 __all__ += ['acute_treatment', 'infection_clearence']
 # Interventions applied to the environment or environmental transmission
 __all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposure_reduction',
-            'environmental_seasonality']
+            'environmental_seasonality', 'environmental_trapezoidal_modulation']
 # Interventions that are not treatments but change some of the agents properties
 __all__ += ['behavioral_change']
 # Products
@@ -389,6 +389,32 @@ class environmental_exposure_reduction(WASH):
 
     def apply(self, sim):
         super().apply(sim)
+        return
+
+
+class environmental_trapezoidal_modulation(WASH):
+    """
+    Results in a reduction of the relative exposure to the environment
+    due crop irrigation, health inspections of food vendors.
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.target_attr_path = ['demographics', 'environmentalpool', 'pars', 'transmission', 'rel_trans']
+        self.target_baseline = super()._get_target_baseline(sim)
+        return
+
+    def apply(self, sim):
+        self.results['effective_value'][sim.ti] = self.target_baseline
+        if sim.year >= self.start and len(self.time):
+            time_days = sim.year * days_per_year
+            self.efficacy = self.efficacy_pattern(time_days)
+            self._set_target_val_par(sim, self.efficacy * self.target_baseline)
+            self._update_results(sim)
+            self.ti += 1
         return
 
 
