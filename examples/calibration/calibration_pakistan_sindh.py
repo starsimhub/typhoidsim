@@ -22,9 +22,26 @@ Target:
 
 import matplotlib.pyplot as plt
 import optuna
+from functools import partial
 
 import starsim as ss
 import typhoidsim as ty
+
+
+def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
+    """
+    Create a partially applied function from unexp2susc_prob_function_gauld2018
+    with given sus_saturation_age and sus_age_exposure_slope arguments.
+
+    Args:
+        sus_saturation_age (float): The age at which exposure reaches saturation.
+        sus_age_exposure_slope (float): The slope of exposure with increasing age.
+
+    Returns:
+        callable: A partially applied function of unexp2susc_prob_function_gauld2018.
+    """
+    return partial(ty.unexp2susc_youth_prob_function_gauld2018, sus_saturation_age=sus_saturation_age,
+                   sus_age_exposure_slope=sus_age_exposure_slope)
 
 
 # We will make a function that will return an instance of Sim(). All instances
@@ -42,10 +59,6 @@ def make_sim(tai=None, lam=None):
     sim (starsim.Sim): a starsim simulation configured with the same high level parameters for
     the populatioin and typhoid disease, but with slightly different intervention parameters.
 
-    Example
-    # Make a single simulation with a vaccine campaign where the vaccine has 70% efficacy and we cover 80% of the population
-    sim = make_sim(vax_eff=0.7, vax_cov=0.8)
-    sim.run()
     """
 
     # Define high-level simulation parameters
@@ -64,9 +77,28 @@ def make_sim(tai=None, lam=None):
     # TODO: add life expectancy 66.51 year
     # TODO: population growth rate 2.74%/year
 
+    # Transition to susceptible
+
+    # Define the susceptible introduction curve
+    # This curve defines an age-based transition from completeley immune to susceptible.
+    sus_saturation_age = 20.0
+    sus_age_exposure_slope = 2.0
+
+    # Partially evaluated function with the parameters defined above
+    p_unexp2sus_parc_fun = partial_unexp2susc(
+        sus_saturation_age=sus_saturation_age,
+        sus_age_exposure_slope=sus_age_exposure_slope)
+
     # The disease
-    typhoids_pars = {'tai': tai, 'tpri': 0.5, 'tsri': 1.0, 'tcri': 0.241, 'tppi': 0.98,
-                     'p_cpg': 0.108, 'init_prev': ss.bernoulli(0.1)}
+    typhoids_pars = {'tai': tai,
+                     'tpri': 0.5,
+                     'tsri': 1.0,
+                     'tcri': 0.241,
+                     'tppi': 0.98,
+                     'p_cpg': 0.108,
+                     'init_prev': ss.bernoulli(0.1),
+                     'p_unexp2sus': ss.bernoulli(p=p_unexp2sus_parc_fun)}
+
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
     environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars(env2ppl_exposure_rate=ss.poisson(lam=lam))})
@@ -81,7 +113,6 @@ def make_sim(tai=None, lam=None):
 
     # Create the simulation
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=environment)
-
     # Run multisim with 100 sims?
 
     return sim
@@ -97,12 +128,3 @@ def objective_step_1(trial):
     cost = None
     return cost
 
-
-def objective_step_2(trial):
-    """ The cost function to optimise in step 2 of calibration"""
-    pass
-
-
-def objective_step_3(trial):
-    """ The cost function to optimise in step 3 of calibration"""
-    pass
