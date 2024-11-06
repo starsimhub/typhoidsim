@@ -111,7 +111,21 @@ def make_sim(tai=None, teer=None):
     environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars(env2ppl_exposure_rate=ss.poisson(lam=teer)),  #TEER: Typhoid environmental exposure rate
                                              'volume': 1})  # We set the volume to 1 to try to reproduce from EMOD
 
-    # Create seasonal pattern ramp
+    # parameters of seasonal pattern
+    peak_start_doy = 275.85  # day of the year
+    ramp_up_dur = 175.26  # days
+    ramp_dw_dur = 100.0  # days
+    cutoff_dur = 20.0  # days
+    max_amp = 1.0
+
+    trapezoidal_pattern = lambda x: ty.asym_trapezoidal(x, period=365.0,
+                                                            peak_start_doy=peak_start_doy,
+                                                            ramp_up_dur=ramp_up_dur,
+                                                            ramp_dw_dur=ramp_dw_dur,
+                                                            cutoff_dur=cutoff_dur,
+                                                            amp=max_amp)
+
+    exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start=2005)
 
     # OBSERVATIONS AND REPORTING
 
@@ -120,7 +134,8 @@ def make_sim(tai=None, teer=None):
     age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
 
     # CREATE THE SIMULATION
-    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment])
+    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
+                 interventions=exposure_modulation)
     # Run multisim with 100 sims?
 
     return sim
