@@ -65,10 +65,11 @@ class age_histogram(ss.Analyzer):
     Records age-specific statistics for each timestep.
     By default it records age-specific new cases for every time step.
     """
-    def __init__(self, age_bins=None, to_record=None):
+    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None):
         super().__init__()
         self.name = "age_based_histogram"
         self.age_bins = age_bins
+        self.age_bin_labels = age_bin_labels
         self.to_record = to_record
         self.target_attr_path = None
         return
@@ -90,6 +91,8 @@ class age_histogram(ss.Analyzer):
         else:
             self.target_attr_path = ["diseases", "typhoid", self.to_record]
 
+        if self.age_bin_labels is None:
+            self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(nags)]
         return
 
     def _get_target_arr(self, sim):
