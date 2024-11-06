@@ -133,7 +133,7 @@ def make_sim(tai=None, teer=None):
     age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
     age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
 
-    age_histogram_report = ty.age_histogram(age_bins=age_bin_edges, to_record="ti_infected")
+    age_histogram_report = ty.age_histogram(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record="ti_infected")
 
     # CREATE THE SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
