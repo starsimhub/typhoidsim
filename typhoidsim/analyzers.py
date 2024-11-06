@@ -4,10 +4,11 @@ Analyzers specific to Typhoid.
 
 import numpy as np
 
+import sciris as sc
 import starsim as ss
 
 
-__all__ = ["states_consistency"]
+__all__ = ["states_consistency", "age_histogram"]
 
 
 class states_consistency(ss.Analyzer):
@@ -59,134 +60,54 @@ class states_consistency(ss.Analyzer):
         return
 
 
-class prepatent_state_monitor(ss.Analyzer):
-    """ Analyzer to track everything -- use for debug pruposes """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.name = 'prepatent_state_monitor'
-        self.success = True
-        return
-
-    def update_results(self, sim):
-        return self.apply(sim)
-
-    def apply(self, sim):
-        """
-        """
-        typ = sim.diseases.typhoidsimeple
-
-        prep_dur_acu = (typ.ti_acute - typ.ti_prepatent) * sim.dt
-        prep_dur_sbl = (typ.ti_subclinical - typ.ti_prepatent) * sim.dt
-
-
-        self.results['prep_durs'][sim.ti] = np.concatenate((prep_dur_acu, prep_dur_sbl), axis=0)
-        self.results['prep_durs_acu'][sim.ti] = prep_dur_acu
-        self.results['prep_durs_acu'][sim.ti] = prep_dur_acu
-
-        return
-
-
-class infectiousness(ss.Analyzer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.requires = [ss.Typhoid]
-        self.name = 'infectiousness_monitor'
+class age_histogram(ss.Analyzer):
+    """
+    Records age-specific statistics for each timestep.
+    By default it records age-specific new cases for every time step.
+    """
+    def __init__(self, age_bins=None, to_record=None):
+        super().__init__()
+        self.name = "age_based_histogram"
+        self.age_bins = age_bins
+        self.to_record = to_record
+        self.target_attr_path = None
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
         npts = self.sim.npts
+        nags = len(self.age_bins) - 1  # number of age groups
         self.results += [
-            ss.Result(self.name, 'infectiousness_levels', npts, dtype=float,
+            ss.Result(self.name, "age_histogram", (nags, npts), dtype=float,
                       scale=True),
         ]
+        if self.to_record is not None and not self.to_record.startswith("ti_"):
+            raise ValueError(f"This analyzers operates on event-tracking states that start with 'ti_'. "
+                             f"Received {self.to_record}")
+
+        if self.target_attr_path is None:
+            self.target_attr_path = ["diseases", "typhoid", "ti_infected"]
+        else:
+            self.target_attr_path = ["diseases", "typhoid", self.to_record]
+
         return
+
+    def _get_target_arr(self, sim):
+        """Get target values of an attribute that is an interable"""
+        attr = sim
+        for attr_name in self.target_attr_path[:-1]:
+            attr = getattr(attr, attr_name)
+        target_attr = self.target_attr_path[-1]
+        vals = getattr(attr, target_attr)
+        return vals
 
     def apply(self, sim):
         ti = sim.ti
+        vals = self._get_target_arr(sim)
+        uids = (vals == ti).uids
+        ages = sim.people.age[uids]
+        self.results.age_histogram[:, ti] = np.histogram(ages, bins=self.age_bins)[0]
         return
 
-
-class lifeof(ss.Analyzer):
-    """
-    Plots a schematic with the events of person.
-    Stores a lot of data. Should be used for debugging purposes mainly.
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.requires = [ss.Typhoid]
-        self.name = 'life_of_a_person'
-        return
-
-    def init_pre(self, sim):
-        super().init_pre(sim)
-        npts = self.sim.npts
-        self.results += [
-            ss.Result(self.name, 'label_me', npts, dtype=float,
-                      scale=True),
-        ]
-        return
-
-    def apply(self, sim):
-        ti = sim.ti
-        return
-
-class natural_history(ss.Analyzer):
-    """
-    Provides statistics about the natural history of the disease:
-    - proportion of people in each stage
-    - mean duration of each stage
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.requires = [ss.Typhoid]
-        self.name = 'natural_history'
-        return
-
-    def init_pre(self, sim):
-        super().init_pre(sim)
-        npts = self.sim.npts
-        self.results += [
-            ss.Result(self.name, 'new_result', npts, dtype=float,
-                      scale=True),
-        ]
-        return
-
-    def apply(self, sim):
-        ti = sim.ti
-        return
-
-
-class environmental_monitor(ss.Analyzer):
-    """
-    Monitors what's going on with the environment
-    Maybe not needed
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.requires = [ss.Typhoid]
-        self.name = 'natural_history'
-        return
-
-    def init_pre(self, sim):
-        super().init_pre(sim)
-        npts = self.sim.npts
-        self.results += [
-            ss.Result(self.name, 'new_result', npts, dtype=float,
-                      scale=True),
-        ]
-        return
-
-    def apply(self, sim):
-        ti = sim.ti
-        return
-
-
-
-# Debug Analyzers
-# Examine prepatent only properties
-# Examine infectiousness
-# Examine infected states (acute/sublicnical)
-# Examine chronic
-# Examine environment properties
+    def plot(self):
+        pass
