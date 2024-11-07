@@ -966,7 +966,9 @@ def unexp2sus_youth_prob_function_gauld2018(module, sim, uids, sus_saturation_ag
     Returns:
         p_sus (array): array of probabilities for every agent in uids.
     """
-    p_sus = tyum.sigmoid(sim.people.age[uids], sus_saturation_age, sus_age_exposure_slope)
+    p2 = tyum.sigmoid(sim.people.age[uids], sus_saturation_age, sus_age_exposure_slope)
+    p1 = tyum.sigmoid(sim.people.age[uids]-sim.dt, sus_saturation_age, sus_age_exposure_slope)
+    p_sus = (p2 - p1) / (1.0 - p1)
     return np.array(p_sus)
 
 
