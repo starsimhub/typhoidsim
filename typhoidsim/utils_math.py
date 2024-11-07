@@ -11,7 +11,7 @@ from . import defaults as tyd
 
 # Specify all externally visible things this file defines
 __all__ = ['sigmoid', 'gompertz', 'gompertz_dfun', 'double_sigmoid_exp', 'double_sigmoid_tanh',
-           'asym_trapezoidal']
+           'asym_trapezoidal', 'box_exponential']
 
 
 def sigmoid(x, max_x, slope):
@@ -194,3 +194,41 @@ def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
         )
     )
     return trapezoidal_pulse
+
+
+def box_exponential(x, start, box_duration, decay_time_constant, time):
+    """
+    Generate a time signal which is 0 up to a 'start' time; 1 from
+    'start' until 'start + box_duration', and from 'start + box_duration'
+    decays as an exponential function.
+
+    From EMDO: `currentEffect *= (1 - dt/decayTimeConstant)`.
+
+    Args:
+        z (numpy.ndarray): The array of points at which we calculate the signal, usually time.
+        start (float): The start time of the box_duration in the signal.
+        box_duration (float): The duration for which the signal remains at 1.
+        decay_time_constant (float): The time constant for the exponential decay.
+
+    Returns:
+        numpy.ndarray: The resulting signal as an array.
+
+    Example:
+        >>> time = np.linspace(0, 10, 1000)
+        >>> efficacy_modulation = box_exponential(2, 5, 3, time)
+    """
+    # Definition by parts
+    conditions = [
+        x < start,
+        (x >= start) & (x < start + box_duration),
+        x >= start + box_duration
+    ]
+
+    functions = [
+        0.0,
+        1.0,
+        # decay part, equivalent to emod's effect *= (1 - dt/decayTimeConstant)
+        lambda x: np.max(0, np.exp(-((x - (start + box_duration)) / decay_time_constant)))
+    ]
+
+    return np.piecewise(x, conditions, functions)
