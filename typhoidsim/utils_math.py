@@ -228,5 +228,5 @@ def box_exponential(x, start, box_duration, decay_time_constant):
         lambda x: np.exp(-((x - (start + box_duration)) / decay_time_constant))
     ]
     val = np.piecewise(x, conditions, functions)
-    val[sc.findinds(val < 0)] = 0.0
+    val = np.where(val < 0, 0.0, val)
     return val
