@@ -29,6 +29,11 @@ import starsim as ss
 import typhoidsim as ty
 
 
+def eligible_age_group(sim, min_age=0.0, max_age=2.0):
+    is_eligible = (sim.people.age >= min_age) & (sim.people.age < max_age)
+    return is_eligible
+
+
 def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
     """
     Create a partially applied function from unexp2susc_prob_function_gauld2018
@@ -107,7 +112,7 @@ def make_sim(tai=None, teer=None):
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
-    # CONTAMINATED VEHICLE
+    # ENVIRONMENT
     environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars(env2ppl_exposure_rate=ss.poisson(lam=teer)),  #TEER: Typhoid environmental exposure rate
                                              'volume': 1})  # We set the volume to 1 to try to reproduce from EMOD
 
@@ -126,6 +131,16 @@ def make_sim(tai=None, teer=None):
                                                             amp=max_amp)
 
     exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start=2005)
+
+    # INTERVENTIONS: Vaccination campaigns
+    campaign_start_year = 2000.0
+    vax_le_2yo = ty.base_vaccination(start_year=campaign_start_year,
+                                     eligibility=lambda x: eligible_age_group(x, min_age=0.0, max_age=2.0),
+                                     product=None)
+    vax_2_5_yo = ty.base_vaccination(start_year=campaign_start_year,
+                                     eligibility=lambda x: eligible_age_group(x, min_age=2.0, max_age=5.0),
+                                     product=None)
+
 
     # OBSERVATIONS AND REPORTING
 

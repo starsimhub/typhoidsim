@@ -14,7 +14,7 @@ from .defaults import day2year, days_per_year
 # Diagnostics
 __all__  = ['base_test']
 # Treatments applied to people
-__all__ += ['acute_treatment', 'infection_clearence']
+__all__ += ['acute_treatment', 'infection_clearence', 'base_vaccination']
 # Interventions applied to the environment or environmental transmission
 __all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposure_reduction',
             'environmental_seasonality', 'environmental_trapezoidal_modulation']
@@ -557,6 +557,49 @@ class infectiousness_clearence(ss.Product):
         return
 
 
+class base_vaccination(ss.RoutineDelivery):
+    """
+    Base vaccination class for determining who will receive a vaccine.
+
+    Args:
+         product        (str/Product)   : the vaccine to use
+         prob           (float/arr)     : annual probability of eligible population getting vaccinated
+         eligibility    (inds/callable) : indices OR callable that returns inds
+         label          (str)           : the name of vaccination strategy
+         kwargs         (dict)          : passed to Intervention()
+    """
+    def __init__(self, *args, product=None, prob=None, label=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.prob = sc.promotetoarray(prob)
+        self.label = label
+        self._parse_product(product)
+        self.vaccinated = ss.BoolArr('vaccinated')
+        self.ti_vaccinated = ss.FloatArr('ti_vaccinated')
+        self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
+        return
+
+    def apply(self, sim):
+        """
+        Deliver the diagnostics by finding who's eligible, finding who accepts, and applying the product, only once.
+        """
+
+        accept_uids = np.array([])
+        if sim.ti in self.timepoints:
+            ti = sc.findinds(self.timepoints, sim.ti)[0]
+            prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
+            is_eligible = self.check_eligibility(sim)  # Check eligibility
+            breakpoint()
+            is_eligible_not_vax = (is_eligible & ~self.vaccinated)
+            self.coverage_dist.set(p=prob)
+            new_accept_uids = self.coverage_dist.filter(is_eligible_not_vax)
+            if len(new_accept_uids):
+                self.product.administer(sim, accept_uids)
+                # Update people's state and dates
+                self.vaccinated[accept_uids] = True
+                self.ti_vaccinated[accept_uids] = sim.ti
+        return accept_uids
+
+
 class blocking_vaccine_with_waning(ss.Product):
     """
     An Acquisition Blocking vaccine that impacts the overall probability of
@@ -565,7 +608,7 @@ class blocking_vaccine_with_waning(ss.Product):
 
     def __init__(self, pars=None, *args, **kwargs):
         super().__init__()
-        self.default_pars(efficacy=1.0, efficayc_pattern=None)
+        self.default_pars(efficacy=1.0, efficacy_pattern=None)
         self.update_pars(pars, **kwargs)
         return
 
@@ -575,7 +618,7 @@ class blocking_vaccine_with_waning(ss.Product):
         return
 
     def get_modulation(self, sim):
-        modulation_factor = self.pars['efficayc_pattern'](sim.year)
+        modulation_factor = self.pars['efficacy_pattern'](sim.year)
         return modulation_factor
 
     def administer(self, sim, uids):
