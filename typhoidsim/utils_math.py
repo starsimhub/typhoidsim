@@ -4,10 +4,7 @@ for parametrisation of otherwise constant parameters. .
 """
 
 import numpy as np
-import scipy.signal as signal
-
-from . import defaults as tyd
-
+import sciris as sc
 
 # Specify all externally visible things this file defines
 __all__ = ['sigmoid', 'gompertz', 'gompertz_dfun', 'double_sigmoid_exp', 'double_sigmoid_tanh',
@@ -196,7 +193,7 @@ def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
     return trapezoidal_pulse
 
 
-def box_exponential(x, start, box_duration, decay_time_constant, time):
+def box_exponential(x, start, box_duration, decay_time_constant):
     """
     Generate a time signal which is 0 up to a 'start' time; 1 from
     'start' until 'start + box_duration', and from 'start + box_duration'
@@ -215,7 +212,7 @@ def box_exponential(x, start, box_duration, decay_time_constant, time):
 
     Example:
         >>> time = np.linspace(0, 10, 1000)
-        >>> efficacy_modulation = box_exponential(2, 5, 3, time)
+        >>> efficacy_modulation = box_exponential(time, 2, 5, 3)
     """
     # Definition by parts
     conditions = [
@@ -228,7 +225,8 @@ def box_exponential(x, start, box_duration, decay_time_constant, time):
         0.0,
         1.0,
         # decay part, equivalent to emod's effect *= (1 - dt/decayTimeConstant)
-        lambda x: np.max(0, np.exp(-((x - (start + box_duration)) / decay_time_constant)))
+        lambda x: np.exp(-((x - (start + box_duration)) / decay_time_constant))
     ]
-
-    return np.piecewise(x, conditions, functions)
+    val = np.piecewise(x, conditions, functions)
+    val[sc.findinds(val < 0)] = 0.0
+    return val
