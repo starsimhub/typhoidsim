@@ -9,12 +9,13 @@ import starsim as ss
 
 from .patterns import Pattern
 from .defaults import day2year, days_per_year
+from .utils_math import box_exponential
 
 # Interventions
 # Diagnostics
 __all__  = ['base_test']
 # Treatments applied to people
-__all__ += ['acute_treatment', 'infection_clearence', 'base_vaccination']
+__all__ += ['acute_treatment', 'infection_clearence', 'vaccination_wih_waning']
 # Interventions applied to the environment or environmental transmission
 __all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposure_reduction',
             'environmental_seasonality', 'environmental_trapezoidal_modulation']
@@ -257,9 +258,9 @@ class WASH(ss.Intervention):
     Assumes the intervention is applied over an interval of (continuous) time.
     """
 
-    def __init__(self, start=None, dur=None, efficacy=None, *args, **kwargs):
+    def __init__(self, start_year=None, dur=None, efficacy=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.start = start
+        self.start = start_year
         self.dur   = dur
         self.efficacy_pattern = efficacy  # (temporal) pattern of efficacy of this intervention
         self.efficacy = None,             # current value of efficacy
@@ -477,9 +478,9 @@ class environmental_seasonality(ss.Intervention):
     """
     Use the mechanism of interventions to increase the number of CFUs in the environment.
     """
-    def __init__(self, start=None, dur=None, seasonal_pattern=None, *args, **kwargs):
+    def __init__(self, start_year=None, dur=None, seasonal_pattern=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.start = start
+        self.start = start_year
         self.dur = dur
         self.pattern = seasonal_pattern  # pattern of seasonal cfu
         self.end_day = None
@@ -557,47 +558,63 @@ class infectiousness_clearence(ss.Product):
         return
 
 
-class base_vaccination(ss.RoutineDelivery):
+class vaccination_wih_waning(ss.RoutineDelivery):
     """
-    Base vaccination class for determining who will receive a vaccine.
+    An intervention that handles a vaccination with waning.
+    NOTE: this case is a bit special because it agreggates vaccine protection and the immune
+    system. Immunity waning could be handled in the disease, or there could be a module that is
+    called immune_system and it could have different responses depending on the product.
+    Maybe it's the job for a connector?
 
     Args:
-         product        (str/Product)   : the vaccine to use
          prob           (float/arr)     : annual probability of eligible population getting vaccinated
-         eligibility    (inds/callable) : indices OR callable that returns inds
+         age_pars       (dict)          : a dictionary with min_age and max_age to determine the age group who is eligible
+         vax_pars    (dict)             : a dictionary with a mix of vaccine and waning parameters: efficacy, box_duration and decay_time_constant
          label          (str)           : the name of vaccination strategy
          kwargs         (dict)          : passed to Intervention()
     """
-    def __init__(self, *args, product=None, prob=None, label=None, **kwargs):
+    def __init__(self, *args, prob=None, label=None, age_pars=None, waning_pars=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.prob = sc.promotetoarray(prob)
         self.label = label
-        self._parse_product(product)
         self.vaccinated = ss.BoolArr('vaccinated')
-        self.ti_vaccinated = ss.FloatArr('ti_vaccinated')
+        self.y_vaccinated = ss.FloatArr('y_vaccinated')
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
+        self.age_pars = age_pars
+        self.vax_pars = waning_pars
         return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        return
+
+    def elgibility(self, sim):
+        is_eligible = (sim.people.age >= self.age_pars.min_age) & (sim.people.age < self.age_pars.max_age).uids
+        return is_eligible
 
     def apply(self, sim):
         """
         Deliver the diagnostics by finding who's eligible, finding who accepts, and applying the product, only once.
         """
-
-        accept_uids = np.array([])
-        if sim.ti in self.timepoints:
+        if sim.year >= self.start_year:
             ti = sc.findinds(self.timepoints, sim.ti)[0]
             prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
             is_eligible = self.check_eligibility(sim)  # Check eligibility
-            breakpoint()
             is_eligible_not_vax = (is_eligible & ~self.vaccinated)
             self.coverage_dist.set(p=prob)
             new_accept_uids = self.coverage_dist.filter(is_eligible_not_vax)
             if len(new_accept_uids):
-                self.product.administer(sim, accept_uids)
                 # Update people's state and dates
-                self.vaccinated[accept_uids] = True
-                self.ti_vaccinated[accept_uids] = sim.ti
-        return accept_uids
+                self.vaccinated[new_accept_uids] = True
+                self.y_vaccinated[new_accept_uids] = sim.year
+            if len(self.vaccinated.uids):
+                current_year = sim.year * np.ones(len(self.vaccinated.uids))
+                box_durs = self.vax_pars['box_duration'] * np.ones(len(self.vaccinated.uids))
+                decay_constant = self.vax_pars['decay_time_constant'] * np.ones(len(self.vaccinated.uids))
+                efficacy = self.vax_pars['efficacy'] * box_exponential(current_year, self.y_vaccinated[self.vaccinated.uids], box_durs, decay_constant)
+                sim.diseases.typhoid.rel_sus[self.vaccinated.uids] = 1.0 - efficacy
+
+        return self.vaccinated.uids
 
 
 class blocking_vaccine_with_waning(ss.Product):
@@ -608,7 +625,7 @@ class blocking_vaccine_with_waning(ss.Product):
 
     def __init__(self, pars=None, *args, **kwargs):
         super().__init__()
-        self.default_pars(efficacy=1.0, efficacy_pattern=None)
+        self.default_pars(efficacy=1.0)
         self.update_pars(pars, **kwargs)
         return
 
@@ -617,13 +634,8 @@ class blocking_vaccine_with_waning(ss.Product):
         self.initialized = True
         return
 
-    def get_modulation(self, sim):
-        modulation_factor = self.pars['efficacy_pattern'](sim.year)
-        return modulation_factor
-
     def administer(self, sim, uids):
-        sim.diseases.typhoid.rel_sus[uids] = 1.0 - self.pars['efficacy'] * self.get_modulation(sim)
-        return
+        return box_exponential
 
 
 class blocking_vaccine(ss.Product):
