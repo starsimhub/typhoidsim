@@ -1028,17 +1028,14 @@ def _detect_age_anniversary(sim, age_anniversary):
     return reached_anniv
 
 
-def create_stair_function(bin_edges, bin_values):
+def stratify_parameter_by_age(bin_edges, bin_values):
     """
     Create a function that, given an age, returns the value of a parameter
-    corresponding to the age bin that the age falls into. Usefult for parameters
-    that are stratified by age.
+    corresponding assigned to the age bin that the age falls into.
 
     Args:
-        bin_edges (np.ndarray): The edges of the age bins. Should be
-                                           in ascending order.
-        bin_values (np.ndarray): The values corresponding to each age bin.
-                                           Should be the of length bin_edges - 1.
+        bin_edges (np.ndarray): The edges of the age bins. Should be in ascending order.
+        bin_values (np.ndarray): The values corresponding to each age bin. Should be the of length bin_edges - 1.
 
     Returns:
         age_bin_function (callable): A function that takes an age and returns the value for the bin that
@@ -1046,11 +1043,11 @@ def create_stair_function(bin_edges, bin_values):
 
     bin_edges = np.array([0, 2, 5, 120])
     bin_values = np.array([904.4, 240.9, 0.0])
-    age_bin_function = create_age_bin_function(bin_edges, bin_values)
-    age_bin_function(25))  # should return 0.0
+    age_stratified_parameter = stratify_parameter(bin_edges, bin_values)
+    age_stratified_parameter(25)  # should return 0.0
     """
-    def age_bin_function(age):
+    def age_stratified_parameter(age):
         index = tyu.digitize_ages(age, bin_edges)
         return bin_values[index]
 
-    return age_bin_function
+    return age_stratified_parameter
