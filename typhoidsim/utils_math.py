@@ -202,31 +202,22 @@ def box_exponential(x, start, box_duration, decay_time_constant):
     From EMDO: `currentEffect *= (1 - dt/decayTimeConstant)`.
 
     Args:
-        z (numpy.ndarray): The array of points at which we calculate the signal, usually time.
-        start (float): The start time of the box_duration in the signal.
-        box_duration (float): The duration for which the signal remains at 1.
-        decay_time_constant (float): The time constant for the exponential decay.
+        x (numpy.ndarray): The array of points at which we calculate the signal, usually time.
+        start (numpy.ndarray): The start time of the box_duration in the signal.
+        box_duration (numpy.ndarray): The duration for which the signal remains at 1.
+        decay_time_constant (numpy.ndarray): The time constant for the exponential decay.
 
     Returns:
         numpy.ndarray: The resulting signal as an array.
 
     Example:
         >>> time = np.linspace(0, 10, 1000)
-        >>> efficacy_modulation = box_exponential(time, 2, 5, 3)
+        >>> start, box_duration, decay_time_constant = np.array([2.0]), np.array([5.0]), np.array([3.0])
+        >>> efficacy_modulation = box_exponential(time, start, box_duration, decay_time_constant)
     """
-    # Definition by parts
-    conditions = [
-        x < start,
-        (x >= start) & (x < start + box_duration),
-        x >= start + box_duration
-    ]
-
-    functions = [
-        0.0,
-        1.0,
-        # decay part, equivalent to emod's effect *= (1 - dt/decayTimeConstant)
-        lambda x: np.exp(-((x - (start + box_duration)) / decay_time_constant))
-    ]
-    val = np.piecewise(x, conditions, functions)
-    val = np.where(val < 0, 0.0, val)
-    return val
+    x_offset = x - start
+    vals = np.zeros(len(x))
+    vals = np.where((x_offset >= 0.0) & (x_offset < box_duration), 1.0, vals)
+    vals = np.where(x_offset >= box_duration, np.exp(-((x - (start + box_duration)) / decay_time_constant)), vals)
+    vals = np.where(vals < 0, 0.0, vals)
+    return vals
