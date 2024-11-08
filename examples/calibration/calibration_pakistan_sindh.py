@@ -29,11 +29,6 @@ import starsim as ss
 import typhoidsim as ty
 
 
-def eligible_age_group(sim, min_age=0.0, max_age=2.0):
-    is_eligible = (sim.people.age >= min_age) & (sim.people.age < max_age)
-    return is_eligible
-
-
 def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
     """
     Create a partially applied function from unexp2susc_prob_function_gauld2018
@@ -69,8 +64,8 @@ def make_sim(tai=None, teer=None):
     pars = dict(
         start    =1990.0,         # Starting year
         n_years  =10.0,           # Duration of the simulation in years
-        dt       =1.0/365.0,     # Timestep of 1 day, expressed in years
-        verbose  =1,             # Do not print details of the run
+        dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
+        verbose  =1,              # Do not print details of the run
     )
 
     # POPULATION
@@ -84,8 +79,8 @@ def make_sim(tai=None, teer=None):
     # Crude birth rate in Pakistan 2020 per 1000 people
     cbr = 27
     vital_dynamics = [
-        ss.Births(birth_rate=cbr, units=1e-3),
-        ss.Deaths(death_rate=death_rates, units=1e-3)
+        ss.Births(birth_rate=cbr, units=1e-3),         # units=1e-3 mean rates are expressed per 1000 people
+        ss.Deaths(death_rate=death_rates, units=1e-3)  # units=1e-3 mean rates are expressed per 1000 people
     ]
 
     # DISEASE CONFIGURATION
@@ -130,17 +125,9 @@ def make_sim(tai=None, teer=None):
                                                             cutoff_dur=cutoff_dur,
                                                             amp=max_amp)
 
-    exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start=2005)
+    exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start_year=2005.0)
 
     # INTERVENTIONS: Vaccination campaigns
-    campaign_start_year = 2000.0
-    vax_le_2yo = ty.base_vaccination(start_year=campaign_start_year,
-                                     eligibility=lambda x: eligible_age_group(x, min_age=0.0, max_age=2.0),
-                                     product=None)
-    vax_2_5_yo = ty.base_vaccination(start_year=campaign_start_year,
-                                     eligibility=lambda x: eligible_age_group(x, min_age=2.0, max_age=5.0),
-                                     product=None)
-
 
     # OBSERVATIONS AND REPORTING
 
