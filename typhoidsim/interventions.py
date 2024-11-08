@@ -21,7 +21,8 @@ __all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposu
 # Interventions that are not treatments but change some of the agents properties
 __all__ += ['behavioral_change']
 # Products
-__all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vaccine', 'typhoid_vaccine']
+__all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vaccine',
+            'blocking_vaccine_with_waning', 'typhoid_vaccine']
 
 
 # -- Treatments
@@ -553,6 +554,32 @@ class infectiousness_clearence(ss.Product):
         # estimate how many CFUs are cleared in one timestep
         clearence = sim.people.typhoid.infectiousness[uids] * (self.pars.clearence_rate / day2year) * sim.dt
         sim.people.typhoid.infectiousness[uids] -= clearence
+        return
+
+
+class blocking_vaccine_with_waning(ss.Product):
+    """
+    An Acquisition Blocking vaccine that impacts the overall probability of
+    infection after exposure. Also takes in
+    """
+
+    def __init__(self, pars=None, *args, **kwargs):
+        super().__init__()
+        self.default_pars(efficacy=1.0, efficayc_pattern=None)
+        self.update_pars(pars, **kwargs)
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.initialized = True
+        return
+
+    def get_modulation(self, sim):
+        modulation_factor = self.pars['efficayc_pattern'](sim.year)
+        return modulation_factor
+
+    def administer(self, sim, uids):
+        sim.diseases.typhoid.rel_sus[uids] = 1.0 - self.pars['efficacy'] * self.get_modulation(sim)
         return
 
 
