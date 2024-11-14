@@ -139,7 +139,7 @@ def gompertz_dfun(x, a, b, c):
 
 
 def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
-                     ramp_dw_dur=25.0, cutoff_dur=0.0, amp=1.0):
+                     ramp_dw_dur=25.0, cutoff_dur=0.0, max_amp=1.0):
     """
     Specify an asymmetric trapezoidal 'wave' profile like the one used
     in Gauld et al 2018 and Kraay et al 2024.
@@ -150,7 +150,7 @@ def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
         ramp_up_dur (float): Duration, in days, of the period over which the environmental exposure route increases seasonally.
         ramp_dw_dur (float): Duration, in days, of the period over which the environmental exposure route descreases seasonally.
         cutoff_dur (float): Duration, in days, in which environmental exposure halts during the low season
-        amp (float): usually a numvber between 0 and 1 with the modulating scaling factor of exposure to the environment
+        amp (float): usually a numvber between 0 and 1 with the maximum modulating scaling factor of exposure to the environment
     Returns:
          (ndarray): An array of values corresponding to the input asym_trapezoidal(x) values.
     """
@@ -170,14 +170,14 @@ def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
     # Define slope up as vectorized operations instead of direct operations
     slope_up = np.where(
         ((time_mod >= ramp_up_start_doy) & (time_mod < peak_start_doy)),
-        ((time_mod - ramp_up_start_doy) + half_day) * (amp / ramp_up_dur),
+        ((time_mod - ramp_up_start_doy) + half_day) * (max_amp / ramp_up_dur),
         0
     )
 
     # Define slope down as vectorized operations instead of direct operations
     slope_dw = np.where(
         ((time_mod >= peak_end_doy) & (time_mod <= ramp_dw_end_doy)),
-        amp - (((time_mod - peak_end_doy) - half_day) * (amp / ramp_dw_dur)),
+        max_amp - (((time_mod - peak_end_doy) - half_day) * (max_amp / ramp_dw_dur)),
         0
     )
 
@@ -186,7 +186,7 @@ def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
         0,
         np.where(
             ((time_mod >= peak_start_doy-1) & (time_mod <= peak_end_doy)),
-            amp,
+            max_amp,
             slope_up + slope_dw
         )
     )
