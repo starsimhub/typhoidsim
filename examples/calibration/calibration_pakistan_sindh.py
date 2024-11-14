@@ -23,26 +23,11 @@ Target:
 import matplotlib.pyplot as plt
 import optuna
 import pandas as pd
-from functools import partial
 
 import starsim as ss
 import typhoidsim as ty
 
-
-def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
-    """
-    Create a partially applied function from unexp2susc_prob_function_gauld2018
-    with given sus_saturation_age and sus_age_exposure_slope arguments.
-
-    Args:
-        sus_saturation_age (float): The age at which exposure reaches saturation.
-        sus_age_exposure_slope (float): The slope of exposure with increasing age.
-
-    Returns:
-        callable: A partially applied function of unexp2susc_prob_function_gauld2018.
-    """
-    return partial(ty.unexp2sus_youth_prob_function_gauld2018, sus_saturation_age=sus_saturation_age,
-                   sus_age_exposure_slope=sus_age_exposure_slope)
+import calibration_pakistan_utils as utils
 
 
 # We will make a function that will return an instance of Sim(). All instances
@@ -65,7 +50,7 @@ def make_sim(tai=None, teer=None):
         start    =1990.0,         # Starting year
         n_years  =10.0,           # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
-        verbose  =1,              # Do not print details of the run
+        verbose  =1,              # Pint details of the run
     )
 
     # POPULATION
@@ -90,8 +75,8 @@ def make_sim(tai=None, teer=None):
     sus_saturation_age = 20.0
     sus_age_exposure_slope = 6.94
 
-    # Partially evaluated function with the parameters defined above
-    p_unexp2sus_parc_fun = partial_unexp2susc(
+    # Function that defines the probability of becoming susceptible
+    p_unexp2sus_parc_fun = utils.partial_unexp2susc(
         sus_saturation_age=sus_saturation_age,
         sus_age_exposure_slope=sus_age_exposure_slope)
 
@@ -109,21 +94,18 @@ def make_sim(tai=None, teer=None):
 
     # ENVIRONMENT
     environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars(env2ppl_exposure_rate=ss.poisson(lam=teer)),  #TEER: Typhoid environmental exposure rate
-                                             'volume': 1})  # We set the volume to 1 to try to reproduce from EMOD
+                                             'volume': 1})  # We set the volume to 1 if we want to reproduce EMOD results
 
     # parameters of seasonal pattern
-    peak_start_doy = 275.85  # day of the year
-    ramp_up_dur = 175.26  # days
-    ramp_dw_dur = 100.0  # days
-    cutoff_dur = 20.0  # days
-    max_amp = 1.0
+    seasonal_env_pars = {
+        'period': 365.0,   # in days
+        'peak_start_doy': 275.85,  # day of the year
+        'ramp_up_dur': 175.26,     # duration in days
+        'ramp_dw_dur': 100.0,      # duration in days
+        'cutoff_dur': 20.0,        # duration in days
+        'max_amp': 1.0}
 
-    trapezoidal_pattern = lambda x: ty.asym_trapezoidal(x, period=365.0,
-                                                            peak_start_doy=peak_start_doy,
-                                                            ramp_up_dur=ramp_up_dur,
-                                                            ramp_dw_dur=ramp_dw_dur,
-                                                            cutoff_dur=cutoff_dur,
-                                                            amp=max_amp)
+    trapezoidal_pattern = utils.partial_env_trapezoidal(seasonal_env_pars)
 
     exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start_year=2005.0)
 
@@ -152,7 +134,10 @@ def make_sim(tai=None, teer=None):
     # CREATE THE SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
                  interventions=[exposure_modulation, campaign_vax_2_5_yo], analyzers=age_histogram_report)
-    # Run multisim with 100 sims?
+
+    # Export to df
+
+    # Export parameteres
 
     return sim
 
