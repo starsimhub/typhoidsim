@@ -128,6 +128,18 @@ def make_sim(tai=None, teer=None):
     exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start_year=2005.0)
 
     # INTERVENTIONS: Vaccination campaigns
+    # Create products
+    campaign_start_year = 1991.0
+    campaign_vax_2_5_yo = ty.vaccination_wih_waning(
+        start_year=campaign_start_year,
+        end_year=1999.0,
+        prob=0.1/365.0,  # coverage
+        waning_pars={'efficacy': 0.95,
+                     'decay_time_constant': 505.0 / ty.days_per_year,
+                     'box_duration': 1.0},
+        age_pars={'min_age': 2.0,
+                  'max_age': 4.0}
+        )
 
     # OBSERVATIONS AND REPORTING
 
@@ -139,21 +151,21 @@ def make_sim(tai=None, teer=None):
 
     # CREATE THE SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
-                 interventions=exposure_modulation, analyzers=age_histogram_report)
+                 interventions=[exposure_modulation, campaign_vax_2_5_yo], analyzers=age_histogram_report)
     # Run multisim with 100 sims?
 
     return sim
 
 
-def objective_step_1(trial):
-    """ The cost function to optimise in step 1 of calibration"""
-    p1 = trial.suggest_float('vax_eff', 0.0, 1.0)
-    p2 = trial.suggest_float('vax_cov', 0.0, 1.0)
-    p3 = trial.suggest_float('start_year', 2000.0, 2001.0)
-
-    # include variance of cost function?
-    cost = None
-    return cost
+# def objective_step_1(trial):
+#     """ The cost function to optimise in step 1 of calibration"""
+#     p1 = trial.suggest_float('vax_eff', 0.0, 1.0)
+#     p2 = trial.suggest_float('vax_cov', 0.0, 1.0)
+#     p3 = trial.suggest_float('start_year', 2000.0, 2001.0)
+#
+#     # include variance of cost function?
+#     cost = None
+#     return cost
 
 
 sim = make_sim(tai=42808.0, teer=6.94)
