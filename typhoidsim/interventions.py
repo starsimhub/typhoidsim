@@ -596,7 +596,7 @@ class vaccination_wih_waning(ss.RoutineDelivery):
         """
         Deliver the diagnostics by finding who's eligible, finding who accepts, and applying the product, only once.
         """
-        if sim.year >= self.start_year:
+        if sim.year >= self.start_year and sim.year <= self.end_year:
             ti = sc.findinds(self.timepoints, sim.ti)[0]
             prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
             is_eligible = self.check_eligibility(sim)  # Check eligibility
