@@ -8,6 +8,7 @@ import sciris as sc
 import optuna as op
 import matplotlib.pyplot as plt
 import starsim as ss
+import typhoidsim.utils as tyu
 
 
 __all__ = ['Calibration', 'compute_gof']
@@ -267,8 +268,8 @@ class Calibration(sc.prettyobj): # pragma: no cover
     @staticmethod
     def sim_to_df(sim): # TODO: remove this method
         """ Convert a sim to the expected dataframe type """
-        df_res = sim.to_df(sep='.')
-        df_res['t'] = df_res['timevec']
+        df_res = tyu.to_df(sim, sep='.')
+        df_res['t'] = df_res['yearvec']
         df_res = df_res.set_index('t')
         df_res['time'] = np.floor(np.round(df_res.index, 1)).astype(int)
         return df_res
@@ -461,8 +462,8 @@ class Calibration(sc.prettyobj): # pragma: no cover
         self.after_fit  = self.compute_fit(self.after_sim)
 
         # Add the data to the sims
-        for sim in [self.before_sim, self.after_sim]:
-            sim.init_data(self.data)
+        # for sim in [self.before_sim, self.after_sim]:
+        #     sim.init_data(self.data)
 
         print(f'Fit with original pars: {self.before_fit:n}')
         print(f'Fit with best-fit pars: {self.after_fit:n}')
