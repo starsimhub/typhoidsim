@@ -14,7 +14,7 @@ Period:
 
 Free parameters:
 - typhoid acute infectiousness (TAI) expressed in CFUs
-- lambda environment: average exposure rate to the environment, expressed in (in num exposures * volume / day)
+- lambda environment: average exposure rate to the environment (TEER), expressed in (in num exposures * volume / day)
 
 Target:
 - age distribution of blood culture confirmed typhoid cases
@@ -60,14 +60,13 @@ def make_sim(tai=None, teer=None):
 
     # DEMOGRAPHICS
     # Load age-specific mortality rate, expressed in deaths per 1000 people
-    ty_data = ty.get_data_home()  # Get's the directory of the data directory within typhoidsim
-    death_rates = pd.read_csv(ty_data + '/pakistan_2020_deaths.csv')
+    death_rates_df = utils.get_mortality_rates()
 
     # Crude birth rate in Pakistan 2020 per 1000 people
     cbr = 27
     vital_dynamics = [
         ss.Births(birth_rate=cbr, units=1e-3),         # units=1e-3 mean rates are expressed per 1000 people
-        ss.Deaths(death_rate=death_rates, units=1e-3)  # units=1e-3 mean rates are expressed per 1000 people
+        ss.Deaths(death_rate=death_rates_df, units=1)  # units=1 mean rates are expressed as proportions/percentages in 1/year
     ]
 
     # DISEASE CONFIGURATION
@@ -140,26 +139,36 @@ def make_sim(tai=None, teer=None):
                  interventions=[exposure_modulation, campaign_vax_2_5_yo],
                  analyzers=age_histogram_report)
 
-
-    # Export parameterss
-
     return sim
 
 
-# def objective_step_1(trial):
-#     """ The cost function to optimise in step 1 of calibration"""
-#     p1 = trial.suggest_float('vax_eff', 0.0, 1.0)
-#     p2 = trial.suggest_float('vax_cov', 0.0, 1.0)
-#     p3 = trial.suggest_float('start_year', 2000.0, 2001.0)
-#
-#     # include variance of cost function?
-#     cost = None
-#     return cost
+def objective_step_1(trial):
+    """ The cost function and parameters to optimise in step 1 of calibration"""
+    p1 = trial.suggest_float('vax_eff', 0.0, 1.0)
+    p2 = trial.suggest_float('vax_cov', 0.0, 1.0)
+    p3 = trial.suggest_float('start_year', 2000.0, 2001.0)
+
+    pars = {"a": p1, "b": p2, "c": p3}
+    # Create a new simulation with the parameters
+    sim = make_sim(**pars)
+    sim.run()
+
+    # Evaluate cost
+    # include variance of cost function?
+    cost = None
+    return cost
 
 
-sim = make_sim(tai=42808.0, teer=6.94)
-sim.run()
+def objective_step_2(trial):
+    """ The cost function and parameters to optimise in step 1 of calibration"""
+    pass
 
-utils.save_outputs(sim)
+
+if __name__ == '__main__':
+
+    # Main calibration workflow
+    random_sweep = optuna.study.create_study(direction="minimize", sampler=optuna.samplers.TPESampler, seed=42)
+    n_samples = 50  # number of combinations of parameters we are going to explore
+    random_sweep.optimize(objective_step_1, n_trials=n_samples, n_jobs=4)
 
 
