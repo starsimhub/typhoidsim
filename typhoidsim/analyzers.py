@@ -109,6 +109,8 @@ class histograms_by_age_sex(ss.Analyzer):
     def apply(self, sim):
         ti = sim.ti
         vals = self._get_target_arr(sim)
+        # TODO: add a probability to select agents in case we want to
+        #  mimic the 'reported' cases which are always less than all the cases
         f_uids = ((vals == ti) & sim.people.female).uids
         m_uids = ((vals == ti) & sim.people.male).uids
         f_ages = sim.people.age[f_uids]
