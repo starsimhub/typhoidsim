@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import optuna
 import pandas as pd
 
+import sciris as sc
 import starsim as ss
 import typhoidsim as ty
 
@@ -136,12 +137,11 @@ def make_sim(tai=None, teer=None):
 
     # PUT EVERYTHING TOGETHER IN A SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
-                 interventions=[exposure_modulation, campaign_vax_2_5_yo], analyzers=age_histogram_report)
+                 interventions=[exposure_modulation, campaign_vax_2_5_yo],
+                 analyzers=age_histogram_report)
 
-    # Export to df
 
-
-    # Export parameteres
+    # Export parameterss
 
     return sim
 
@@ -159,3 +159,7 @@ def make_sim(tai=None, teer=None):
 
 sim = make_sim(tai=42808.0, teer=6.94)
 sim.run()
+
+utils.save_outputs(sim)
+
+
