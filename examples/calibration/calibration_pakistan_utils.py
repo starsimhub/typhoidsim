@@ -55,6 +55,9 @@ def get_age_distribution_pakistan():
     Parse data from json file used in EMOD simulations to get
     age distribution for Pakistan. Returns it in a format that
     can be passed to starsim's People, to build the appropriate population.
+
+    Returns:
+         df (pd.DataFrame): A dataframe with columns 'age' and 'value' that capture age distribution
     """
     # Lower edge of an age bin
     json_data = load_demogrphics_pakistan()
@@ -63,6 +66,14 @@ def get_age_distribution_pakistan():
     age_probs = np.diff(age_cum_prob)
     df = pd.DataFrame({'age': age_bin_lb[0:-1], 'value': age_probs})
     return df
+
+
+def get_mortality_rates():
+    pass
+
+
+def get_birth_rates():
+    pass
 
 
 def load_demogrphics_pakistan(json_file='TestDemographics_pak_updated.json'):
@@ -102,3 +113,33 @@ def check_age_distribution(n_agents=100_000):
     ty.plot_age_histogram(sim_pakistan.people)
     plt.show()
     return
+
+
+def save_outputs(sim, output_dir=None):
+    """
+    Saves results from the simulation in an analysis friendly format (.csv)
+
+    Args:
+        sim(ss.Sim): a Sim object, already run
+        output_dir (pathlib.Path):  a Path object with the absolute path where to save the results
+
+    Returns:
+         sim_df (pd.DataFrame): the dataframe with results for every time step of the simulation
+    """
+
+    if output_dir is None:
+        import pathlib
+        output_dir = pathlib.Path.cwd()
+
+    # Export to df -- we can export results to a dataframe (and save as csv) for offline analysis
+    sim_df = ty.to_df(sim)
+
+    batch_name = "calib_pak_sindh"
+    filename = ty.generate_unique_filename(root_str=batch_name)
+    csv_ext = ".csv"
+    sim_df.to_csv(output_dir / f"{filename}{csv_ext}", index=False)
+    json_ext = ".json"
+    #TODO: Save simulation parameters --  not working properly right now,
+    # gets hung up in recursion and serialisation of objects (starsim distributions)
+    #sim.to_json(filename=output_dir + filename + ".json", keys=['parameters'])
+    return sim_df  # in case we want to do something else with the data
