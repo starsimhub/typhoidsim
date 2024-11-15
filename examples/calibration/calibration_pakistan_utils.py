@@ -1,9 +1,9 @@
 """
-This module contains useful function to support calibration workflows for Pakistan
-scenarios.
+This module contains useful functions to support calibration workflows for Pakistan
+scenarios, but do not quite belong in the core typhoidsim modules,
 
 The idea is that functions that are used multiple times are contained in one
-place, rather than being duplicated across multiple scripts.
+place, rather than being duplicated across multiple calibration scripts.
 """
 
 import numpy as np
@@ -56,16 +56,19 @@ def get_age_distribution_pakistan():
     age distribution for Pakistan. Returns it in a format that
     can be passed to starsim's People, to build the appropriate population.
     """
-    data_home = ty.get_data_home()
-    json_file = 'TestDemographics_pak_updated.json'
-    json_data = sc.loadjson(data_home + "/" + json_file)
-
     # Lower edge of an age bin
+    json_data = load_demogrphics_pakistan()
     age_bin_lb = np.array(json_data["Nodes"][0]["IndividualAttributes"]["AgeDistribution"]["ResultValues"])  # Drop the last value of age because is the right edge of the last age bin
     age_cum_prob = json_data["Nodes"][0]["IndividualAttributes"]["AgeDistribution"]["DistributionValues"]
     age_probs = np.diff(age_cum_prob)
     df = pd.DataFrame({'age': age_bin_lb[0:-1], 'value': age_probs})
     return df
+
+
+def load_demogrphics_pakistan(json_file='TestDemographics_pak_updated.json'):
+    data_home = ty.get_data_home()  # Assumes we have placed the file in typhoidsim/data directory
+    json_data = sc.loadjson(data_home + "/" + json_file)
+    return json_data
 
 
 def check_age_distribution(n_agents=100_000):
