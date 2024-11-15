@@ -33,7 +33,7 @@ import calibration_pakistan_utils as utils
 
 # We will make a function that will return an instance of Sim(). All instances
 # will be identical except for the the value of the parameter we are exploring.
-def make_sim(tai=None, teer=None):
+def make_sim(tai=42_808, teer=1.99):
     """
     Specify the complete model, and create a simulation instance of typhoid
     with a simple vaccination intervention.
@@ -47,7 +47,7 @@ def make_sim(tai=None, teer=None):
 
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =1990.0,         # Starting year
+        start    =1990.0,         # Start year
         n_years  =10.0,           # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         verbose  =1,              # Pint details of the run
@@ -115,9 +115,8 @@ def make_sim(tai=None, teer=None):
     exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start_year=2005.0)
 
     # Intervention with vaccination
-    campaign_start_year = 1991.0
     campaign_vax_2_5_yo = ty.vaccination_wih_waning(
-        start_year=campaign_start_year,
+        start_year=1991.0,
         end_year=1999.0,
         prob=0.1/365.0,  # coverage
         waning_pars={'efficacy': 0.95,
@@ -132,13 +131,15 @@ def make_sim(tai=None, teer=None):
     # Create an analyzer that will provide the results we need to compare to target empirical data
     age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
     age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
-
-    age_histogram_report = ty.age_histogram(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record="ti_infected")
+    # Track cases by age and by sex
+    anz_1 = ty.histograms_by_age_sex(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record="ti_infected", name="report_1")
+    # Track cases for all the population, grouped by sex -- just for convinience, could process the results from the analyzer above
+    anz_2 = ty.histograms_by_age_sex(age_bins=[0, ty.max_age], age_bin_labels=['all'], to_record="ti_infected", name="report_2")
 
     # PUT EVERYTHING TOGETHER IN A SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
                  interventions=[exposure_modulation, campaign_vax_2_5_yo],
-                 analyzers=age_histogram_report)
+                 analyzers=[anz_1, anz_2])
 
     return sim
 
@@ -167,9 +168,12 @@ def objective_step_2(trial):
 
 if __name__ == '__main__':
 
-    # Main calibration workflow
-    random_sweep = optuna.study.create_study(direction="minimize", sampler=optuna.samplers.TPESampler, seed=42)
-    n_samples = 50  # number of combinations of parameters we are going to explore
-    random_sweep.optimize(objective_step_1, n_trials=n_samples, n_jobs=4)
+    # # Main calibration workflow
+    # random_sweep = optuna.study.create_study(direction="minimize", sampler=optuna.samplers.TPESampler, seed=42)
+    # n_samples = 50  # number of combinations of parameters we are going to explore
+    # random_sweep.optimize(objective_step_1, n_trials=n_samples, n_jobs=4)
+
+    sim = make_sim()
+    sim.run()
 
 
