@@ -79,9 +79,9 @@ class histograms_by_age_sex(ss.Analyzer):
         npts = self.sim.npts
         nags = len(self.age_bins) - 1  # number of age groups
         self.results += [
-            ss.Result(self.name, "male_histograms", (nags, npts), dtype=float,
+            ss.Result(self.name, "male_histograms", (npts, nags), dtype=float,
                       scale=True),
-            ss.Result(self.name, "female_histograms", (nags, npts), dtype=float,
+            ss.Result(self.name, "female_histograms", (npts, nags), dtype=float,
                       scale=True),
         ]
         if self.to_record is not None and not self.to_record.startswith("ti_"):
@@ -115,8 +115,8 @@ class histograms_by_age_sex(ss.Analyzer):
         m_uids = ((vals == ti) & sim.people.male).uids
         f_ages = sim.people.age[f_uids]
         m_ages = sim.people.age[m_uids]
-        self.results.female_histograms[:, ti] = np.histogram(f_ages, bins=self.age_bins)[0]
-        self.results.male_histograms[:, ti] = np.histogram(m_ages, bins=self.age_bins)[0]
+        self.results.female_histograms[ti, :] = np.histogram(f_ages, bins=self.age_bins)[0]
+        self.results.male_histograms[ti, :] = np.histogram(m_ages, bins=self.age_bins)[0]
         return
 
     def plot(self):
