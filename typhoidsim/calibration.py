@@ -534,7 +534,7 @@ class Calibration(sc.prettyobj): # pragma: no cover
             self.confirm_fit()
         msim = ss.MultiSim([self.before_sim, self.after_sim])
         fig = msim.plot(**kwargs)
-        return ss.return_fig(fig)
+        return return_fig(fig)
 
     def plot_trend(self, best_thresh=None, fig_kw=None):
         """
@@ -571,7 +571,7 @@ class Calibration(sc.prettyobj): # pragma: no cover
             plt.xlabel('Trial number')
             plt.ylabel('Mismatch')
         sc.figlayout()
-        return ss.return_fig(fig)
+        return return_fig(fig)
 
 
 def validate_sim_data(data=None, die=None):
@@ -613,3 +613,14 @@ def validate_sim_data(data=None, die=None):
         raise ValueError(errormsg)
 
     return data
+
+
+def return_fig(fig, **kwargs):
+    """ Do postprocessing on the figure: by default, don't return if in Jupyter, but show instead """
+    is_jupyter = False
+    if is_jupyter:
+        print(fig)
+        plt.show()
+        return None
+    else:
+        return fig
