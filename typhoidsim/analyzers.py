@@ -8,7 +8,7 @@ import sciris as sc
 import starsim as ss
 
 
-__all__ = ["states_consistency", "age_histogram"]
+__all__ = ["states_consistency", "histograms_by_age_sex"]
 
 
 class states_consistency(ss.Analyzer):
@@ -60,14 +60,14 @@ class states_consistency(ss.Analyzer):
         return
 
 
-class age_histogram(ss.Analyzer):
+class histograms_by_age_sex(ss.Analyzer):
     """
-    Records age-specific statistics for each timestep.
-    By default it records age-specific new cases for every time step.
+    Records statistics (counts) by age and sex for each timestep.
+    By default, this analyzer records new cases for every time step.
     """
     def __init__(self, age_bins=None, age_bin_labels=None, to_record=None):
         super().__init__()
-        self.name = "age_based_histogram"
+        self.name = "histograms_by_age_sex"
         self.age_bins = age_bins
         self.age_bin_labels = age_bin_labels
         self.to_record = to_record
@@ -79,17 +79,19 @@ class age_histogram(ss.Analyzer):
         npts = self.sim.npts
         nags = len(self.age_bins) - 1  # number of age groups
         self.results += [
-            ss.Result(self.name, "age_histogram", (nags, npts), dtype=float,
+            ss.Result(self.name, "male_histograms", (nags, npts), dtype=float,
+                      scale=True),
+            ss.Result(self.name, "female_histograms", (nags, npts), dtype=float,
                       scale=True),
         ]
         if self.to_record is not None and not self.to_record.startswith("ti_"):
             raise ValueError(f"This analyzers operates on event-tracking states that start with 'ti_'. "
                              f"Received {self.to_record}")
 
-        if self.target_attr_path is None:
-            self.target_attr_path = ["diseases", "typhoid", "ti_infected"]
-        else:
-            self.target_attr_path = ["diseases", "typhoid", self.to_record]
+        if self.to_record is None:
+            self.to_record = "ti_infected"
+
+        self.target_attr_path = ["diseases", "typhoid", self.to_record]
 
         if self.age_bin_labels is None:
             self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(nags)]
@@ -107,9 +109,12 @@ class age_histogram(ss.Analyzer):
     def apply(self, sim):
         ti = sim.ti
         vals = self._get_target_arr(sim)
-        uids = (vals == ti).uids
-        ages = sim.people.age[uids]
-        self.results.age_histogram[:, ti] = np.histogram(ages, bins=self.age_bins)[0]
+        f_uids = ((vals == ti) & sim.people.female).uids
+        m_uids = ((vals == ti) & sim.people.male).uids
+        f_ages = sim.people.age[f_uids]
+        m_ages = sim.people.age[m_uids]
+        self.results.female_histograms[:, ti] = np.histogram(f_ages, bins=self.age_bins)[0]
+        self.results.male_histograms[:, ti] = np.histogram(m_ages, bins=self.age_bins)[0]
         return
 
     def plot(self):
