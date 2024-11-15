@@ -271,7 +271,7 @@ class Calibration(sc.prettyobj): # pragma: no cover
         df_res = tyu.to_df(sim, sep='.')
         df_res['t'] = df_res['yearvec']
         df_res = df_res.set_index('t')
-        df_res['time'] = np.floor(np.round(df_res.index, 1)).astype(int)
+        df_res['time'] = np.floor(np.round(df_res.index, 1)).astype(float)
         return df_res
 
     def run_trial(self, trial):
