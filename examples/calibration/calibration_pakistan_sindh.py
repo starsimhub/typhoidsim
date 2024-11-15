@@ -19,7 +19,7 @@ Free parameters:
 Target:
 - age distribution of blood culture confirmed typhoid cases
 """
-
+import matplotlib.pyplot as plt
 import sciris as sc
 import starsim as ss
 import typhoidsim as ty
@@ -44,7 +44,6 @@ def make_sim():
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
         start    =2017.0,         # Start year
-        total_pop=115.4e6,        # We use the `total_pop` parameter to scale our results so that they reflect a much larger population.
         n_years  =6.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         verbose  =1,              # Pint details of the run
@@ -170,8 +169,8 @@ def run_starsim_calibration_step_1(do_plot=True):
         sim=sim,
         data=data,
         weights=weights,
-        total_trials=1,
-        n_workers=1,
+        total_trials=16,
+        n_workers=2,
         die=True,
         name="typhoidsim_calibration_sindh"
     )
@@ -191,11 +190,11 @@ def run_starsim_calibration_step_1(do_plot=True):
         print('✗ Calibration did not improve fit, but this sometimes happens stochastically and is not necessarily an error')
 
     if do_plot:
-        calib.plot_sims()
+        calib.plot_sims(key="typhoid")
         calib.plot_trend()
-
+    plt.show()
     return calib
 
 
 if __name__ == '__main__':
-    run_starsim_calibration_step_1(do_plot=False)
+    run_starsim_calibration_step_1(do_plot=True)
