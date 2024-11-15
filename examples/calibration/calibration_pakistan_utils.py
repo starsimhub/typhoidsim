@@ -146,6 +146,8 @@ def get_data_for_calibration_prevax(province="Sindh"):
     df['date'] = pd.to_datetime(df['date'])
     df = df.loc[df['date'].dt.year.isin([2018, 2019]) &  # Keep only rows with year equal to 2018 or 2019.
                (df['age_group_name'] == 'All')] # Keep only rows with age_group_name equals 'All'.
+    df['year'] = df['date'].dt.year + (df['date'].dt.month - 1) / 12
+    df.drop(columns=['date', 'age_group_name'], inplace=True)
     df.reset_index(drop=True, inplace=True)
     return df
 
