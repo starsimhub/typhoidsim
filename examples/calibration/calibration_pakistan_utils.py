@@ -68,7 +68,7 @@ def get_age_distribution_pakistan():
     return df
 
 
-def get_mortality_rates():
+def get_mortality_rates_pakistan():
     """
     Parse mortality rates from json file used in EMOD simulations.
 
@@ -100,6 +100,16 @@ def get_mortality_rates():
     # Concatenate the original and copied DataFrames
     df = pd.concat([df_male, df_female], ignore_index=True)
     return df
+
+
+def get_crude_birth_rates_pakistan():
+    """
+    Placeholder to load and parse birth rates over mutiple year.
+    The output df should have the columns "Year" and the column "CBR".
+    CBR can expressed as birth rates are per 1000 people, per year; or
+    percentages per year.
+    """
+    pass
 
 
 def load_demogrphics_pakistan(json_file='TestDemographics_pak_updated.json'):
