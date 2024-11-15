@@ -17,6 +17,7 @@ from . import settings as tys
 __all__ = ['get_data_home', 'load_dataset', 'get_dataset_names']
 __all__ += ['digitize_ages_1yr']
 __all__ += ['test_cpu_performance']
+__all__ += ['generate_unique_filename', 'to_df']
 
 
 @nb.jit((nb.float64[:], ), cache=True, nopython=True)
@@ -205,7 +206,7 @@ def test_cpu_performance():
     return t_bl  # baseline performance in seconds
 
 
-def generate_filename(root_str="typhoidsim"):
+def generate_unique_filename(root_str="typhoidsim"):
     """
     Generate a unique filename -- useful when running lots of simulations, in a
     distributed manner
@@ -224,3 +225,22 @@ def generate_filename(root_str="typhoidsim"):
     u_id = sc.uuid(which="hex")  # Creates a length-6 hex string
     filename = root_str + "_" + now + u_id
     return filename
+
+
+def to_df(sim, sep='_'):
+    """
+    Export results as a Pandas dataframe. Available in newer starsim versions (ie, 2.0)
+    Only saves 1D result arrays, discards the results from analyzers, unless they
+    are 1D arrays.
+    """
+    if not sim.results_ready:  # pragma: no cover
+        errormsg = 'Please run the sim before exporting the results'
+        raise RuntimeError(errormsg)
+
+    flat = sim.results.flatten(sep=sep)
+    for arr in flat.keys():
+        if len(flat[arr].shape) > 1:
+            del flat[arr]
+
+    df = sc.dataframe.from_dict(flat)
+    return df
