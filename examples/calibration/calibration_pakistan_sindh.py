@@ -20,10 +20,6 @@ Target:
 - age distribution of blood culture confirmed typhoid cases
 """
 
-import matplotlib.pyplot as plt
-import optuna
-import pandas as pd
-
 import sciris as sc
 import starsim as ss
 import typhoidsim as ty
@@ -32,14 +28,14 @@ import calibration_pakistan_utils as utils
 
 
 # We will make a function that will return an instance of Sim(). All instances
-# will be identical except for the the value of the parameter we are exploring.
-def make_sim(tai=42_808, teer=1.99):
+# will be identical except for the the value of the parameters we are calibrating.
+def make_sim():
     """
     Specify the complete model, and create a simulation instance of typhoid
     with a simple vaccination intervention.
 
     Args:
-
+        None
 
     Returns:
     sim (starsim.Sim): a starsim simulation object, configured and ready to run.
@@ -47,8 +43,9 @@ def make_sim(tai=42_808, teer=1.99):
 
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =1990.0,         # Start year
-        n_years  =10.0,           # Duration of the simulation in years
+        start    =2017.0,         # Start year
+        total_pop=115.4e6,        # We use the `total_pop` parameter to scale our results so that they reflect a much larger population.
+        n_years  =6.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         verbose  =1,              # Pint details of the run
     )
@@ -82,7 +79,7 @@ def make_sim(tai=42_808, teer=1.99):
         sus_saturation_age=sus_saturation_age,
         sus_age_exposure_slope=sus_age_exposure_slope)
 
-    typhoids_pars = {'tai': tai,
+    typhoids_pars = {'tai': 42_808,
                      'tpri': 0.5,
                      'tsri': 1.0,
                      'tcri': 0.241,
@@ -95,8 +92,8 @@ def make_sim(tai=42_808, teer=1.99):
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
     # ENVIRONMENT
-    environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars(env2ppl_exposure_rate=ss.poisson(lam=teer)),  #TEER: Typhoid environmental exposure rate
-                                             'volume': 1})  # Set the volume to 1 if we want to reproduce EMOD results
+    environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  #TEER: Typhoid environmental exposure rate
+                                             'volume': 1})      # Set the volume to 1 if we want to reproduce EMOD results
 
     # INTERVENTIONS: Vaccination campaigns
 
@@ -116,8 +113,8 @@ def make_sim(tai=42_808, teer=1.99):
 
     # Intervention with vaccination
     campaign_vax_2_5_yo = ty.vaccination_wih_waning(
-        start_year=1991.0,
-        end_year=1999.0,
+        start_year=2020.0,
+        end_year=2022.0,
         prob=0.1/365.0,  # coverage
         waning_pars={'efficacy': 0.95,
                      'decay_time_constant': 505.0 / ty.days_per_year,
@@ -131,7 +128,7 @@ def make_sim(tai=42_808, teer=1.99):
     # Create an analyzer that will provide the results we need to compare to target empirical data
     age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
     age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
-    # Track cases by age and by sex
+    # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
     anz_1 = ty.histograms_by_age_sex(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record="ti_infected", name="report_1")
     # Track cases for all the population, grouped by sex -- just for convinience, could process the results from the analyzer above
     anz_2 = ty.histograms_by_age_sex(age_bins=[0, ty.max_age], age_bin_labels=['all'], to_record="ti_infected", name="report_2")
@@ -144,36 +141,61 @@ def make_sim(tai=42_808, teer=1.99):
     return sim
 
 
-def objective_step_1(trial):
-    """ The cost function and parameters to optimise in step 1 of calibration"""
-    p1 = trial.suggest_float('vax_eff', 0.0, 1.0)
-    p2 = trial.suggest_float('vax_cov', 0.0, 1.0)
-    p3 = trial.suggest_float('start_year', 2000.0, 2001.0)
+def run_starsim_calibration_step_1(do_plot=True):
+    """"
+    Calibration, step 1, we use data across the whole population
+    """
 
-    pars = {"a": p1, "b": p2, "c": p3}
-    # Create a new simulation with the parameters
-    sim = make_sim(**pars)
-    sim.run()
+    # Define the calibration parameters
+    calib_pars = dict(
+        # typhoid acute infectiousness
+        tai=dict(low=0.0, high=1e6, guess=42_808, path=('diseases', 'typhoid', 'tai')),
+        # typhoid environmental exposure rate
+        teer=dict(low=0.0, high=10.0, guess=1.99, path=('demographics', 'environmentalpool', 'teer_lam'))
+    )
 
-    # Evaluate cost
-    # include variance of cost function?
-    cost = None
-    return cost
+    # Make the sim and data
+    sim = make_sim()
+    data = utils.get_data_for_calibration_prevax(province="Sindh")  # only gets data in the years 2018-2019
 
+    # Define weights for the data
+    weights = {
+        'typhoid.prevalence':     1.0,
+        'typhoid.new_infections': 1.0,
+    }
 
-def objective_step_2(trial):
-    """ The cost function and parameters to optimise in step 1 of calibration"""
-    pass
+    # Make the calibration
+    calib = ty.Calibration(
+        calib_pars=calib_pars,
+        sim=sim,
+        data=data,
+        weights=weights,
+        total_trials=1,
+        n_workers=1,
+        die=True,
+        name="typhoidsim_calibration_sindh"
+    )
+
+    # Perform the calibration
+    sc.printcyan('\nPeforming calibration...')
+    calib.calibrate(confirm_fit=False)
+
+    # Confirm
+    sc.printcyan('\nConfirming fit...')
+    calib.confirm_fit()
+    print(f'Fit with original pars: {calib.before_fit:n}')
+    print(f'Fit with best-fit pars: {calib.after_fit:n}')
+    if calib.after_fit <= calib.before_fit:
+        print('✓ Calibration improved fit')
+    else:
+        print('✗ Calibration did not improve fit, but this sometimes happens stochastically and is not necessarily an error')
+
+    if do_plot:
+        calib.plot_sims()
+        calib.plot_trend()
+
+    return calib
 
 
 if __name__ == '__main__':
-
-    # # Main calibration workflow
-    # random_sweep = optuna.study.create_study(direction="minimize", sampler=optuna.samplers.TPESampler, seed=42)
-    # n_samples = 50  # number of combinations of parameters we are going to explore
-    # random_sweep.optimize(objective_step_1, n_trials=n_samples, n_jobs=4)
-
-    sim = make_sim()
-    sim.run()
-
-
+    run_starsim_calibration_step_1(do_plot=False)
