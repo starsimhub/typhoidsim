@@ -17,7 +17,7 @@ import typhoidsim as ty
 
 def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
     """
-    Create a partially applied function from unexp2susc_prob_function_gauld2018
+    Create a partially evaluated function from unexp2susc_prob_function_gauld2018
     with given sus_saturation_age and sus_age_exposure_slope arguments.
 
     Args:
@@ -122,7 +122,7 @@ def load_demogrphics_pakistan(json_file='TestDemographics_pak_updated.json'):
     return json_data
 
 
-def parse_empirical_data_pakistan(csv_file='TahirData_0928'):
+def load_empirical_data_pakistan(csv_file='TahirData_0928.csv'):
     """
     File with empirical data from Pakistan/Sindh
     Source: https://github.com/InstituteforDiseaseModeling/typhoid-pakistan-calibration/blob/main/calibration_Sindh/Assets/TahirData_0928.csv
@@ -130,6 +130,24 @@ def parse_empirical_data_pakistan(csv_file='TahirData_0928'):
     data_home = ty.get_data_home()  # Assumes we have placed the file in typhoidsim/data directory
     data = pd.read_csv(data_home + "/" + csv_file)
     return data
+
+
+def get_data_for_calibration_prevax(province="Sindh"):
+    """ Example script to prepare a df for starsim's Calibration"""
+    data = load_empirical_data_pakistan()
+
+    # Column name indicate "results" available in the simulation.
+    df = pd.DataFrame({"date": data[f"Date"],
+                       "typhoid.new_infections": data[f"{province}_positive"],
+                       "typhoid.prevalence": data[f"{province}_positivity"],   # TODO: need to update the name of the columns once we include tests with a testing report rate
+                       "age_group_name": data[f"Ages"]})
+
+    # Filter data
+    df['date'] = pd.to_datetime(df['date'])
+    df = df.loc[df['date'].dt.year.isin([2018, 2019]) &  # Keep only rows with year equal to 2018 or 2019.
+               (df['age_group_name'] == 'All')] # Keep only rows with age_group_name equals 'All'.
+    df.reset_index(drop=True, inplace=True)
+    return df
 
 
 def check_age_distribution(n_agents=100_000):
