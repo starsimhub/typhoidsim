@@ -65,9 +65,9 @@ class histograms_by_age_sex(ss.Analyzer):
     Records statistics (counts) by age and sex for each timestep.
     By default, this analyzer records new cases for every time step.
     """
-    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None):
+    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, name=None):
         super().__init__()
-        self.name = "histograms_by_age_sex"
+        self.name = "histograms_by_age_sex" if name is None else name
         self.age_bins = age_bins
         self.age_bin_labels = age_bin_labels
         self.to_record = to_record
