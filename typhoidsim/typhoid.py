@@ -260,17 +260,17 @@ class Typhoid(ss.Disease):
         npts = self.sim.npts
         self.results += [
             ss.Result(self.name, 'prevalence', npts, dtype=float, scale=False, label='Prevalence'),
-            ss.Result(self.name, 'new_infections', npts, dtype=int, scale=True, label='New infections'),
-            ss.Result(self.name, 'cum_infections', npts, dtype=int, scale=True, label='Cumulative infections'),
-            ss.Result(self.name, "new_susceptible", npts, dtype=int, scale=True, label="New Susceptible"),
-            ss.Result(self.name, "new_prepatent", npts, dtype=int, scale=True, label="New Prepatent"),
-            ss.Result(self.name, "new_acute", npts, dtype=int, scale=True, label="New Acute"),
-            ss.Result(self.name, "new_subclinical", npts, dtype=int, scale=True, label="New Subclinical"),
-            ss.Result(self.name, "new_chronic", npts, dtype=int, scale=True, label="New Chronic"),
-            ss.Result(self.name, "new_recovered", npts, dtype=int, scale=True, label="New Recovered"),
-            ss.Result(self.name, "new_deaths", npts, dtype=int, scale=True, label="New Dead"),
-            ss.Result(self.name, 'perc_infections_con', npts, dtype=float, scale=False, label='Percentage of infections from contact route'),
-            ss.Result(self.name, 'perc_infections_env', npts, dtype=float, scale=False, label='Percentage of infections from environmental route'),
+            ss.Result(self.name, 'new_infections', npts, dtype=int, scale=False, label='New infections'),
+            ss.Result(self.name, 'cum_infections', npts, dtype=int, scale=False, label='Cumulative infections'),
+            ss.Result(self.name, "new_susceptible", npts, dtype=int, scale=False, label="New Susceptible"),
+            ss.Result(self.name, "new_prepatent", npts, dtype=int, scale=False, label="New Prepatent"),
+            ss.Result(self.name, "new_acute", npts, dtype=int, scale=False, label="New Acute"),
+            ss.Result(self.name, "new_subclinical", npts, dtype=int, scale=False, label="New Subclinical"),
+            ss.Result(self.name, "new_chronic", npts, dtype=int, scale=False, label="New Chronic"),
+            ss.Result(self.name, "new_recovered", npts, dtype=int, scale=False, label="New Recovered"),
+            ss.Result(self.name, "new_deaths", npts, dtype=int, scale=False, label="New Dead"),
+            #ss.Result(self.name, 'perc_infections_con', npts, dtype=float, scale=False, label='Percentage of infections from contact route'),
+            #ss.Result(self.name, 'perc_infections_env', npts, dtype=float, scale=False, label='Percentage of infections from environmental route'),
 
         ]
         return
@@ -940,10 +940,10 @@ class Typhoid(ss.Disease):
         res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
-        res.perc_infections_env[ti] = 100.0*sc.safedivide(np.count_nonzero((self.infc_origin == tyd.TransmissionRoute.ENVIRONMENT.value) &
-                                                       (self.ti_infected == ti)), res.new_infections[ti])
-        res.perc_infections_con[ti] = 100.0*sc.safedivide(np.count_nonzero((self.infc_origin == tyd.TransmissionRoute.CONTACT.value) &
-                                                       (self.ti_infected == ti)), res.new_infections[ti])
+        # res.perc_infections_env[ti] = 100.0*sc.safedivide(np.count_nonzero((self.infc_origin == tyd.TransmissionRoute.ENVIRONMENT.value) &
+        #                                                (self.ti_infected == ti)), res.new_infections[ti])
+        # res.perc_infections_con[ti] = 100.0*sc.safedivide(np.count_nonzero((self.infc_origin == tyd.TransmissionRoute.CONTACT.value) &
+        #                                                (self.ti_infected == ti)), res.new_infections[ti])
         return
 
 
