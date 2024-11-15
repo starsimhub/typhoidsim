@@ -39,10 +39,9 @@ def make_sim(tai=None, teer=None):
 
     Args:
 
-    Returns:
-    sim (starsim.Sim): a starsim simulation configured with the same high level parameters for
-    the populatioin and typhoid disease, but with slightly different intervention parameters.
 
+    Returns:
+    sim (starsim.Sim): a starsim simulation object, configured and ready to run.
     """
 
     # HIGH-LEVEL SIM PARAMETERS
@@ -53,8 +52,10 @@ def make_sim(tai=None, teer=None):
         verbose  =1,              # Pint details of the run
     )
 
+    age_data = utils.get_age_distribution_pakistan()  # Loads age distribution data from the json file used in EMOD simulations
+
     # POPULATION
-    ppl = ss.People(10_000)
+    ppl = ss.People(10_000, age_data=age_data)
 
     # DEMOGRAPHICS
     # Load age-specific mortality rate, expressed in deaths per 1000 people
@@ -72,8 +73,8 @@ def make_sim(tai=None, teer=None):
 
     # Define the susceptible introduction curve
     # This curve defines an age-based transition from completeley immune to susceptible.
-    sus_saturation_age = 20.0
-    sus_age_exposure_slope = 6.94
+    sus_saturation_age = 20.0       # in years
+    sus_age_exposure_slope = 6.94   # ? not sure about the units
 
     # Function that defines the probability of becoming susceptible
     p_unexp2sus_parc_fun = utils.partial_unexp2susc(
@@ -94,23 +95,25 @@ def make_sim(tai=None, teer=None):
 
     # ENVIRONMENT
     environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars(env2ppl_exposure_rate=ss.poisson(lam=teer)),  #TEER: Typhoid environmental exposure rate
-                                             'volume': 1})  # We set the volume to 1 if we want to reproduce EMOD results
+                                             'volume': 1})  # Set the volume to 1 if we want to reproduce EMOD results
 
-    # parameters of seasonal pattern
+    # INTERVENTIONS: Vaccination campaigns
+
+    # Parameters of seasonal pattern
     seasonal_env_pars = {
-        'period': 365.0,   # in days
+        'period': 365.0,           # in days
         'peak_start_doy': 275.85,  # day of the year
         'ramp_up_dur': 175.26,     # duration in days
         'ramp_dw_dur': 100.0,      # duration in days
         'cutoff_dur': 20.0,        # duration in days
         'max_amp': 1.0}
-
+    # Seasonal pattern
     trapezoidal_pattern = utils.partial_env_trapezoidal(seasonal_env_pars)
 
+    # Intervention that uses the seasonal pattern
     exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start_year=2005.0)
 
-    # INTERVENTIONS: Vaccination campaigns
-    # Create products
+    # Intervention with vaccination
     campaign_start_year = 1991.0
     campaign_vax_2_5_yo = ty.vaccination_wih_waning(
         start_year=campaign_start_year,
@@ -131,11 +134,12 @@ def make_sim(tai=None, teer=None):
 
     age_histogram_report = ty.age_histogram(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record="ti_infected")
 
-    # CREATE THE SIMULATION
+    # PUT EVERYTHING TOGETHER IN A SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
                  interventions=[exposure_modulation, campaign_vax_2_5_yo], analyzers=age_histogram_report)
 
     # Export to df
+
 
     # Export parameteres
 
