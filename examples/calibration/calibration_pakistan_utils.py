@@ -122,6 +122,16 @@ def load_demogrphics_pakistan(json_file='TestDemographics_pak_updated.json'):
     return json_data
 
 
+def parse_empirical_data_pakistan(csv_file='TahirData_0928'):
+    """
+    File with empirical data from Pakistan/Sindh
+    Source: https://github.com/InstituteforDiseaseModeling/typhoid-pakistan-calibration/blob/main/calibration_Sindh/Assets/TahirData_0928.csv
+    """
+    data_home = ty.get_data_home()  # Assumes we have placed the file in typhoidsim/data directory
+    data = pd.read_csv(data_home + "/" + csv_file)
+    return data
+
+
 def check_age_distribution(n_agents=100_000):
     """
     Run a quick sim to get the age distribution of the population, and plots the
