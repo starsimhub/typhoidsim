@@ -36,7 +36,7 @@ def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
 
     # Handle inputs
     if bins is None:
-        bins = np.arange(0 ,101)
+        bins = np.arange(0, 101)
 
     # Set defaults
     color     = [0.1, 0.1, 0.1]  # Color for the age distribution
@@ -69,7 +69,7 @@ def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
     plt.grid(True)
     plt.xlabel('Age (years)')
     plt.ylabel('Number of people (agents)')
-    plt.title(f'Age distribution ({len(people):n} people total)')
+    plt.title(f'Age distribution ({len(people):n} agents total)')
 
     # Plot cumulative distribution
     plt.subplot(n_rows, 2, 2)
