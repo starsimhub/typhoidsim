@@ -28,6 +28,7 @@ class EnvironmentalPool(ss.Demographics):
                 env2ppl_exposure_rate=ss.poisson(lam=5e2),   # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)/day -- lam is equivalent to typhoid_environmental_exposure_rate
 
             ),
+            teer_lam=5e2,     # HACKY parameter, otherwise CAlibration class does not ru where the path to the parameter is longer than 3
         # Temperature-parameters, not used at the moment
             bs_temp=6.0,   # Baseline temperature at which bacteria would stop growing, in degree Celsius
             av_temp=14.0,  # typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
@@ -57,6 +58,8 @@ class EnvironmentalPool(ss.Demographics):
         self.init_env_pool(sim)  # Initialise the environmental pool of contagion at t-1
         if sc.isnumber(self.pars.av_temp):
             self.pars.av_temp = typ.Pattern("av_temp", pars={'av_temp': self.pars.av_temp})
+        ##
+        self.pars.transmission.env2ppl_exposure_rate.lam = self.pars.teer_lam
         return
 
     def init_svs(self):
