@@ -69,14 +69,44 @@ def get_age_distribution_pakistan():
 
 
 def get_mortality_rates():
-    pass
+    """
+    Parse mortality rates from json file used in EMOD simulations.
 
+    These rates are expressed as mortality rate in units of 1/year".
 
-def get_birth_rates():
-    pass
+    Returns:
+        df (pd.DataFrame): A dataframe with columns
+    """
+    json_data = load_demogrphics_pakistan()
+    # Get lower bound of each age bin
+    age_bin_lb = np.array(json_data["Nodes"][0]["IndividualAttributes"]["MortalityDistributionMale"]["PopulationGroups"][0])[::2]
+    # Years for which we have data available
+    years = np.array(json_data["Nodes"][0]["IndividualAttributes"]["MortalityDistributionMale"]["PopulationGroups"][1])
+    rates = np.array(json_data["Nodes"][0]["IndividualAttributes"]["MortalityDistributionMale"]["ResultValues"])[::2, :]
+
+    # Process data
+    year_data = np.tile(years, len(age_bin_lb))
+    age_data = np.repeat(age_bin_lb, len(years))
+    unfolded_rates = rates.reshape(-1)
+    sex_data = np.repeat("Male", len(year_data))
+
+    df_male = pd.DataFrame({"Time": year_data, "Sex": sex_data, "AgeGrpStart": age_data, "mx": unfolded_rates})
+
+    # The demographics module needs data for male & female, we assume the
+    # same rates apply.
+    df_female = df_male.copy()
+    df_female["Sex"] = "Female"
+
+    # Concatenate the original and copied DataFrames
+    df = pd.concat([df_male, df_female], ignore_index=True)
+    return df
 
 
 def load_demogrphics_pakistan(json_file='TestDemographics_pak_updated.json'):
+    """
+    Load demogrphics data from json file used in eMOD simulation
+    This file is usually found under the Assets/ directory.
+    """
     data_home = ty.get_data_home()  # Assumes we have placed the file in typhoidsim/data directory
     json_data = sc.loadjson(data_home + "/" + json_file)
     return json_data
