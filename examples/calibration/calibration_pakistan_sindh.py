@@ -53,14 +53,15 @@ def make_sim(tai=None, teer=None):
         verbose  =1,              # Pint details of the run
     )
 
-    age_data = utils.get_age_distribution_pakistan()  # Loads age distribution data from the json file used in EMOD simulations
+    # Loads age distribution data from the json file used in EMOD simulations
+    age_data = utils.get_age_distribution_pakistan()   # NOTE: Any adjustments to the age distribution (ie, to scale it to the demographics of the specific province) can be done here
 
     # POPULATION
     ppl = ss.People(10_000, age_data=age_data)
 
     # DEMOGRAPHICS
-    # Load age-specific mortality rate, expressed in deaths per 1000 people
-    death_rates_df = utils.get_mortality_rates()
+    # Load age-specific mortality rate, expressed in age-group proportions, in units of 1/year
+    death_rates_df = utils.get_mortality_rates_pakistan()
 
     # Crude birth rate in Pakistan 2020 per 1000 people
     cbr = 27
