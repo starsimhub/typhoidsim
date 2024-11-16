@@ -216,34 +216,41 @@ class base_test(ss.Intervention):
         self.prob = sc.promotetoarray(prob)
         self.eligibility = eligibility
         self.coverage_dist = ss.bernoulli(p=self.prob)
-        self.screened = ss.BoolArr('screened', default=False)
-        self.screens = ss.FloatArr('screens', default=0)
-        self.ti_screened = ss.FloatArr('ti_screened')
+        self.screened = ss.BoolArr('tested', default=False)
+        self.ti_screened = ss.FloatArr('ti_tested')
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.results += ss.Result(self.name, 'n_screened', sim.npts, dtype=int)  # count how many were treated today, includes new and old patients
+        self.results += ss.Result(self.name, 'new_positive', sim.npts, dtype=int)  # count how many tested positive today, includes new and old patients
+        self.results += ss.Result(self.name, 'new_tested', sim.npts, dtype=int)  # count how many were tested today, includes only new patients
+        self.results += ss.Result(self.name, 'positivity', sim.npts, dtype=float)    # instantaneous positivity (equivalent to prevalence but based on number of people who tested positive today / number of tested)
+
+        if self.eligibility is None:
+            self.eligibility = self.check_eligibility
         return
 
     def apply(self, sim):
         """
         """
-        if self.eligibility is None:
-            eligible_uids = self.check_eligibility(sim)  # Check eligibility
-        else:
-            eligible_uids = self.eligibility() if callable(self.eligibility) else self.eligibility
+        eligible_uids = self._eligibility(sim)
         self.coverage_dist.set(p=self.prob)
         tested_uids = self.coverage_dist.filter(eligible_uids)
         self.screened[tested_uids] = True
         self.screens[tested_uids] += 1
-        self.ti_screened[tested_uids] = sim.ti
-        self.results['n_screened'][sim.ti] = len(tested_uids)
+        self.ti_tested[tested_uids] = sim.ti
+        self.results['new_tested'][sim.ti] = self.ti_screened.sum()
+        self.results['new_positive'][sim.ti] = sum(sim.people.typhoid.infected[tested_uids])
+        self.results['positivity'][sim.ti] = sc.safedivide(self.results['new_positive'][sim.ti], self.results['new_tested'][sim.ti])
         return tested_uids
 
     def check_eligibility(self, sim):
+        """ Default eligibility, do not test the same person more than once"""
         chronic_uids = (sim.people.typhoid.chronic & ~self.screened).uids
         return chronic_uids
+
+    def _eligibility(self, sim):
+        return self.eligibility(sim) if callable(self.eligibility) else self.eligibility
 
 
 # -- Environmental interventions
