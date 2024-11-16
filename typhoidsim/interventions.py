@@ -208,7 +208,8 @@ class base_test(ss.Intervention):
          prob_t         (float)     : probability of eligible people (chronic) being selected to receive a test
          prob_tp        (float)     : probability of tested people who are infected receiving a positive diagnosis (true positive)
          eligibility    (inds/callable) : indices OR callable that returns inds
-         kwargs         (dict)          : passed to Intervention()
+         eligibility_kwargs (dict)  : keyword arguments passed to eligibilty() if eligibility is a function/callable with the signature eligibility(sim, **eligibility_kwargs)
+         kwargs         (dict)      : passed to Intervention()
     """
 
     def __init__(self, prob_t=1.0, prob_tp=1.0, eligibility=None, eligibility_kwargs=None, **kwargs):
