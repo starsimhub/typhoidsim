@@ -202,22 +202,25 @@ class infection_clearence(ss.Intervention):
 # -- Diagnostics
 class base_test(ss.Intervention):
     """
-    By default, find who is a chronic typhoid carrier. But if eligibility is not
-    None (default) it will count those uids as 'screened'.
+    By default, find who is a chronic typhoid carrier.
 
     Args:
-         prob           (float/arr)     : probability of eligible people (chronic) receiving a positive diagnostic
+         prob_t         (float)     : probability of eligible people (chronic) being selected to receive a test
+         prob_tp        (float)     : probability of tested people who are infected receiving a positive diagnosis (true positive)
          eligibility    (inds/callable) : indices OR callable that returns inds
          kwargs         (dict)          : passed to Intervention()
     """
 
-    def __init__(self, prob=1.0, eligibility=None, **kwargs):
+    def __init__(self, prob_t=1.0, prob_tp=1.0, eligibility=None, eligibility_kwargs=None, **kwargs):
         super().__init__(**kwargs)
-        self.prob = sc.promotetoarray(prob)
+        self.prob_t = sc.promotetoarray(prob_t)    # probability of being tested
+        self.prob_tp = sc.promotetoarray(prob_tp)  # given that a person if being tested, probabilty of testing postivie (capture uncertantiy of test product/method)
         self.eligibility = eligibility
-        self.coverage_dist = ss.bernoulli(p=self.prob)
-        self.screened = ss.BoolArr('tested', default=False)
-        self.ti_screened = ss.FloatArr('ti_tested')
+        self.eligibility_kwargs = eligibility_kwargs
+        self.coverage_dist = ss.bernoulli(p=self.prob_t)
+        self.test_dist = ss.bernoulli(p=self.prob_tp)
+        self.tested = ss.BoolArr('tested', default=False)
+        self.ti_tested = ss.FloatArr('ti_tested')
         return
 
     def init_pre(self, sim):
@@ -234,23 +237,32 @@ class base_test(ss.Intervention):
         """
         """
         eligible_uids = self._eligibility(sim)
-        self.coverage_dist.set(p=self.prob)
+        self.coverage_dist.set(p=self.prob_t)
+        self.test_dist.set(p=self.prob_tp)
         tested_uids = self.coverage_dist.filter(eligible_uids)
-        self.screened[tested_uids] = True
-        self.screens[tested_uids] += 1
+        # Of those who where tested and are positive
+        are_pos_uids = (sim.people.typhoid.infected[tested_uids]).uids
+        # Decide whether the test comes back positive
+        tested_pos_uids = self.test_dist.filter(are_pos_uids)
+        self.tested[tested_uids] = True
         self.ti_tested[tested_uids] = sim.ti
-        self.results['new_tested'][sim.ti] = self.ti_screened.sum()
-        self.results['new_positive'][sim.ti] = sum(sim.people.typhoid.infected[tested_uids])
+        self.results['new_tested'][sim.ti] = self.tested.sum()
+        self.results['new_positive'][sim.ti] = len(tested_pos_uids)
         self.results['positivity'][sim.ti] = sc.safedivide(self.results['new_positive'][sim.ti], self.results['new_tested'][sim.ti])
         return tested_uids
 
     def check_eligibility(self, sim):
         """ Default eligibility, do not test the same person more than once"""
-        chronic_uids = (sim.people.typhoid.chronic & ~self.screened).uids
+        chronic_uids = (sim.people.typhoid.chronic & ~self.tested).uids
         return chronic_uids
 
     def _eligibility(self, sim):
-        return self.eligibility(sim) if callable(self.eligibility) else self.eligibility
+        if callable(self.eligibility) and self.eligibility_kwargs is not None:
+            return self.eligibility(sim, **self.eligibility_kwargs)
+        elif callable(self.eligibility) and self.eligibility_kwargs is None:
+            return self.eligibility(sim)
+        else:  # Assume self.eligibility is an array of uids
+            return self.eligibility
 
 
 # -- Environmental interventions
