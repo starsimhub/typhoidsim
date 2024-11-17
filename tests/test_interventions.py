@@ -99,6 +99,49 @@ def run_sim_vaccine(efficacy, leaky=True, do_plot=False):
     return sim
 
 
+def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
+    # Define high-level simulation parameters
+    pars = dict(
+        start=2000,  # Starting year
+        n_years=2.0/365.0,  # Duration of the simulation in years
+        dt=1.0/365.0,  # Timestep of 1 day, expressed in years
+        verbose=0,  # Do not print details of the run
+    )
+
+    ppl = ss.People(10_000)
+    init_p = 0.5
+    typhoid = ty.Typhoid(pars={'init_prev': ss.bernoulli(p=init_p)})
+    # create and apply the test intervention
+    tst = ty.base_test(prob_t=prob_test, prob_tp=prob_test_positive, eligibility=ty.eligibility_by_age)
+    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst)
+    sim.initialize(verbose=False)
+
+    # check the number of infected cases
+    assert np.isclose((sum(sim.people.typhoid.infected)/sum(sim.people.alive)), init_p, atol=1e-2)
+
+    sim.run()
+
+    mean_tests = sim.interventions.base_test.results.new_tested.mean() / sum(sim.people.alive)
+    assert np.isclose(mean_tests, prob_test, atol=1e-2)
+
+    mean_positive = sim.interventions.base_test.results.new_positive.mean() / sum(sim.people.alive)
+    prob = init_p * prob_test * prob_test_positive
+    assert np.isclose(mean_positive, prob, atol=1e-2)
+
+    if do_plot:
+        sim.plot()
+
+    return sim
+
+
+def test_base_test(do_plot=False):
+    return run_sim_base_test(0.3, 1.0, do_plot=do_plot)
+
+
+def test_base_test_leaky(do_plot=False):
+    return run_sim_base_test(0.3, 0.5, do_plot=do_plot)
+
+
 def test_vaccine_leaky(do_plot=False):
     return run_sim_vaccine(0.3, False, do_plot=do_plot)
 
@@ -110,8 +153,10 @@ def test_vaccine_all_or_nothing(do_plot=False):
 if __name__ == '__main__':
     T = sc.timer()
     do_plot = True
+    test_vaccine_leaky(do_plot=do_plot)
+    test_vaccine_all_or_nothing(do_plot=do_plot)
 
-    leaky = test_vaccine_leaky(do_plot=do_plot)
-    a_or_n = test_vaccine_all_or_nothing(do_plot=do_plot)
+    test_base_test_leaky(do_plot=do_plot)
+    test_base_test(do_plot=do_plot)
 
     T.toc()
