@@ -241,13 +241,14 @@ class base_test(ss.Intervention):
         self.coverage_dist.set(p=self.prob_t)
         self.test_dist.set(p=self.prob_tp)
         tested_uids = self.coverage_dist.filter(eligible_uids)
-        # Of those who where tested and are positive
-        are_pos_uids = (sim.people.typhoid.infected[tested_uids]).uids
-        # Decide whether the test comes back positive
+        # Of those who where tested and are infected
+        infected_uids = (sim.people.typhoid.infected).uids
+        are_pos_uids = np.intersect1d(infected_uids, tested_uids)
+        # Decide whether the test actually comes back positive
         tested_pos_uids = self.test_dist.filter(are_pos_uids)
         self.tested[tested_uids] = True
         self.ti_tested[tested_uids] = sim.ti
-        self.results['new_tested'][sim.ti] = self.tested.sum()
+        self.results['new_tested'][sim.ti] = len(tested_uids)
         self.results['new_positive'][sim.ti] = len(tested_pos_uids)
         self.results['positivity'][sim.ti] = sc.safedivide(self.results['new_positive'][sim.ti], self.results['new_tested'][sim.ti])
         return tested_uids
