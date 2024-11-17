@@ -7,6 +7,9 @@ import functools
 
 import typhoidsim.defaults as tyd
 
+__all__ = ['eligibility_by_age', 'eligibility_by_sex', 'eligibility_by_age_sex']
+__all__ += ['eligibility_all_females', 'eligibility_all_males']
+
 
 def eligibility_by_age(sim, age_min=0.0, age_max=tyd.max_age):
     """
