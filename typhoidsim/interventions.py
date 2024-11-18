@@ -15,7 +15,7 @@ from .utils_math import box_exponential
 # Diagnostics
 __all__  = ['base_test']
 # Treatments applied to people
-__all__ += ['acute_treatment', 'infection_clearence', 'vaccination_wih_waning']
+__all__ += ['acute_treatment', 'infection_clearence', 'vaccination_with_waning']
 # Interventions applied to the environment or environmental transmission
 __all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposure_reduction',
             'environmental_seasonality', 'environmental_trapezoidal_modulation']
@@ -579,7 +579,7 @@ class infectiousness_clearence(ss.Product):
         return
 
 
-class vaccination_wih_waning(ss.RoutineDelivery):
+class vaccination_with_waning(ss.RoutineDelivery):
     """
     An intervention that handles a vaccination with waning.
     NOTE: this case is a bit special because it agreggates vaccine protection and the immune

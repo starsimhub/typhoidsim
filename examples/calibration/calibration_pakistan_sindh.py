@@ -111,7 +111,7 @@ def make_sim():
     exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start_year=2005.0)
 
     # Intervention with vaccination
-    campaign_vax_2_5_yo = ty.vaccination_wih_waning(
+    campaign_vax_2_5_yo = ty.vaccination_with_waning(
         start_year=2020.0,
         end_year=2022.0,
         prob=0.1/365.0,  # coverage
