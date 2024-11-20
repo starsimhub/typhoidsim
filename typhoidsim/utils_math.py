@@ -163,7 +163,7 @@ def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
     peak_start_doy = (peak_start_doy + shift_days) % period
     peak_dur = (period - cutoff_dur) - (ramp_dw_dur + ramp_up_dur)
     peak_end_doy = (peak_start_doy + peak_dur) % period
-    ramp_dw_end_doy = ((peak_end_doy + ramp_dw_dur) + shift_days) % period
+    ramp_dw_end_doy = (peak_end_doy + ramp_dw_dur) % period
 
     time_mod = (x + shift_days) % period
 
