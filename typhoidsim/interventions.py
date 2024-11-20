@@ -431,13 +431,14 @@ class environmental_trapezoidal_modulation(WASH):
         return
 
     def apply(self, sim):
+        self.efficacy = 0.0
         self.results['effective_value'][sim.ti] = self.target_baseline
         if sim.year >= self.start and len(self.time):
             time_days = sim.year * days_per_year
             self.efficacy = self.efficacy_pattern(time_days)
-            self._set_target_val_par(sim, self.efficacy * self.target_baseline)
-            self._update_results(sim)
             self.ti += 1
+        self._set_target_val_par(sim, self.efficacy * self.target_baseline)
+        self._update_results(sim)
         return
 
     def _update_results(self, sim):
