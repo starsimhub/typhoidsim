@@ -35,9 +35,9 @@ seasonal_env_pars = {
 
 
 def trapezoid(env_pars):
-    if env_pars['ramp_up_dur_'] +  env_pars['ramp_dw_dur_'] + env_pars['cuttof'] > env_pars['period']:
+    if env_pars['ramp_up_dur'] + env_pars['ramp_dw_dur'] + env_pars['cutoff_dur'] > env_pars['period']:
         raise ValueError(f"the duration of the pattern is longer than the period")
-    elif env_pars['ramp_up_dur_'] +  env_pars['ramp_dw_dur_'] + env_pars['cuttof'] == env_pars['period']:
+    elif env_pars['ramp_up_dur'] + env_pars['ramp_dw_dur'] + env_pars['cutoff_dur'] == env_pars['period']:
         raise ValueError(f"the duration of the pattern is exactly the period, will get a triangular waveform")
     else:
         return functools.partial(ty.asym_trapezoidal, **env_pars)
