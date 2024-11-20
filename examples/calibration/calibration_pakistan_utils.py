@@ -133,7 +133,20 @@ def load_empirical_data_pakistan(csv_file='TahirData_0928.csv'):
 
 
 def get_data_for_calibration_prevax(province="Sindh"):
-    """ Example script to prepare a df for starsim's Calibration"""
+    """
+    Example script to prepare a df for starsim's Calibration class.
+    This function extracts data from Pakistan from the yers 2018 and 2019,
+    and arranges them in a dataframe with columns named "typhoid.new_infections",
+    and "typhoid.prevalence". These column names correspond to 'paths' to results
+    in the simulation object (after running the simulation).
+
+    sim.results.typhoid.new_infections --> is a timeseries
+    sim.results.typhoid.new_infections --> is a timeseries
+
+    The Calibration class requires column names in dataframe that matches a
+    'stream' or 'array' of data inside the simulation.
+    """
+
     data = load_empirical_data_pakistan()
 
     # Column name indicate "results" available in the simulation.
