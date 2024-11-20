@@ -85,14 +85,15 @@ def make_sim():
                      'tppi': 0.98,
                      'p_cpg': 0.108,
                      'p_acute': ss.bernoulli(p=0.16),
-                     'init_prev': ss.bernoulli(p=0.05),
+                     'init_prev': ss.bernoulli(p=0.05),                   # Initial prevalence: This is how we seed infections at the start of a simulation. In this case approx 5% of the total population of agents, will be infected at t=0
                      'p_unexp2sus': ss.bernoulli(p=p_unexp2sus_parc_fun)}
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
     # ENVIRONMENT
     environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  # TEER: Typhoid environmental exposure rate
-                                             'volume': 1})      # Set the volume to 1 if we want to reproduce EMOD results
+                                             'volume': 1,       # Set the volume to 1 if we want to reproduce EMOD-like results
+                                             'transmission': ss.Pars({'rel_trans': 0.00001})})  # This parameter is equivalent to mEL parameter in Gauld etal 2018
 
     # INTERVENTIONS: Vaccination campaigns
 
@@ -122,7 +123,7 @@ def make_sim():
                   'max_age': 4.0}
         )
 
-    # Intervention base test
+    # Intervention base test. This mimics the imperfect/incomplete nbature of empirical data through the lens of testing a fraction of the population.
     test = ty.base_test(prob_t=0.3, prob_tp=1.0, eligibility=ty.eligibility_by_age)
 
     # OBSERVATIONS AND REPORTING
@@ -132,7 +133,7 @@ def make_sim():
     age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
     # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
     anz_1 = ty.histograms_by_age_sex(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record="ti_infected", name="report_1")
-    # Track cases for all the population, grouped by sex -- just for convinience, could process the results from the analyzer above
+    # Track cases for all the population, grouped by sex -- just for convinience, one could process the results from the analyzer above.
     anz_2 = ty.histograms_by_age_sex(age_bins=[0, ty.max_age], age_bin_labels=['all'], to_record="ti_infected", name="report_2")
 
     # PUT EVERYTHING TOGETHER IN A SIMULATION
@@ -153,7 +154,7 @@ def run_starsim_calibration_step_1(do_plot=True):
         # typhoid acute infectiousness
         tai=dict(low=0.0, high=1e6, guess=42_808, path=('diseases', 'typhoid', 'tai')),
         # typhoid environmental exposure rate
-        teer=dict(low=0.0, high=10.0, guess=1.99, path=('demographics', 'environmentalpool', 'teer_lam'))
+        teer=dict(low=0.0, high=10.0, guess=1.99, path=('demographics', 'environmentalpool', 'teer_lam'))  # The path always consists of three components/steps.
     )
 
     # Make the sim and data
