@@ -32,8 +32,8 @@ def make_sim(tai=42_000):
 
     # ENVIRONMENT
     environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  # TEER: Typhoid environmental exposure rate
-                                             'volume': 1,       # Set the volume to 1 if we want to reproduce EMOD results
-                                             'transmission': ss.Pars({'rel_trans': 0.00001})})
+                                             'volume': 1,       # Set the volume to 1 if we want to reproduce EMOD-like results
+                                             'transmission': ss.Pars({'rel_trans': 0.00001})})  # This parameter is equivalent to mEL parameter in Gauld etal 2018
 
     # Create the simulation with specific intervention parameters
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid,  demographics=environment, label=f"TAI:{tai}")
