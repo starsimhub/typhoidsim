@@ -440,6 +440,11 @@ class environmental_trapezoidal_modulation(WASH):
             self.ti += 1
         return
 
+    def _update_results(self, sim):
+        self.results['efficacy'][sim.ti] = self.efficacy
+        self.results['effective_value'][sim.ti] = self.efficacy * self.target_baseline
+        return
+
 
 class environmental_cleanup(WASH):
     def __init__(self, **kwargs):
