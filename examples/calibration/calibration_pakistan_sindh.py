@@ -46,7 +46,7 @@ def make_sim():
         start    =2017.0,         # Start year
         n_years  =6.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
-        verbose  =1,              # Pint details of the run
+        verbose  =0,              # Pint details of the run
     )
 
     # Loads age distribution data from the json file used in EMOD simulations
@@ -78,20 +78,20 @@ def make_sim():
         sus_saturation_age=sus_saturation_age,
         sus_age_exposure_slope=sus_age_exposure_slope)
 
-    typhoids_pars = {'tai': 42_808,
+    typhoids_pars = {'tai': 42_000,
                      'tpri': 0.5,
                      'tsri': 1.0,
                      'tcri': 0.241,
                      'tppi': 0.98,
                      'p_cpg': 0.108,
                      'p_acute': ss.bernoulli(p=0.16),
-                     'init_prev': ss.bernoulli(0.1),
+                     'init_prev': ss.bernoulli(p=0.05),
                      'p_unexp2sus': ss.bernoulli(p=p_unexp2sus_parc_fun)}
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
     # ENVIRONMENT
-    environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  #TEER: Typhoid environmental exposure rate
+    environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  # TEER: Typhoid environmental exposure rate
                                              'volume': 1})      # Set the volume to 1 if we want to reproduce EMOD results
 
     # INTERVENTIONS: Vaccination campaigns
@@ -99,7 +99,7 @@ def make_sim():
     # Parameters of seasonal pattern
     seasonal_env_pars = {
         'period': 365.0,           # in days
-        'peak_start_doy': 275.85,  # day of the year
+        'peak_start_doy': 0.0,  # day of the year
         'ramp_up_dur': 175.26,     # duration in days
         'ramp_dw_dur': 100.0,      # duration in days
         'cutoff_dur': 20.0,        # duration in days
@@ -122,6 +122,9 @@ def make_sim():
                   'max_age': 4.0}
         )
 
+    # Intervention base test
+    test = ty.base_test(prob_t=0.3, prob_tp=1.0, eligibility=ty.eligibility_by_age)
+
     # OBSERVATIONS AND REPORTING
 
     # Create an analyzer that will provide the results we need to compare to target empirical data
@@ -134,7 +137,7 @@ def make_sim():
 
     # PUT EVERYTHING TOGETHER IN A SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
-                 interventions=[exposure_modulation, campaign_vax_2_5_yo],
+                 interventions=[test, exposure_modulation, campaign_vax_2_5_yo],
                  analyzers=[anz_1, anz_2])
 
     return sim
@@ -156,8 +159,7 @@ def run_starsim_calibration_step_1(do_plot=True):
     # Make the sim and data
     sim = make_sim()
     data = utils.get_data_for_calibration_prevax(province="Sindh")  # only gets data in the years 2018-2019
-
-    # Define weights for the data
+    # Define weights for the goodness of fit
     weights = {
         'typhoid.prevalence':     1.0,
         'typhoid.new_infections': 1.0,
@@ -196,5 +198,35 @@ def run_starsim_calibration_step_1(do_plot=True):
     return calib
 
 
+def run_debug(do_plot=True):
+    """ Run one simulation"""
+    sim = make_sim()
+    sim.run()
+    if do_plot:
+        sim.plot()
+        plt.show()
+    return sim
+
+
+def run_debug_multisim(do_plot=True):
+    sim1 = make_sim()
+    sim2 = make_sim()
+    sims = sc.autolist()
+    sims.append(sim1)
+    sims.append(sim2)
+
+    # Let's change a parameter in sim2
+    sim2.initialize()
+    sim2.diseases.typhoid.pars.tai = 1_000
+    msim = ss.MultiSim(sims)
+    msim.run()
+    if do_plot:
+        msim.plot()
+        plt.show()
+    return msim
+
+
 if __name__ == '__main__':
-    run_starsim_calibration_step_1(do_plot=True)
+    #run_starsim_calibration_step_1(do_plot=True)
+    #sim = run_debug(do_plot=True)
+    msim = run_debug_multisim(do_plot=True)
