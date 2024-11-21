@@ -29,7 +29,7 @@ import typhoidsim as ty
 
 import calibration_pakistan_utils as utils
 
-calib_debug = False  # If true, calibration will run in serial
+calib_debug = True  # If true, calibration will run in serial
 
 
 # We will make a function that will return an instance of Sim(). All instances
@@ -133,8 +133,9 @@ def make_sim():
 
     # OBSERVATIONS AND REPORTING
     # Create an analyzer that will provide the results we need to compare to target empirical data
-    age_bin_edges = [0, 2, 5, 10, 15]
-    age_bin_labels = ['<2', '2-4', '5-9', '10-14']  # human readable labels
+    age_bin_edges = [0, 2, 15, ty.max_age]
+    age_bin_labels = ['<2', '2-15', '15+']  # human readable labels
+
     to_record = dict(ti_infected=dict(path=("diseases", "typhoid")),
                      alive=dict(path=("people",)),
                      ti_positive=dict(path=("interventions", "base_test")),
@@ -176,7 +177,36 @@ def build_sim(sim, calib_pars, **kwargs):
 
 
 def make_calib_components():
-    pass
+    df = utils.load_empirical_data_pakistan()
+    # Add a column with a similar representation of time
+    df["yearvec"] = df["Date"].dt.year + (df["Date"].dt.dayofyear - 1) / ty.days_per_year
+    df_2_to_15 = df.loc[(df["Ages"] == "Kids2to15"), :]
+
+    # TODO: find a better way to do this, in case we change the age bins
+    age_bin_labels = ['<2', '2-15', '15+']  # human readable labels
+    # Make dirctionary to map lable to array index in analyzer result array
+    age_bins_dict = {label: idx for idx, label in enumerate(age_bin_labels)}
+
+    # Example with females between 2 <= age < 4
+    f_infectious_2_to_15 = ty.CalibComponent220(
+        name='f_positive_2_15',
+        # Reference data
+        expected=pd.DataFrame({
+            'n': df_2_to_15["Sindh_positive"] * 5.0,  # !!! TODO: CHANGE!!! Made up scaling because "Sindh_tested" is all NaNs for this age group
+            'x': df_2_to_15["Sindh_positive"].astype(float),  # Count/Number of individuals found to test positive
+        }, index=pd.Index(df_2_to_15["yearvec"], name='t')),  # On these dates
+        # Extract equivalent data from the simulation
+        extract_fn=lambda sim: pd.DataFrame({
+            'n': sim.analyzers.hist_by_age_sex.results.hist_f_ti_tested[:, age_bins_dict['2-15']],    # Number of individuals who were tested
+            'x': sim.analyzers.hist_by_age_sex.results.hist_f_ti_positive[:, age_bins_dict['2-15']],  # Number of individuals whose test was positive
+        }, index=pd.Index(sim.analyzers.hist_by_age_sex.yearvec, name='t')),  # Index is time
+
+        conform='prevalent',
+        nll_fn='beta',
+        weight=1,  # Not required if only one component
+    )
+    components = [f_infectious_2_to_15]
+    return components
 
 
 def my_gof_fun(sim, expected_data=None):
@@ -214,32 +244,31 @@ def run_starsim_calibration_step_1(do_plot=True):
     sim = make_sim()
 
     # Option 1: with custom-made goodnes-of-fit function
-    calib = ty.Calibration220(
-        calib_pars=calib_pars,
-        sim=sim,
-        build_fn=build_sim,
-        eval_fn=my_gof_fun,
-        eval_kwargs=dict(expected_data=utils.load_empirical_data_pakistan()),  # loads all the data from TahirData_0928.csv without any preprocessing
-        total_trials=16,
-        n_workers=4,
-        die=True,
-        debug=calib_debug
-    )
-
-    # Option 2: with calib components
-    # components = make_calib_components()
     # calib = ty.Calibration220(
     #     calib_pars=calib_pars,
     #     sim=sim,
     #     build_fn=build_sim,
-    #     build_kw=None,
-    #     components=components,
+    #     eval_fn=my_gof_fun,
+    #     eval_kwargs=dict(expected_data=utils.load_empirical_data_pakistan()),  # loads all the data from TahirData_0928.csv without any preprocessing
     #     total_trials=16,
     #     n_workers=4,
     #     die=True,
     #     debug=calib_debug
     # )
 
+    # Option 2: with calib components
+    components = make_calib_components()
+    calib = ty.Calibration220(
+        calib_pars=calib_pars,
+        sim=sim,
+        build_fn=build_sim,
+        build_kw=None,
+        components=components,
+        total_trials=16,
+        n_workers=4,
+        die=True,
+        debug=calib_debug
+    )
 
     # Perform the calibration
     sc.printcyan('\nPeforming calibration...')
