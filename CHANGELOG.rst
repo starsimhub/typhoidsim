@@ -9,6 +9,13 @@ may result in differences in model output, or are required in order to run an
 old parameter set with the current version, are flagged with the term
 "Regression information".
 
+Version 0.6.0 (2024-11-22)
+--------------------------
+- Bugfixes to seasonal modulation
+- Improved histogram by age and sex analyzer
+- Improved base test intervention
+- Backport Calibration classes from starsim 2.2.0
+
 Version 0.4.0 (2024-10-24)
 --------------------------
 - Environment level of pathogens is measured in CFU concentration
