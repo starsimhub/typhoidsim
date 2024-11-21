@@ -69,7 +69,7 @@ class histograms_by_age_sex(ss.Analyzer):
     """
     def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None, record_until=None, name=None):
         super().__init__()
-        self.name = "histograms_by_age_sex" if name is None else name
+        self.name = "hist_by_age_sex_anz" if name is None else name
         self.age_bins = age_bins
         self.age_bin_labels = age_bin_labels
         self.to_record = to_record
@@ -100,11 +100,11 @@ class histograms_by_age_sex(ss.Analyzer):
 
             else:
                 res_dtype = specs["path"] if "dtype" in specs else float
-                res_lbl = specs["label"] if "label" in specs else None
+                res_lbl   = specs["label"] if "label" in specs else attrname
                 self.results += [ss.Result(self.name, f"hist_m_{attrname}", (self.ntpts, self.nags),
                                            dtype=res_dtype, scale=False, label=f"m_{res_lbl}"),
                                  ss.Result(self.name, f"hist_f_{attrname}", (self.ntpts, self.nags),
-                                           dtype=res_dtype, scale=False, label=f"f_{res_lbl})"),]
+                                           dtype=res_dtype, scale=False, label=f"f_{res_lbl}"),]
         return
 
     def get_ntpts(self, sim):
@@ -149,16 +149,17 @@ class histograms_by_age_sex(ss.Analyzer):
             living_males = sim.people.male & living_folks
             living_femal = sim.people.female & living_folks
 
-            for attrname, specs in self.to_record.items():
+            for attrname, specs in sorted(self.to_record.items()):
                 attrpath = specs["path"]
                 vals = self.get_attr_vals(sim, attrpath, attrname)
                 if attrname.startswith("ti_"):
                     f_uids = ((vals == ti) & living_femal).uids
-                    f_vals = np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
                     m_uids = ((vals == ti) & living_males).uids
-                    m_vals = np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
                 else:
-                    raise NotImplementedError(tyd.sorry_mssg)
+                    f_uids = (vals & living_femal).uids
+                    m_uids = (vals & living_males).uids
+                f_vals = np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
+                m_vals = np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
                 self.record(f_vals, m_vals, attrname)
             self.ti += 1
         return
