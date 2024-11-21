@@ -226,9 +226,9 @@ class base_test(ss.Intervention):
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.results += ss.Result(self.name, 'new_positive', sim.npts, dtype=int)  # count how many tested positive today, includes new and old patients
-        self.results += ss.Result(self.name, 'new_tested', sim.npts, dtype=int)  # count how many were tested today, includes only new patients
-        self.results += ss.Result(self.name, 'positivity', sim.npts, dtype=float)    # instantaneous positivity (equivalent to prevalence but based on number of people who tested positive today / number of tested)
+        self.results += ss.Result(self.name, 'new_positive', sim.npts, dtype=int, label="New Positive")  # count how many tested positive today, includes new and old patients
+        self.results += ss.Result(self.name, 'new_tested', sim.npts, dtype=int, label="New Tested")  # count how many were tested today, includes only new patients
+        self.results += ss.Result(self.name, 'positivity', sim.npts, dtype=float, label="Positivity")    # instantaneous positivity (equivalent to prevalence but based on number of people who tested positive today / number of tested)
 
         if self.eligibility is None:
             self.eligibility = self.check_eligibility
