@@ -42,7 +42,9 @@ def trapezoid(env_pars):
     else:
         return functools.partial(ty.asym_trapezoidal, **env_pars)
 
-sanitation = ty.environmental_trapezoidal_modulation(efficacy=trapezoid(seasonal_env_pars), start_year=2005)
+start_day = (seasonal_env_pars["peak_start_doy"] - seasonal_env_pars["ramp_up_dur"]) / ty.days_per_year
+start_year = 2004.0 + start_day
+sanitation = ty.environmental_trapezoidal_modulation(efficacy=trapezoid(seasonal_env_pars), start_year=start_year)
 
 sim = ss.Sim(
     pars=pars,
@@ -54,7 +56,7 @@ sim = ss.Sim(
 sim.run()
 
 import matplotlib.pyplot as plt
-time = sim.yearvec
+time_yearvec = sim.yearvec
 data1 = sim.demographics.environmentalpool.results['rel_trans']
 data2 = sim.get_intervention(0).results['effective_value']
 data3 = sim.get_intervention(0).results['efficacy']
@@ -63,15 +65,20 @@ data4 = sim.get_intervention(0).target_baseline ## baseline value of rel_trans
 # Check these two match
 fig, ax = plt.subplots()
 axx = ax.twinx()
-time = (time - 2005) * ty.days_per_year
+ayy = ax.twiny()
+
+time = (time_yearvec -start_year) * ty.days_per_year
 ax.plot(time, data1, label="effective rel trans (from environment)", lw=5)
 ax.plot(time, data2, label="effective rel trans (from intervention)", ls=":", lw=3)
 ax.plot(time, data4*np.ones(len(time)), label="baseline rel_trans", marker=".", ms=1)
 axx.plot(time, data3, label="modulation amplitude", ls="-.", color="black")
+ayy.plot(time_yearvec, data2, label="modulation amplitude", ls="-.", color="black")
+ayy.spines['bottom'].set_position(('outward', 20))
+ayy.xaxis.tick_bottom()
 
 ax.set_ylabel("env rel_trans")
 axx.set_ylabel("modulation amplitude")
-ax.set_xlabel("Year")
+#ax.set_xlabel("Days relative to intervention start")
 ax.set_title("effective transmissibility = rel_trans_baseline * modulation amplitude")
 ax.legend()
 axx.legend()
