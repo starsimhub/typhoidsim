@@ -222,6 +222,7 @@ class base_test(ss.Intervention):
         self.test_dist = ss.bernoulli(p=self.prob_tp)
         self.tested = ss.BoolArr('tested', default=False)
         self.ti_tested = ss.FloatArr('ti_tested')
+        self.ti_positive = ss.FloatArr('ti_positive')
         return
 
     def init_pre(self, sim):
@@ -243,11 +244,12 @@ class base_test(ss.Intervention):
         tested_uids = self.coverage_dist.filter(eligible_uids)
         # Of those who where tested and are infected
         infected_uids = (sim.people.typhoid.infected).uids
-        are_pos_uids = np.intersect1d(infected_uids, tested_uids)
+        are_pos_uids = ss.uids(np.intersect1d(infected_uids, tested_uids))
         # Decide whether the test actually comes back positive
         tested_pos_uids = self.test_dist.filter(are_pos_uids)
         self.tested[tested_uids] = True
         self.ti_tested[tested_uids] = sim.ti
+        self.ti_positive[tested_pos_uids] = sim.ti
         self.results['new_tested'][sim.ti] = len(tested_uids)
         self.results['new_positive'][sim.ti] = len(tested_pos_uids)
         self.results['positivity'][sim.ti] = sc.safedivide(self.results['new_positive'][sim.ti], self.results['new_tested'][sim.ti])
