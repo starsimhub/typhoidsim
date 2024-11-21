@@ -90,7 +90,8 @@ class histograms_by_age_sex(ss.Analyzer):
             self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(self.nags)]
 
         if self.to_record is None:
-            self.to_record = dict(ti_infected=dict(path=("diseases", "typhoid")))
+            self.to_record = dict(ti_infected=dict(path=("diseases", "typhoid")),
+                                  alive=dict(path=("people",)))
 
         for attrname, specs in self.to_record.items():
             if "path" not in specs:
