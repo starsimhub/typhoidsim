@@ -1,5 +1,5 @@
 """
-Define the calibration class
+Define the calibration class - migrated from Starsim 2.1.1 and 2.2.0
 """
 import os
 import numpy as np
@@ -12,8 +12,8 @@ import typhoidsim.utils as tyu
 from scipy.special import gammaln
 
 
-__all__ = ['Calibration211', 'Calibration220', 'CalibComponent', 'compute_gof']
-
+__all__ = ['Calibration211', 'Calibration220', 'CalibComponent220', 'compute_gof']
+# I know, ugly to name classes with versions ...
 
 def compute_gof(actual, predicted, normalize=True, use_frac=False, use_squared=False,
                 as_scalar='none', eps=1e-9, skestimator=None, estimator=None, **kwargs):
@@ -106,7 +106,7 @@ def compute_gof(actual, predicted, normalize=True, use_frac=False, use_squared=F
         return gofs
 
 
-class Calibration211(sc.prettyobj): # pragma: no cover
+class Calibration211(sc.prettyobj):  # pragma: no cover
     """
     A class to handle calibration of Starsim simulations. Uses the Optuna hyperparameter
     optimization library (optuna.org).
@@ -706,6 +706,9 @@ class Calibration220(sc.prettyobj):
         sim = sc.dcp(self.sim)
         if label: sim.label = label
 
+        if 'rand_seed' in calib_pars:
+            sim.pars['rand_seed'] = calib_pars.pop('rand_seed')
+
         sim = self.build_fn(sim, calib_pars=calib_pars, **self.build_kw)
 
         # Run the sim
@@ -717,8 +720,7 @@ class Calibration220(sc.prettyobj):
             if self.die:
                 raise E
             else:
-                print(
-                    f'Encountered error running sim!\nParameters:\n{calib_pars}\nTraceback:\n{sc.traceback()}')
+                print(f'Encountered error running sim!\nParameters:\n{calib_pars}\nTraceback:\n{sc.traceback()}')
                 output = None
                 return output
 
@@ -934,8 +936,8 @@ class Calibration220(sc.prettyobj):
         before_sim = self.build_fn(self.sim, calib_pars=before_pars,
                                    **self.build_kw)
         before_sim.label = 'Before calibration'
-        self.before_msim = ss.MultiSim(before_sim, n_runs=n_runs)
-        self.before_msim.run()
+        self.before_msim = ss.MultiSim(before_sim)
+        self.before_msim.run(n_runs=n_runs)
         self.before_fits = np.array(
             [self.eval_fn(sim, **self.eval_kwargs) for sim in
              self.before_msim.sims])
@@ -943,8 +945,8 @@ class Calibration220(sc.prettyobj):
         after_sim = self.build_fn(self.sim, calib_pars=after_pars,
                                   **self.build_kw)
         after_sim.label = 'Before calibration'
-        self.after_msim = ss.MultiSim(after_sim, n_runs=n_runs)
-        self.after_msim.run()
+        self.after_msim = ss.MultiSim(after_sim)
+        self.after_msim.run(n_runs=n_runs)
         self.after_fits = np.array(
             [self.eval_fn(sim, **self.eval_kwargs) for sim in
              self.after_msim.sims])
@@ -1075,7 +1077,7 @@ class Calibration220(sc.prettyobj):
         return fig
 
 
-class CalibComponent(sc.prettyobj):
+class CalibComponent220(sc.prettyobj):
     """
     A class to compare a single channel of observed data with output from a
     simulation. The Calibration class can use several CalibComponent objects to
