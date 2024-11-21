@@ -53,7 +53,6 @@ class states_consistency(ss.Analyzer):
         coll_exh = (typ.immune | typ.susceptible | typ.prepatent | typ.acute | typ.subclinical | typ.chronic | typ.recovered | sim.people.dead).all()
 
         if not coll_exh:
-            breakpoint()
             raise ValueError('Individual Boolean States should be collectively exhaustive but are not.')
 
         checkall = np.array([mut_exc_1, mut_exc_2, mut_exc_3, mut_exc_4, coll_exh])
@@ -69,7 +68,7 @@ class histograms_by_age_sex(ss.Analyzer):
     """
     def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None, record_until=None, name=None):
         super().__init__()
-        self.name = "hist_by_age_sex_anz" if name is None else name
+        self.name = "hist_by_age_sex" if name is None else name
         self.age_bins = age_bins
         self.age_bin_labels = age_bin_labels
         self.to_record = to_record
@@ -78,6 +77,7 @@ class histograms_by_age_sex(ss.Analyzer):
         self.ti = 0
         self.ntpts = None  # Number of timepoints to record
         self.nags  = None  # Number of age groups to record
+        self.yearvec = None # This monitor yearvec
         return
 
     def init_pre(self, sim):
@@ -120,8 +120,8 @@ class histograms_by_age_sex(ss.Analyzer):
         else:
             start_year = self.record_from
             stop_year = self.record_until
-        yearvec = sc.inclusiverange(start_year, stop_year, sim.dt)
-        ntpts = len(yearvec)
+        self.yearvec = sc.inclusiverange(start_year, stop_year, sim.dt)
+        ntpts = len(self.yearvec)
 
         # Update
         self.record_from = start_year
@@ -164,8 +164,25 @@ class histograms_by_age_sex(ss.Analyzer):
             self.ti += 1
         return
 
+    def downsample(self, period, mode=None):
+        """"
+        Implement temporal downsample of results
+        This modifies the self.results ndict.
+        """
+        if mode is None:
+            pass
+        elif mode == "subsample":
+            pass
+        elif mode == "average":
+            pass
+        raise NotImplementedError(tyd.sorry_mssg)
+
     def plot(self):
         raise NotImplementedError(tyd.sorry_mssg)
 
     def to_df(self):
         raise NotImplementedError(tyd.sorry_mssg)
+
+    def finalize_results(self):
+        super().finalize_results()
+        return
