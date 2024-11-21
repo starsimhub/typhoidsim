@@ -93,6 +93,10 @@ class histograms_by_age_sex(ss.Analyzer):
         if self.to_record is None:
             self.to_record = dict(ti_infected=dict(path=("diseases", "typhoid")),
                                   alive=dict(path=("people",)))
+        else:
+            # Add alive as we need this to enable proportions
+            if not "alive" in self.to_record.keys():
+                self.to_record["alive"] = dict(path=("people",))
 
         for attrname, specs in self.to_record.items():
             if "path" not in specs:
@@ -186,14 +190,17 @@ class histograms_by_age_sex(ss.Analyzer):
 
     def finalize_results(self):
         super().finalize_results()
-        if self.record_modality == "proportion":
+        if self.record_modality in ["proportion", "proportions", "props", "perc"]:
             for resname, vals in self.results.items():
                 if not resname.endswith("_alive"):
                     # Proportion of people with attribute "resname" relative to the number of people in each age group
-                    self.results[f"{resname}"] /= self.results[f"hist_m_alive"]
-                    self.results[f"{resname}"] /= self.results[f"hist_f_alive"]
+                    if "_f_" in resname:
+                        denom = "hist_f_alive"
+                    else:
+                        denom = "hist_m_alive"
+                    self.results[f"{resname}"] /= self.results[f"{denom}"]
                 else:
                     # Proportion of people alive in each age group with respect to total population
-                    self.results[f"{resname}"] /= self.results[f"hist_m_alive"].sum(axis=1)[:, None]
-                    self.results[f"{resname}"] /= self.results[f"hist_f_alive"].sum(axis=1)[:, None]
+                    self.results[f"hist_m_alive"] /= self.results[f"hist_m_alive"].sum(axis=1)[:, None]
+                    self.results[f"hist_f_alive"] /= self.results[f"hist_f_alive"].sum(axis=1)[:, None]
         return
