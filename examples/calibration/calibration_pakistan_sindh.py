@@ -29,7 +29,7 @@ import typhoidsim as ty
 
 import calibration_pakistan_utils as utils
 
-calib_debug = True  # If true, calibration will run in serial
+calib_debug = False  # If true, calibration will run in serial
 
 
 # We will make a function that will return an instance of Sim(). All instances
@@ -140,6 +140,8 @@ def make_sim():
                      alive=dict(path=("people",)),
                      ti_positive=dict(path=("interventions", "base_test")),
                      ti_tested=dict(path=("interventions", "base_test")),
+                     tested=dict(path=("interventions", "base_test")),
+                     positive=dict(path=("interventions", "base_test")),
                      )
     # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
     anz = ty.histograms_by_age_sex(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record=to_record)
@@ -181,10 +183,11 @@ def make_calib_components():
     # Add a column with a similar representation of time
     df["yearvec"] = df["Date"].dt.year + (df["Date"].dt.dayofyear - 1) / ty.days_per_year
     df_2_to_15 = df.loc[(df["Ages"] == "Kids2to15"), :]
+    data = df_2_to_15["Sindh_positive"].astype(float).to_numpy()
 
     # TODO: find a better way to do this, in case we change the age bins
     age_bin_labels = ['<2', '2-15', '15+']  # human readable labels
-    # Make dirctionary to map lable to array index in analyzer result array
+    # Make dictionary to map labes to array index in analyzer result array
     age_bins_dict = {label: idx for idx, label in enumerate(age_bin_labels)}
 
     # Example with females between 2 <= age < 4
@@ -192,8 +195,8 @@ def make_calib_components():
         name='f_positive_2_15',
         # Reference data
         expected=pd.DataFrame({
-            'n': df_2_to_15["Sindh_positive"] * 5.0,  # !!! TODO: CHANGE!!! Made up scaling because "Sindh_tested" is all NaNs for this age group
-            'x': df_2_to_15["Sindh_positive"].astype(float),  # Count/Number of individuals found to test positive
+            'n': data * 5.0,  # !!! TODO: CHANGE!!! Made up scaling because "Sindh_tested" is all NaNs for this age group
+            'x': data,  # Count/Number of individuals found to test positive
         }, index=pd.Index(df_2_to_15["yearvec"], name='t')),  # On these dates
         # Extract equivalent data from the simulation
         extract_fn=lambda sim: pd.DataFrame({
@@ -227,7 +230,7 @@ def my_gof_fun(sim, expected_data=None):
     return np.random.rand(1)  # Just to make the calibration run
 
 
-def run_starsim_calibration_step_1(do_plot=True):
+def run_starsim_calibration_step_1(do_plot=True, option=1):
     """"
     Calibration, step 1, we use data across the whole population
     """
@@ -243,32 +246,35 @@ def run_starsim_calibration_step_1(do_plot=True):
     # Make the sim and data
     sim = make_sim()
 
-    # Option 1: with custom-made goodnes-of-fit function
-    # calib = ty.Calibration220(
-    #     calib_pars=calib_pars,
-    #     sim=sim,
-    #     build_fn=build_sim,
-    #     eval_fn=my_gof_fun,
-    #     eval_kwargs=dict(expected_data=utils.load_empirical_data_pakistan()),  # loads all the data from TahirData_0928.csv without any preprocessing
-    #     total_trials=16,
-    #     n_workers=4,
-    #     die=True,
-    #     debug=calib_debug
-    # )
-
-    # Option 2: with calib components
-    components = make_calib_components()
-    calib = ty.Calibration220(
-        calib_pars=calib_pars,
-        sim=sim,
-        build_fn=build_sim,
-        build_kw=None,
-        components=components,
-        total_trials=16,
-        n_workers=4,
-        die=True,
-        debug=calib_debug
-    )
+    #Option 1: with custom-made goodnes-of-fit function
+    if option == 1:
+        calib = ty.Calibration220(
+            calib_pars=calib_pars,
+            sim=sim,
+            build_fn=build_sim,
+            eval_fn=my_gof_fun,
+            eval_kwargs=dict(expected_data=utils.load_empirical_data_pakistan()),  # loads all the data from TahirData_0928.csv without any preprocessing
+            total_trials=16,
+            n_workers=4,
+            die=True,
+            debug=calib_debug
+        )
+    elif option == 2:
+        # Option 2: with calib components
+        components = make_calib_components()
+        calib = ty.Calibration220(
+            calib_pars=calib_pars,
+            sim=sim,
+            build_fn=build_sim,
+            build_kw=None,
+            components=components,
+            total_trials=16,
+            n_workers=4,
+            die=True,
+            debug=calib_debug
+        )
+    else:
+        raise ValueError(f"Uknown calibration option: {option}")
 
     # Perform the calibration
     sc.printcyan('\nPeforming calibration...')
@@ -302,13 +308,20 @@ def run_debug_single_sim(do_plot=True):
 def run_debug_multisim(do_plot=True):
     sim1 = make_sim()
     sim2 = make_sim()
+    sim3 = make_sim()
+
     sims = sc.autolist()
     sims.append(sim1)
     sims.append(sim2)
+    sims.append(sim3)
 
     # Let's change a parameter in sim2
     sim2.initialize()
     sim2.diseases.typhoid.pars.tai = 1_000
+
+    sim3.initialize()
+    sim3.diseases.typhoid.pars.tai = 100_000
+
     msim = ss.MultiSim(sims)
     msim.run()
     if do_plot:
@@ -318,6 +331,6 @@ def run_debug_multisim(do_plot=True):
 
 
 if __name__ == '__main__':
-    run_starsim_calibration_step_1(do_plot=True)
+    #run_starsim_calibration_step_1(do_plot=True, option=1)
     #sim = run_debug_single_sim(do_plot=True)
-    #msim = run_debug_multisim(do_plot=True)
+    msim = run_debug_multisim(do_plot=True)
