@@ -128,8 +128,9 @@ def load_empirical_data_pakistan(csv_file='TahirData_0928.csv'):
     Source: https://github.com/InstituteforDiseaseModeling/typhoid-pakistan-calibration/blob/main/calibration_Sindh/Assets/TahirData_0928.csv
     """
     data_home = ty.get_data_home()  # Assumes we have placed the file in typhoidsim/data directory
-    data = pd.read_csv(data_home + "/" + csv_file)
-    return data
+    df = pd.read_csv(data_home + "/" + csv_file, parse_dates=True)
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    return df
 
 
 def get_data_for_calibration_prevax(province="Sindh"):
