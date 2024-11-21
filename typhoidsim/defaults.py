@@ -24,6 +24,8 @@ max_age = 120
 # Average blood volume per kilo of body weight
 average_bv_bw = 75  # ml/kg
 
+sorry_mssg = "Sorry 🙈!"
+
 
 # Enumeration to track origin of infections
 class TransmissionRoute(enum.Enum):
