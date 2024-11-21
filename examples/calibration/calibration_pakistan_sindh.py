@@ -127,19 +127,21 @@ def make_sim():
     test = ty.base_test(prob_t=0.3, prob_tp=1.0, eligibility=ty.eligibility_by_age)
 
     # OBSERVATIONS AND REPORTING
-
     # Create an analyzer that will provide the results we need to compare to target empirical data
-    age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
-    age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
+    age_bin_edges = [0, 2, 5, 10, 15]
+    age_bin_labels = ['<2', '2-4', '5-9', '10-14'] # human readable labels
+    to_record = dict(ti_infected=dict(path=("diseases", "typhoid")),
+                     alive=dict(path=("people",)),
+                     ti_positive=dict(path=("interventions", "base_test")),
+                     ti_tested=dict(path=("interventions", "base_test")),
+                     )
     # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
-    anz_1 = ty.histograms_by_age_sex(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record="ti_infected", name="report_1")
-    # Track cases for all the population, grouped by sex -- just for convinience, one could process the results from the analyzer above.
-    anz_2 = ty.histograms_by_age_sex(age_bins=[0, ty.max_age], age_bin_labels=['all'], to_record="ti_infected", name="report_2")
+    anz= ty.histograms_by_age_sex(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record=to_record)
 
     # PUT EVERYTHING TOGETHER IN A SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
                  interventions=[test, exposure_modulation, campaign_vax_2_5_yo],
-                 analyzers=[anz_1, anz_2])
+                 analyzers=[anz])
 
     return sim
 
