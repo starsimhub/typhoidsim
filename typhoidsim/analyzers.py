@@ -66,7 +66,7 @@ class histograms_by_age_sex(ss.Analyzer):
     Records statistics (counts) by age and sex for each timestep.
     By default, this analyzer records new cases for every time step.
     """
-    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None, record_until=None, name=None):
+    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None, record_until=None, modality="counts", name=None):
         super().__init__()
         self.name = "hist_by_age_sex" if name is None else name
         self.age_bins = age_bins
@@ -74,6 +74,7 @@ class histograms_by_age_sex(ss.Analyzer):
         self.to_record = to_record
         self.record_from = record_from
         self.record_until = record_until
+        self.record_modality = modality
         self.ti = 0
         self.ntpts = None  # Number of timepoints to record
         self.nags  = None  # Number of age groups to record
@@ -185,4 +186,14 @@ class histograms_by_age_sex(ss.Analyzer):
 
     def finalize_results(self):
         super().finalize_results()
+        if self.record_modality == "proportion":
+            for resname, vals in self.results.items():
+                if not resname.endswith("_alive"):
+                    # Proportion of people with attribute "resname" relative to the number of people in each age group
+                    self.results[f"{resname}"] /= self.results[f"hist_m_alive"]
+                    self.results[f"{resname}"] /= self.results[f"hist_f_alive"]
+                else:
+                    # Proportion of people alive in each age group with respect to total population
+                    self.results[f"{resname}"] /= self.results[f"hist_m_alive"].sum(axis=1)[:, None]
+                    self.results[f"{resname}"] /= self.results[f"hist_f_alive"].sum(axis=1)[:, None]
         return
