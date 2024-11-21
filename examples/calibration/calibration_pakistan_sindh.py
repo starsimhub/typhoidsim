@@ -20,11 +20,15 @@ Target:
 - age distribution of blood culture confirmed typhoid cases
 """
 import matplotlib.pyplot as plt
+import numpy as np
+
 import sciris as sc
 import starsim as ss
 import typhoidsim as ty
 
 import calibration_pakistan_utils as utils
+
+calib_debug = False  # If true, calibration will run in serial
 
 
 # We will make a function that will return an instance of Sim(). All instances
@@ -129,14 +133,14 @@ def make_sim():
     # OBSERVATIONS AND REPORTING
     # Create an analyzer that will provide the results we need to compare to target empirical data
     age_bin_edges = [0, 2, 5, 10, 15]
-    age_bin_labels = ['<2', '2-4', '5-9', '10-14'] # human readable labels
+    age_bin_labels = ['<2', '2-4', '5-9', '10-14']  # human readable labels
     to_record = dict(ti_infected=dict(path=("diseases", "typhoid")),
                      alive=dict(path=("people",)),
                      ti_positive=dict(path=("interventions", "base_test")),
                      ti_tested=dict(path=("interventions", "base_test")),
                      )
     # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
-    anz= ty.histograms_by_age_sex(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record=to_record)
+    anz = ty.histograms_by_age_sex(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record=to_record)
 
     # PUT EVERYTHING TOGETHER IN A SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
@@ -144,6 +148,53 @@ def make_sim():
                  analyzers=[anz])
 
     return sim
+
+
+def build_sim(sim, calib_pars, **kwargs):
+    """
+    Tell the calibration how to update parameters for our specific model.
+    The more module our model has, the more complex to navigate the path
+    to find and update the required paraemeters.
+    """
+    # Access the modules whose parameters we need to modify dueing optimisation
+    typh = sim.pars.diseases
+    env = sim.pars.demographics[2]  # NOTE This is ugly but cannot do it a different way atm, there are three demographics modules: birtrhs, deaths and environment
+
+    for k, pars in calib_pars.items():  # Loop over the calibration parameters
+        v = pars['value']
+        # Each item in calib_pars is a dictionary with keys like 'low', 'high',
+        # 'guess', 'suggest_type', and importantly 'value'. The 'value' key is
+        # the one we want to use as that's the one selected by the algorithm
+        if k == 'tai':
+            typh.pars.tai = v
+        elif k == 'teer':
+            env.pars.transmission.env2ppl_exposure_rate.lam = v
+        else:
+            raise NotImplementedError(f'Parameter {k} not recognized.')
+    return sim
+
+
+def make_calib_components():
+    data = utils.get_data_for_calibration_prevax(province="Sindh")  # only gets data in the years 2018-2019
+    pass
+
+
+def my_gof_fun(sim, expected_data=None):
+    """ 
+    Define your own goodness of fit function.
+    This function takes in a sim, and returns a float (e.g. negative log likelihood) to be maximized.
+
+    sim (starsim.Sim): a simulation object that will have been preconfigured, and run by the Calibration class
+    expected_data (Any, but in this example a pandas dataframe): reference data used for comparison with simulation results.
+    """
+
+    # Extract and aggregate sim results however we need
+
+    # Extract and aggregate reference data however we need
+
+    # Calculate goodness-of-fit between reference and simulated data
+
+    return np.random.rand(1)  # Just to make the calibration run
 
 
 def run_starsim_calibration_step_1(do_plot=True):
@@ -154,54 +205,65 @@ def run_starsim_calibration_step_1(do_plot=True):
     # Define the calibration parameters
     calib_pars = dict(
         # typhoid acute infectiousness
-        tai=dict(low=0.0, high=1e6, guess=42_808, path=('diseases', 'typhoid', 'tai')),
+        tai=dict(low=1e-4, high=1e5, guess=42_808, log=True),
         # typhoid environmental exposure rate
-        teer=dict(low=0.0, high=10.0, guess=1.99, path=('demographics', 'environmentalpool', 'teer_lam'))  # The path always consists of three components/steps.
+        teer=dict(low=0.0, high=10.0, guess=1.99)  # The path always consists of three components/steps.
     )
 
     # Make the sim and data
     sim = make_sim()
-    data = utils.get_data_for_calibration_prevax(province="Sindh")  # only gets data in the years 2018-2019
-    # Define weights for the goodness of fit
-    weights = {
-        'typhoid.prevalence':     1.0,
-        'typhoid.new_infections': 1.0,
-    }
+
+    #data_sources = make_calib_components()
+
+    # # Make the calibration
+    # calib = ty.Calibration220(
+    #     calib_pars=calib_pars,
+    #     sim=sim,
+    #
+    #     build_fn=build_sim,
+    #     build_kw=None,
+    #
+    #     data=data,
+    #
+    #     total_trials=16,
+    #     n_workers=2,
+    #     die=True,
+    #     debug=calib_debug
+    # )
 
     # Make the calibration
-    calib = ty.Calibration(
+    calib = ty.Calibration220(
         calib_pars=calib_pars,
         sim=sim,
-        data=data,
-        weights=weights,
+        build_fn=build_sim,
+        eval_fn=my_gof_fun,
+        eval_kwargs=dict(expected_data=utils.load_empirical_data_pakistan()),  # loads all the data from TahirData_0928.csv without any preprocessing
         total_trials=16,
-        n_workers=2,
+        n_workers=4,
         die=True,
-        name="typhoidsim_calibration_sindh"
+        debug=calib_debug
     )
 
     # Perform the calibration
     sc.printcyan('\nPeforming calibration...')
     calib.calibrate(confirm_fit=False)
 
+    calib.best_pars
+
     # Confirm
     sc.printcyan('\nConfirming fit...')
-    calib.confirm_fit()
-    print(f'Fit with original pars: {calib.before_fit:n}')
-    print(f'Fit with best-fit pars: {calib.after_fit:n}')
-    if calib.after_fit <= calib.before_fit:
-        print('✓ Calibration improved fit')
-    else:
-        print('✗ Calibration did not improve fit, but this sometimes happens stochastically and is not necessarily an error')
+    calib.check_fit(n_runs=5)
 
-    if do_plot:
-        calib.plot_sims(key="typhoid")
-        calib.plot_trend()
+    # if do_plot:
+    # NOTE: these plotting functions fail to work properly with the result arrays that hold the histograms by age and sex
+    # This is a bug with the starsim framework (https://github.com/starsimhub/typhoidsim/issues/120)
+    #     calib.plot_sims(key="typhoid")
+    #     calib.plot_trend()
     plt.show()
     return calib
 
 
-def run_debug(do_plot=True):
+def run_debug_single_sim(do_plot=True):
     """ Run one simulation"""
     sim = make_sim()
     sim.run()
@@ -230,6 +292,6 @@ def run_debug_multisim(do_plot=True):
 
 
 if __name__ == '__main__':
-    #run_starsim_calibration_step_1(do_plot=True)
-    #sim = run_debug(do_plot=True)
-    msim = run_debug_multisim(do_plot=True)
+    run_starsim_calibration_step_1(do_plot=True)
+    #sim = run_debug_single_sim(do_plot=True)
+    #msim = run_debug_multisim(do_plot=True)
