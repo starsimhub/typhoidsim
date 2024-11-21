@@ -21,6 +21,7 @@ Target:
 """
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 import sciris as sc
 import starsim as ss
@@ -175,7 +176,6 @@ def build_sim(sim, calib_pars, **kwargs):
 
 
 def make_calib_components():
-    data = utils.get_data_for_calibration_prevax(province="Sindh")  # only gets data in the years 2018-2019
     pass
 
 
@@ -213,25 +213,7 @@ def run_starsim_calibration_step_1(do_plot=True):
     # Make the sim and data
     sim = make_sim()
 
-    #data_sources = make_calib_components()
-
-    # # Make the calibration
-    # calib = ty.Calibration220(
-    #     calib_pars=calib_pars,
-    #     sim=sim,
-    #
-    #     build_fn=build_sim,
-    #     build_kw=None,
-    #
-    #     data=data,
-    #
-    #     total_trials=16,
-    #     n_workers=2,
-    #     die=True,
-    #     debug=calib_debug
-    # )
-
-    # Make the calibration
+    # Option 1: with custom-made goodnes-of-fit function
     calib = ty.Calibration220(
         calib_pars=calib_pars,
         sim=sim,
@@ -243,6 +225,21 @@ def run_starsim_calibration_step_1(do_plot=True):
         die=True,
         debug=calib_debug
     )
+
+    # Option 2: with calib components
+    # components = make_calib_components()
+    # calib = ty.Calibration220(
+    #     calib_pars=calib_pars,
+    #     sim=sim,
+    #     build_fn=build_sim,
+    #     build_kw=None,
+    #     components=components,
+    #     total_trials=16,
+    #     n_workers=4,
+    #     die=True,
+    #     debug=calib_debug
+    # )
+
 
     # Perform the calibration
     sc.printcyan('\nPeforming calibration...')
