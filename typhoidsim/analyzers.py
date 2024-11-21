@@ -7,6 +7,8 @@ import numpy as np
 import sciris as sc
 import starsim as ss
 
+import typhoidsim.defaults as tyd
+
 
 __all__ = ["states_consistency", "histograms_by_age_sex"]
 
@@ -65,59 +67,103 @@ class histograms_by_age_sex(ss.Analyzer):
     Records statistics (counts) by age and sex for each timestep.
     By default, this analyzer records new cases for every time step.
     """
-    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, name=None):
+    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None, record_until=None, name=None):
         super().__init__()
         self.name = "histograms_by_age_sex" if name is None else name
         self.age_bins = age_bins
         self.age_bin_labels = age_bin_labels
         self.to_record = to_record
-        self.target_attr_path = None
+        self.record_from = record_from
+        self.record_until = record_until
+        self.ti = 0
+        self.ntpts = None  # Number of timepoints to record
+        self.nags  = None  # Number of age groups to record
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        npts = self.sim.npts
-        nags = len(self.age_bins) - 1  # number of age groups
-        self.results += [
-            ss.Result(self.name, "male_histograms", (npts, nags), dtype=float,
-                      scale=True),
-            ss.Result(self.name, "female_histograms", (npts, nags), dtype=float,
-                      scale=True),
-        ]
-        if self.to_record is not None and not self.to_record.startswith("ti_"):
-            raise ValueError(f"This analyzers operates on event-tracking states that start with 'ti_'. "
-                             f"Received {self.to_record}")
 
-        if self.to_record is None:
-            self.to_record = "ti_infected"
-
-        self.target_attr_path = ["diseases", "typhoid", self.to_record]
+        self.ntpts = self.get_ntpts(sim)    # Get right number of timepoints
+        self.nags = len(self.age_bins) - 1  # number of age groups
 
         if self.age_bin_labels is None:
-            self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(nags)]
+            self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(self.nags)]
+
+        if self.to_record is None:
+            self.to_record = dict(ti_infected=dict(path=("diseases", "typhoid")))
+
+        for attrname, specs in self.to_record.items():
+            if "path" not in specs:
+                raise ValueError(f"Will not be able to record {attrname} because 'path' is "
+                                 f"missing the `to_record` configuration dictionary.")
+
+            else:
+                res_dtype = specs["path"] if "dtype" in specs else float
+                res_lbl = specs["label"] if "label" in specs else None
+                self.results += [ss.Result(self.name, f"hist_m_{attrname}", (self.ntpts, self.nags),
+                                           dtype=res_dtype, scale=False, label=f"m_{res_lbl}"),
+                                 ss.Result(self.name, f"hist_f_{attrname}", (self.ntpts, self.nags),
+                                           dtype=res_dtype, scale=False, label=f"f_{res_lbl})"),]
         return
 
-    def _get_target_arr(self, sim):
-        """Get target values of an attribute that is an interable"""
+    def get_ntpts(self, sim):
+        if self.record_from is None and self.record_until is None:
+            start_year = sim.pars.start
+            stop_year = sim.pars.end
+        elif self.record_from is not None and self.record_until is None:
+            start_year = self.record_from
+            stop_year = sim.pars.end
+        elif self.record_from is None and self.record_until is not None:
+            start_year = sim.pars.start
+            stop_year = self.record_until
+        else:
+            start_year = self.record_from
+            stop_year = self.record_until
+        yearvec = sc.inclusiverange(start_year, stop_year, sim.dt)
+        ntpts = len(yearvec)
+
+        # Update
+        self.record_from = start_year
+        self.record_until = stop_year
+        return ntpts
+
+    def get_attr_vals(self, sim, attr_path, attr_name):
+        """Get values of the attribute in attr_path"""
         attr = sim
-        for attr_name in self.target_attr_path[:-1]:
-            attr = getattr(attr, attr_name)
-        target_attr = self.target_attr_path[-1]
+        for attr_link in attr_path:
+            attr = getattr(attr, attr_link)
+        target_attr = attr_name
         vals = getattr(attr, target_attr)
         return vals
 
+    def record(self, f_vals, m_vals, attr_name):
+        self.results[f"hist_m_{attr_name}"][self.ti, :] = m_vals
+        self.results[f"hist_f_{attr_name}"][self.ti, :] = f_vals
+        return
+
     def apply(self, sim):
-        ti = sim.ti
-        vals = self._get_target_arr(sim)
-        # TODO: add a probability to select agents in case we want to
-        #  mimic the 'reported' cases which are always less than all the cases
-        f_uids = ((vals == ti) & sim.people.female & sim.people.alive).uids
-        m_uids = ((vals == ti) & sim.people.male   & sim.people.alive).uids
-        f_ages = sim.people.age[f_uids]
-        m_ages = sim.people.age[m_uids]
-        self.results.female_histograms[ti, :] = np.histogram(f_ages, bins=self.age_bins)[0]
-        self.results.male_histograms[ti, :] = np.histogram(m_ages, bins=self.age_bins)[0]
+        if sim.year >= self.record_from and (sim.year <= self.record_until):
+            ti = sim.ti
+            living_folks = sim.people.alive
+            living_males = sim.people.male & living_folks
+            living_femal = sim.people.female & living_folks
+
+            for attrname, specs in self.to_record.items():
+                attrpath = specs["path"]
+                vals = self.get_attr_vals(sim, attrpath, attrname)
+                if attrname.startswith("ti_"):
+                    f_uids = ((vals == ti) & living_femal).uids
+                    f_vals = np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
+                    m_uids = ((vals == ti) & living_males).uids
+                    m_vals = np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
+                else:
+                    raise NotImplementedError(tyd.sorry_mssg)
+                self.record(f_vals, m_vals, attrname)
+            self.ti += 1
         return
 
     def plot(self):
-        pass
+        raise NotImplementedError(tyd.sorry_mssg)
+
+    def to_df(self):
+        raise NotImplementedError(tyd.sorry_mssg)
