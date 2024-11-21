@@ -221,6 +221,7 @@ class base_test(ss.Intervention):
         self.coverage_dist = ss.bernoulli(p=self.prob_t)
         self.test_dist = ss.bernoulli(p=self.prob_tp)
         self.tested = ss.BoolArr('tested', default=False)
+        self.positive = ss.BoolArr('positive', default=False)
         self.ti_tested = ss.FloatArr('ti_tested')
         self.ti_positive = ss.FloatArr('ti_positive')
         return
@@ -229,7 +230,7 @@ class base_test(ss.Intervention):
         super().init_pre(sim)
         self.results += ss.Result(self.name, 'new_positive', sim.npts, dtype=int, label="New Positive")  # count how many tested positive today, includes new and old patients
         self.results += ss.Result(self.name, 'new_tested', sim.npts, dtype=int, label="New Tested")  # count how many were tested today, includes only new patients
-        self.results += ss.Result(self.name, 'positivity', sim.npts, dtype=float, label="Positivity")    # instantaneous positivity (equivalent to prevalence but based on number of people who tested positive today / number of tested)
+        self.results += ss.Result(self.name, 'positivity', sim.npts, dtype=float, label="Positivity")    #
 
         if self.eligibility is None:
             self.eligibility = self.check_eligibility
@@ -248,6 +249,7 @@ class base_test(ss.Intervention):
         # Decide whether the test actually comes back positive
         tested_pos_uids = self.test_dist.filter(are_pos_uids)
         self.tested[tested_uids] = True
+        self.positive[tested_pos_uids] = True
         self.ti_tested[tested_uids] = sim.ti
         self.ti_positive[tested_pos_uids] = sim.ti
         self.results['new_tested'][sim.ti] = len(tested_uids)
