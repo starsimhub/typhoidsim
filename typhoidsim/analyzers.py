@@ -95,7 +95,7 @@ class histograms_by_age_sex(ss.Analyzer):
                                   alive=dict(path=("people",)))
         else:
             # Add alive as we need this to enable proportions
-            if not "alive" in self.to_record.keys():
+            if "alive" not in self.to_record.keys():
                 self.to_record["alive"] = dict(path=("people",))
 
         for attrname, specs in self.to_record.items():
