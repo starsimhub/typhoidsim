@@ -237,8 +237,7 @@ class base_test(ss.Intervention):
         return
 
     def apply(self, sim):
-        """
-        """
+        self.check_still_positive(sim)
         eligible_uids = self._eligibility(sim)
         self.coverage_dist.set(p=self.prob_t)
         self.test_dist.set(p=self.prob_tp)
@@ -256,6 +255,12 @@ class base_test(ss.Intervention):
         self.results['new_positive'][sim.ti] = len(tested_pos_uids)
         self.results['positivity'][sim.ti] = sc.safedivide(self.results['new_positive'][sim.ti], self.results['new_tested'][sim.ti])
         return tested_uids
+
+    def check_still_positive(self, sim):
+        # Reset if no longer infected
+        infected_uids = (~sim.people.typhoid.infected).uids
+        self.positive[infected_uids] = False
+        return
 
     def check_eligibility(self, sim):
         """ Default eligibility, do not test the same person more than once"""
