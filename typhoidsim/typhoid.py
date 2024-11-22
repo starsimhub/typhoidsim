@@ -118,7 +118,7 @@ class Typhoid(ss.Disease):
             ss.BoolArr("acute", default=False, label="Acute"),
             ss.BoolArr("subclinical", default=False, label="Subclinical"),
             ss.BoolArr("chronic", default=False, label="Chronic"),
-            ss.BoolArr("recovered", default=False, label="Recovered"),
+            ss.BoolArr("recovered", default=False, label="Recovered/Been Infected"),
             ss.BoolArr("infected_ever", default=False, label="Ever Infected"),
 
             # States that track immunity-related quantities or variables
@@ -261,16 +261,16 @@ class Typhoid(ss.Disease):
         super().init_results()
         npts = self.sim.npts
         self.results += [
-            ss.Result(self.name, 'prevalence', npts, dtype=float, scale=False, label='Prevalence'),
-            ss.Result(self.name, 'new_infections', npts, dtype=int, scale=False, label='New infections'),
-            ss.Result(self.name, 'cum_infections', npts, dtype=int, scale=False, label='Cumulative infections'),
-            ss.Result(self.name, "new_susceptible", npts, dtype=int, scale=False, label="New Susceptible"),
-            ss.Result(self.name, "new_prepatent", npts, dtype=int, scale=False, label="New Prepatent"),
-            ss.Result(self.name, "new_acute", npts, dtype=int, scale=False, label="New Acute"),
-            ss.Result(self.name, "new_subclinical", npts, dtype=int, scale=False, label="New Subclinical"),
-            ss.Result(self.name, "new_chronic", npts, dtype=int, scale=False, label="New Chronic"),
-            ss.Result(self.name, "new_recovered", npts, dtype=int, scale=False, label="New Recovered"),
-            ss.Result(self.name, "new_deaths", npts, dtype=int, scale=False, label="New Dead"),
+            ss.Result(self.name, "prevalence", npts, dtype=float, scale=False, label="Prevalence"),
+            ss.Result(self.name, "new_infections", npts, dtype=int, scale=False, label="Newly infections"),
+            ss.Result(self.name, "cum_infections", npts, dtype=int, scale=False, label="Cumulative infections"),
+            ss.Result(self.name, "new_susceptible", npts, dtype=int, scale=False, label="Newly Susceptible"),
+            ss.Result(self.name, "new_prepatent", npts, dtype=int, scale=False, label="Newly Prepatent"),
+            ss.Result(self.name, "new_acute", npts, dtype=int, scale=False, label="Newly Acute"),
+            ss.Result(self.name, "new_subclinical", npts, dtype=int, scale=False, label="Newly Subclinical"),
+            ss.Result(self.name, "new_chronic", npts, dtype=int, scale=False, label="Newly Chronic"),
+            ss.Result(self.name, "new_recovered", npts, dtype=int, scale=False, label="Newly Recovered"),
+            ss.Result(self.name, "new_deaths", npts, dtype=int, scale=False, label="Newly Dead"),
 
         ]
         return
