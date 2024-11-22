@@ -141,9 +141,10 @@ class histograms_by_age_sex_monitor(Monitor):
             self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(self.nags)]
 
         if self.to_record is None:
-            states_of_interest = ['ti_infected', 'infected', 'ti_prepatent', 'prepatent',
-                                  'ti_acute', 'acute', 'ti_subclinical', 'subclinical',
-                                  'ti_chronic', 'chronic']
+            states_of_interest = ["ti_infected", "infected", "infected_ever",
+                                  "ti_prepatent", "prepatent",
+                                  "ti_acute", "acute", "ti_subclinical", "subclinical",
+                                  "ti_chronic", "chronic"]
             self.to_record = {state: dict(path=("diseases", "typhoid")) for state in states_of_interest}
             alive_dict = dict(alive=dict(path=("people",)))
             self.to_record.update(alive_dict)
