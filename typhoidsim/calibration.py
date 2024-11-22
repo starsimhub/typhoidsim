@@ -2,21 +2,21 @@
 Define the calibration class - migrated from Starsim 2.1.1 and 2.2.0
 """
 import os
+import datetime
+
 import numpy as np
 import pandas as pd
 import sciris as sc
 import optuna as op
 import matplotlib.pyplot as plt
 import starsim as ss
-import typhoidsim.utils as tyu
 from scipy.special import gammaln
 
 
 __all__ = ['Calibration220', 'CalibComponent220', 'compute_gof']
-# I know, ugly to name classes with versions ...
 
 
-def compute_gof(actual, predicted, normalize=True, use_frac=False, use_squared=False,
+def compute_gof(expected, predicted, normalize=True, use_frac=False, use_squared=False,
                 as_scalar='none', eps=1e-9, skestimator=None, estimator=None, **kwargs):
     """
     Calculate the goodness of fit. By default use normalized absolute error, but
@@ -24,7 +24,7 @@ def compute_gof(actual, predicted, normalize=True, use_frac=False, use_squared=F
     setting normalize=False, use_squared=True, as_scalar='mean'.
 
     Args:
-        actual      (arr):   array of actual (data) points
+        expected    (arr):   array of reference/expected data points
         predicted   (arr):   corresponding array of predicted (model) points
         normalize   (bool):  whether to divide the values by the largest value in either series
         use_frac    (bool):  convert to fractional mismatches rather than absolute
@@ -51,7 +51,7 @@ def compute_gof(actual, predicted, normalize=True, use_frac=False, use_squared=F
     """
 
     # Handle inputs
-    actual    = np.array(sc.dcp(actual), dtype=float)
+    expected  = np.array(sc.dcp(expected), dtype=float)
     predicted = np.array(sc.dcp(predicted), dtype=float)
 
     # Scikit-learn estimator is supplied: use that
@@ -65,37 +65,37 @@ def compute_gof(actual, predicted, normalize=True, use_frac=False, use_squared=F
         except AttributeError as E:
             errormsg = f'Estimator {skestimator} is not available; see https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-parameter for options'
             raise AttributeError(errormsg) from E
-        gof = sklearn_gof(actual, predicted, **kwargs)
+        gof = sklearn_gof(expected, predicted, **kwargs)
         return gof
 
     # Custom estimator is supplied: use that
     if estimator is not None: # pragma: no cover
         try:
-            gof = estimator(actual, predicted, **kwargs)
+            gof = estimator(expected, predicted, **kwargs)
         except Exception as E:
-            errormsg = f'Custom estimator "{estimator}" must be a callable function that accepts actual and predicted arrays, plus optional kwargs'
+            errormsg = f'Custom estimator "{estimator}" must be a callable function that accepts `expected` and `predicted` arrays, plus optional kwargs'
             raise RuntimeError(errormsg) from E
         return gof
 
     # Default case: calculate it manually
     else:
         # Key step -- calculate the mismatch!
-        gofs = abs(np.array(actual) - np.array(predicted))
+        gofs = abs(np.array(expected) - np.array(predicted))
 
         if normalize and not use_frac:
-            actual_max = abs(actual).max()
-            if actual_max > 0:
-                gofs /= actual_max
+            expected_max = abs(expected).max()
+            if expected > 0:
+                gofs /= expected_max
 
         if use_frac:
-            if (actual<0).any() or (predicted<0).any():
+            if (expected < 0).any() or (predicted < 0).any():
                 print('Warning: Calculating fractional errors for non-positive quantities is ill-advised!')
             else:
-                maxvals = np.maximum(actual, predicted) + eps
+                maxvals = np.maximum(expected, predicted) + eps
                 gofs /= maxvals
 
         if use_squared:
-            gofs = gofs**2
+            gofs **= 2
 
         if as_scalar == 'sum':
             gofs = np.sum(gofs)
@@ -103,7 +103,6 @@ def compute_gof(actual, predicted, normalize=True, use_frac=False, use_squared=F
             gofs = np.mean(gofs)
         elif as_scalar == 'median':
             gofs = np.median(gofs)
-
         return gofs
 
 
@@ -135,7 +134,7 @@ def validate_sim_data(data=None, die=None):
         # Data loading failed
         except Exception as E:
             errormsg = f'Failed to add data "{data}": expecting a dataframe-compatible object. Error:\n{E}'
-            if die == False:
+            if not die:
                 print(errormsg)
             else:
                 raise ValueError(errormsg)
@@ -231,6 +230,7 @@ class Calibration220(sc.prettyobj):
 
         # Temporarily store a filename for storing intermediate results
         self.tmp_filename = 'tmp_calibration_%06i.obj'
+        self.json = None
         return
 
     def run_sim(self, calib_pars=None, label=None):
@@ -291,7 +291,8 @@ class Calibration220(sc.prettyobj):
 
         return sim
 
-    def _sample_from_trial(self, pardict=None, trial=None):
+    @staticmethod
+    def _sample_from_trial(pardict=None, trial=None):
         """
         Take in an optuna trial and sample from pars, after extracting them from the structure they're provided in
         """
@@ -331,8 +332,7 @@ class Calibration220(sc.prettyobj):
             pars = None
 
         if self.reseed:
-            pars['rand_seed'] = trial.suggest_int('rand_seed', 0,
-                                                  1_000_000)  # Choose a random rand_seed
+            pars['rand_seed'] = trial.suggest_int('rand_seed', 0, 1_000_000)  # Choose a rand_seed
 
         sim = self.run_sim(pars)
 
@@ -619,11 +619,27 @@ class CalibComponent220(sc.prettyobj):
     Args:
         name (str) : the name of this component. Importantly, if
             extract_fn is None, the code will attempt to use the name, like
-            "hiv.prevalence" to automatically extract data from the simulation.
-        data (df) : pandas Series containing calibration data. The index should be the time in either floating point years or datetime.
-        mode (str/func): To handle misaligned timepoints between observed data and simulation output, it's important to know if the data are incident (like new cases) or prevalent (like the number infected).
-            If 'prevalent', simulation outputs will be interpolated to observed timepoints.
-            If 'incident', outputs will be interpolated to cumulative incidence.
+            "hiv.prevalence" to automatically extract data from the sim object.
+        expected (pd.Dataframe) : pandas dataframe containing calibration data.
+            The index should be the time in either floating point years or datetime.
+        extract_fn (callable) : a function to extract predicted/actual data in the same
+            format and with the same columns as `expected`.
+        conform (str | callable): specify how to handle timepoints that don't
+            align exactly between the expected and the actual/predicted/simulated
+            data so they conform to common time grid. Whether the data represents
+            a 'prevalent' or an 'incident' quantity impacts how this alignment is performed.
+
+            If 'prevalent', it means data in expected & actual dataframes represent
+            the current state of the system, like the number of currently infected
+            individuals. In this case, the data in 'actual'  will be interpolated
+            to match the timepoints in 'expected', allowing for pointwise comparisons
+            between the expected and actual data.
+
+            If 'incident', it means data reflects new instances over a period of time,
+            like the number of new vaccinated. In this case, the data in 'actual'
+            will be transformed into a cumulative incidence form and then interpolated, ensuring they can be compared accurately with the progressive tally represented by incident data.
+
+        nll_fn (str | callable)
     """
 
     def __init__(self, name, expected, extract_fn, conform, nll_fn, weight=1):
@@ -631,121 +647,210 @@ class CalibComponent220(sc.prettyobj):
         self.expected = expected
         self.extract_fn = extract_fn
         self.weight = weight
+        self.nll = np.nan
+        self.avail_conforms = {"incident":  linear_accum,
+                               "prevalent": linear_interp}
 
-        if isinstance(nll_fn, str):
-            if nll_fn == 'beta':
-                self.nll_fn = self.nll_beta
-            elif nll_fn == 'gamma':
-                self.nll_fn = self.nll_gamma
-            else:
-                errormsg = f'The nll_fn (negative log-likelihood function) argument must be "beta" or "gamma", not {conform}.'
-                raise ValueError(errormsg)
+        self.avail_nll_fns = {"beta": nll_beta,
+                              "gamma": nll_gamma}
+
+        self.conform = self._validate_conform(conform)
+        self.nll_fn  = self._validate_nll_fn(nll_fn)
+        return
+
+    def _validate_conform(self, conform):
+        if not isinstance(conform, str) and not callable(conform):
+            raise Exception(f"The conform argument must be a string or a callable function, not {type(conform)}.")
+        elif isinstance(conform, str):
+            conform_ = self.avail_conforms.get(conform)
+            if conform_ is None:
+                avail = self.avail_conforms.keys()
+                raise ValueError(f"The conform argument must be one of {avail}, not {conform}.")
         else:
-            if not callable(nll_fn):
-                msg = f'The nll_fn (negative log-likelihood function) argument must be a string or a callable function, not {type(nll_fn)}.'
-                raise Exception(msg)
-            self.nll_fn = nll_fn
+            conform_ = conform
+        return conform_
 
-        if isinstance(conform, str):
-            if conform == 'incident':
-                self.conform = self.linear_accum
-            elif conform == 'prevalent':
-                self.conform = self.linear_interp
-            else:
-                errormsg = f'The conform argument must be "prevalent" or "incident", not {conform}.'
-                raise ValueError(errormsg)
+    def _validate_nll_fn(self, nll_fn):
+        if not isinstance(nll_fn, str) and not callable(nll_fn):
+            msg = f"The nll_fn (negative log-likelihood function) argument must be a string or a callable function, not {type(nll_fn)}."
+            raise Exception(msg)
+        elif isinstance(nll_fn, str):
+            nll_fn_ = self.avail_nll_fns.get(nll_fn)
+            avail = self.avail_nll_fns.keys()
+            if nll_fn_ is None:
+                raise ValueError(f"The nll_fn (negative log-likelihood function) argument must be one of {avail}, not {nll_fn}")
         else:
-            if not callable(conform):
-                errormsg = f'The conform argument must be a string or a callable function, not {type(conform)}.'
-                raise TypeError(errormsg)
-            self.conform = conform
-
-        pass
-
-    @staticmethod
-    def nll_beta(expected, actual):
-        """
-        For the beta-binomial negative log-likelihood, we begin with a Beta(1,1) prior
-        and subsequently observe actual['x'] successes (positives) in actual['n'] trials (total observations).
-        The result is a Beta(actual['x']+1, actual['n']-actual['x']+1) posterior.
-        We then compare this to the real data, which has expected['x'] successes (positives) in expected['n'] trials (total observations).
-        To do so, we use a beta-binomial likelihood:
-        p(x|n, x, a, b) = (n choose x) B(x+a, n-x+b) / B(a, b)
-        where
-          x=expected['x']
-          n=expected['n']
-          a=actual['x']+1
-          b=actual['n']-actual['x']+1
-        and B is the beta function, B(x, y) = Gamma(x)Gamma(y)/Gamma(x+y)
-
-        We compute the log of p(x|n, x, a, b), noting that gammaln is the log of the gamma function
-        """
-        e_n, e_x = expected['n'], expected['x']
-        a_n, a_x = actual['n'], actual['x']
-        logL = gammaln(e_n + 1) - gammaln(e_x + 1) - gammaln(e_n - e_x + 1)
-        logL += gammaln(e_x + a_x + 1) + gammaln(
-            e_n - e_x + a_n - a_x + 1) - gammaln(e_n + a_n + 2)
-        logL += gammaln(a_n + 2) - gammaln(a_x + 1) - gammaln(a_n - a_x + 1)
-        return -logL
-
-    @staticmethod
-    def nll_gamma(expected, actual):
-        """
-        Also called negative binomial, but parameterized differently
-        The gamma-poisson likelihood is a Poisson likelihood with a gamma-distributed rate parameter
-        """
-        e_n, e_x = expected['n'], expected['x']
-        a_n, a_x = actual['n'], actual['x']
-        logL = gammaln(e_x + a_x + 1) - gammaln(e_x + 1) - gammaln(e_x + 1)
-        logL += (e_x + 1) * np.log(e_n)
-        logL += (a_x + 1) * np.log(a_n)
-        logL -= (e_x + a_x + 1) * np.log(e_n + a_n)
-        return -logL
-
-    @staticmethod
-    def linear_interp(expected, actual):
-        """
-        Simply interpolate
-        Use for prevalent data like prevalence
-        """
-        t = expected.index
-        conformed = pd.DataFrame(index=expected.index)
-        for k in actual:
-            conformed[k] = np.interp(x=t, xp=actual.index, fp=actual[k])
-
-        return conformed
-
-    @staticmethod
-    def linear_accum(expected, actual):
-        """
-        Interpolate in the accumulation, then difference.
-        Use for incident data like incidence or new_deaths
-        """
-        t = expected.index
-        t_step = np.diff(t)
-        assert np.all(t_step == t_step[0])
-        ti = np.append(t,
-                       t[-1] + t_step)  # Add one more because later we'll diff
-
-        sim_t = np.array(
-            [sc.datetoyear(t) for t in actual.index if isinstance(t, dt.date)])
-
-        sdi = np.interp(x=ti, xp=sim_t, fp=actual.cumsum())
-        df = pd.Series(sdi.diff(), index=t)
-        return df
+            nll_fn_ = nll_fn
+        return nll_fn_
 
     def eval(self, sim):
         """ Compute and return the negative log likelihood """
-        actual = self.extract_fn(sim)  # Extract
-        actual = self.conform(self.expected, actual)  # Conform
-        self.nll = self.nll_fn(self.expected, actual)  # Negative log likelihood
+        predicted = self.extract_fn(sim)                     # Extract simulated data
+        predicted = self.conform(self.expected, predicted)   # Conform
+        self.nll = self.nll_fn(self.expected, predicted)     # Negative log likelihood
         return self.weight * np.sum(self.nll)
 
     def __call__(self, sim):
         return self.eval(sim)
 
     def __repr__(self):
-        return f'Calibration component with name {self.name}'
+        return f"Calibration component with name {self.name}"
 
     def plot(self):
-        NotImplementedError
+        raise NotImplementedError
+
+
+def nll_beta(expected, actual):
+    """
+    For the beta-binomial negative log-likelihood, we begin with a Beta(1,1) prior
+    and subsequently observe actual['x'] successes (positives) in actual['n'] trials (total observations).
+    The result is a Beta(actual['x']+1, actual['n']-actual['x']+1) posterior.
+    We then compare this to the real data, which has expected['x'] successes (positives) in expected['n'] trials (total observations).
+    To do so, we use a beta-binomial likelihood:
+    p(x|n, x, a, b) = (n choose x) B(x+a, n-x+b) / B(a, b)
+    where
+      x=expected['x']
+      n=expected['n']
+      a=actual['x']+1
+      b=actual['n']-actual['x']+1
+    and B is the beta function, B(x, y) = Gamma(x)Gamma(y)/Gamma(x+y)
+
+    We compute the log of p(x|n, x, a, b), noting that gammaln is the log of the gamma function
+
+    Args:
+        expected (pd.Dataframe): dataframe containing reference data (usually empirical data).
+             The index should be the time in either floating point years or datetime.
+        actual (pd.Dataframe): dataframe containing the 'current' or 'actual' data we have (usually simulated) data
+             The index should be the time in either floating point years or datetime.
+    Returns
+        -logL (float): negative likelihood
+    """
+    e_n, e_x = expected['n'], expected['x']
+    a_n, a_x = actual['n'], actual['x']
+    logL = gammaln(e_n + 1) - gammaln(e_x + 1) - gammaln(e_n - e_x + 1)
+    logL += gammaln(e_x + a_x + 1) + gammaln(
+        e_n - e_x + a_n - a_x + 1) - gammaln(e_n + a_n + 2)
+    logL += gammaln(a_n + 2) - gammaln(a_x + 1) - gammaln(a_n - a_x + 1)
+    return -logL
+
+
+def nll_gamma(expected, actual):
+    """
+    Also called negative binomial, but parameterized differently. The gamma-poisson
+    likelihood is a Poisson likelihood with a gamma-distributed rate parameter
+
+    Args:
+        expected (pd.Dataframe): dataframe containing reference data (usually empirical data).
+             The index should be the time in either floating point years or datetime.
+        actual (pd.Dataframe): dataframe containing the 'current' or 'actual' data we have (usually simulated) data
+             The index should be the time in either floating point years or datetime.
+
+    Returns
+        -logL (float): negative likelihood
+    """
+    e_n, e_x = expected['n'], expected['x']
+    a_n, a_x = actual['n'], actual['x']
+    logL = gammaln(e_x + a_x + 1) - gammaln(e_x + 1) - gammaln(e_x + 1)
+    logL += (e_x + 1) * np.log(e_n)
+    logL += (a_x + 1) * np.log(a_n)
+    logL -= (e_x + a_x + 1) * np.log(e_n + a_n)
+    return -logL
+
+
+def linear_interp(expected, actual):
+    """
+    Use for prevalent data like prevalence
+
+    Args:
+        expected (pd.Dataframe): dataframe containing reference data (usually from empirical sources).
+             The index should be the time in either floating point 'calendar years' or datetime.
+        actual (pd.Dataframe): dataframe containing the 'current' or 'actual' data we have (usually from simulated sources) data
+             The index should be the time in either floating point 'calendar years' or datetime.
+    Returns:
+        conformed (pd.Dataframe): dataframe containing the actual or current data
+            that have been interpolated to match a common timeframe with the data in `expected`.
+            The interpolation ensures that the two datasets (expected and actual)
+            can be compared directly (one-to-one) or used together in further
+            analysis, because they are now aligned to the same time grid.
+    """
+    conformed = pd.DataFrame(index=expected.index)
+    common_time_grid = expected.index
+    for col in actual:
+        conformed[col] = np.interp(x=common_time_grid, xp=actual.index, fp=actual[col])
+    return conformed
+
+
+def linear_accum(expected, actual):
+    """
+    Interpolate in the accumulation, then difference.
+    Use for incident data like incidence or new_deaths
+
+    Args:
+        expected (pd.Dataframe): dataframe containing reference data (usually from empirical sources).
+             The index should be the time in either floating point 'calendar years' or datetime.
+        actual (pd.Dataframe): dataframe containing the 'current' or 'actual' data we have (usually from simulated sources) data
+             The index should be the time in either floating point 'calendar years' or datetime.
+
+    Returns:
+        conformed (pd.Dataframe): dataframe containing the actual or current data
+            that have been interpolated to match a common timeframe with the data in `expected`.
+            The interpolation ensures that the two datasets (expected and actual)
+            can be compared directly (one-to-one) or used together in further
+            analysis, because they are now aligned to the same time grid.
+
+    """
+    conformed = pd.DataFrame(index=expected.index)
+    common_time_grid = expected.index
+    t_step = np.diff(common_time_grid )
+    assert np.all(t_step == t_step[0])  # Check we have regularly sampled data
+
+    # Make common time grid
+    cum_time_grid = np.append(common_time_grid, common_time_grid[-1] + t_step)  # Add one more because later we'll diff
+
+    if isinstance(actual.index, pd.DatetimeIndex):
+        actual_time_grid = np.array([sc.datetoyear(t) for t in actual.index if isinstance(t, datetime.date)])
+    else:
+        actual_time_grid = actual.index
+
+    for col in actual:
+        sdi = np.interp(x=cum_time_grid, xp=actual_time_grid, fp=actual[col].cumsum())
+        conformed[col] = pd.Series(np.diff(sdi), index=common_time_grid)
+    return conformed
+
+
+def dirichlet_single(raw_data, sim_data):
+    # from emod-based calibration
+    # TODO: document and refactor
+    num_cat_bins = len(raw_data)
+    raw_nobs = sum(raw_data)
+    sim_nobs = sum(sim_data)
+    ll = 0.
+    ll += gammaln(raw_nobs + 1)
+    ll += gammaln(sim_nobs + num_cat_bins)
+    ll -= gammaln(raw_nobs + sim_nobs + num_cat_bins)
+    for catbin in range(num_cat_bins):
+        ll += gammaln(raw_data[catbin] + sim_data[catbin] + 1)
+        ll -= gammaln(sim_data[catbin] + 1)
+        ll -= gammaln(raw_data[catbin] + 1)
+    ll /= num_cat_bins
+    return ll
+
+
+def beta_binomial(raw_nobs, sim_nobs, raw_data, sim_data, return_mean=True):
+    # from emod-based calibration
+    # TODO: document and refactor
+    num_bins = len(raw_data)
+    ll = 0.
+    for this_bin in range(num_bins):
+        ll += gammaln(raw_nobs[this_bin] + 1)
+        ll += gammaln(sim_nobs[this_bin] + 2)
+        ll -= gammaln(raw_nobs[this_bin] + sim_nobs[this_bin] + 2)
+        ll += gammaln(raw_data[this_bin] + sim_data[this_bin] + 1)
+        ll += gammaln(raw_nobs[this_bin] - raw_data[this_bin] + sim_nobs[this_bin] - sim_data[this_bin] + 1)
+        ll -= gammaln(raw_data[this_bin] + 1)
+        ll -= gammaln(raw_nobs[this_bin] - raw_data[this_bin] + 1)
+        ll -= gammaln(sim_data[this_bin] + 1)
+        ll -= gammaln(sim_nobs[this_bin] - sim_data[this_bin] + 1)
+    if num_bins != 0 and return_mean:
+        ll /= num_bins
+    return ll
