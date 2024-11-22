@@ -119,14 +119,15 @@ class Typhoid(ss.Disease):
             ss.BoolArr("subclinical", default=False, label="Subclinical"),
             ss.BoolArr("chronic", default=False, label="Chronic"),
             ss.BoolArr("recovered", default=False, label="Recovered"),
+            ss.BoolArr("infected_ever", default=False, label="Ever Infected"),
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
             ss.FloatArr("n_exposures", default=0.0, label="Number of Exposures"),     # average number of exposures from a given source/route over the interval of one timestep (usually 1 day)
             ss.FloatArr("exposure_amount", default=0.0, label="Number of Exposures"), # average (number of exposures * vollume) from a given source/route over the interval of one timestep (usually 1 day)
             ss.FloatArr("cfu_dose", default=0.0, label="Exposure amount (CFUs)"),     # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
-            ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),          # average number of CFUs during different stages of the disease (infected phase, within host).
-            ss.FloatArr("n_infections", 0.0, label="Number of Infections"),      # number of infections over the lifespan of this agent
+            ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),           # average number of CFUs during different stages of the disease (infected phase, within host).
+            ss.FloatArr("n_infections", 0.0, label="Number of Infections"),       # number of infections over the lifespan of this agent
             ss.FloatArr("immunity", default=1.0, label="Immunity Level"),             # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
             ss.FloatArr("p_infc", default=0.0, label="Probability of Infection"),     # Track probability of infection
             ss.FloatArr("p_route", default=0.0, label="Probability Route Draw"),      # Probability to determine which route will be the route if infection
@@ -145,6 +146,7 @@ class Typhoid(ss.Disease):
             ss.FloatArr("ti_chronic", label="Start of chronic stage"),
             ss.FloatArr("ti_recovered", label="Time of recovery"),
             ss.FloatArr("ti_dead", label="Time of death"),
+
         )
 
         # Define random number generators for make_new_cases
@@ -269,8 +271,6 @@ class Typhoid(ss.Disease):
             ss.Result(self.name, "new_chronic", npts, dtype=int, scale=False, label="New Chronic"),
             ss.Result(self.name, "new_recovered", npts, dtype=int, scale=False, label="New Recovered"),
             ss.Result(self.name, "new_deaths", npts, dtype=int, scale=False, label="New Dead"),
-            #ss.Result(self.name, 'perc_infections_con', npts, dtype=float, scale=False, label='Percentage of infections from contact route'),
-            #ss.Result(self.name, 'perc_infections_env', npts, dtype=float, scale=False, label='Percentage of infections from environmental route'),
 
         ]
         return
@@ -450,8 +450,7 @@ class Typhoid(ss.Disease):
         self.infectiousness[acu2rec] = 0.0
 
         # handle subclinical pathway
-        sub2rec = (
-            self.subclinical & (self.ti_recovered <= ti)).uids
+        sub2rec = (self.subclinical & (self.ti_recovered <= ti)).uids
         self.recovered[sub2rec] = True
         self.subclinical[sub2rec] = False
         self.infected[sub2rec] = False
@@ -518,9 +517,8 @@ class Typhoid(ss.Disease):
         p = self.pars
         dt = self.sim.dt
         dur_chro = p.dur_chro_dist.rvs(uids.size) * tyd.days_per_week  # duration in in days
-        dur_chro = dur_chro * tyd.day2year                  # duration in years
+        dur_chro = dur_chro * tyd.day2year        # duration in years
         return sc.randround(dur_chro / dt)        # duration in integer number of timesteps
-
 
     @staticmethod
     def prepatent_mean_dur_function(module, sim, uids):
@@ -610,6 +608,7 @@ class Typhoid(ss.Disease):
         self.susceptible[uids] = False
         self.unexposed[uids] = False
         self.infected[uids] = True
+        self.infected_ever[uids] = True
         self.prepatent[uids] = True
         self.ti_prepatent[uids] = ti
         self.ti_infected[uids] = ti
