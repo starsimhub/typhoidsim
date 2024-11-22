@@ -144,7 +144,8 @@ class histograms_by_age_sex_monitor(Monitor):
             states_of_interest = ["ti_infected", "infected", "infected_ever",
                                   "ti_prepatent", "prepatent",
                                   "ti_acute", "acute", "ti_subclinical", "subclinical",
-                                  "ti_chronic", "chronic"]
+                                  "ti_chronic", "chronic",
+                                  "ti_recovered", "recovered"]
             self.to_record = {state: dict(path=("diseases", "typhoid")) for state in states_of_interest}
             alive_dict = dict(alive=dict(path=("people",)))
             self.to_record.update(alive_dict)
