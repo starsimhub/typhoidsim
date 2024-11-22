@@ -22,6 +22,7 @@ Target:
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import datetime
 
 import sciris as sc
 import starsim as ss
@@ -29,7 +30,7 @@ import typhoidsim as ty
 
 import calibration_pakistan_utils as utils
 
-calib_debug = False  # If true, calibration will run in serial
+calib_debug = True # If true, calibration will run in serial
 
 
 # We will make a function that will return an instance of Sim(). All instances
@@ -181,7 +182,7 @@ def build_sim(sim, calib_pars, **kwargs):
 def make_calib_components():
     df = utils.load_empirical_data_pakistan()
     # Add a column with a similar representation of time
-    df["yearvec"] = df["Date"].dt.year + (df["Date"].dt.dayofyear - 1) / ty.days_per_year
+    df["yearvec"] = np.array([sc.datetoyear(t) for t in df["Date"] if isinstance(t, datetime.date)])
     df_2_to_15 = df.loc[(df["Ages"] == "Kids2to15"), :]
     data = df_2_to_15["Sindh_positive"].astype(float).to_numpy()
 
@@ -204,7 +205,7 @@ def make_calib_components():
             'x': sim.analyzers.hist_by_age_sex.results.hist_f_ti_positive[:, age_bins_dict['2-15']],  # Number of individuals whose test was positive
         }, index=pd.Index(sim.analyzers.hist_by_age_sex.yearvec, name='t')),  # Index is time
 
-        conform='prevalent',
+        conform='incident',
         nll_fn='beta',
         weight=1,  # Not required if only one component
     )
@@ -266,7 +267,6 @@ def run_starsim_calibration_step_1(do_plot=True, option=1):
             calib_pars=calib_pars,
             sim=sim,
             build_fn=build_sim,
-            build_kw=None,
             components=components,
             total_trials=16,
             n_workers=4,
@@ -331,6 +331,6 @@ def run_debug_multisim(do_plot=True):
 
 
 if __name__ == '__main__':
-    #run_starsim_calibration_step_1(do_plot=True, option=1)
+    run_starsim_calibration_step_1(do_plot=True, option=2)
     #sim = run_debug_single_sim(do_plot=True)
-    msim = run_debug_multisim(do_plot=True)
+    #msim = run_debug_multisim(do_plot=True)
