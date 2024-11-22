@@ -144,7 +144,7 @@ def make_sim():
                      positive=dict(path=("interventions", "base_test")),
                      )
     # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
-    anz = ty.histograms_by_age_sex(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record=to_record)
+    anz = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges, age_bin_labels=age_bin_labels, to_record=to_record)
 
     # PUT EVERYTHING TOGETHER IN A SIMULATION
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, demographics=vital_dynamics + [environment],
