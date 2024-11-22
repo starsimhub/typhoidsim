@@ -27,7 +27,8 @@ def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
     Returns:
         callable: A partially applied function of unexp2susc_prob_function_gauld2018.
     """
-    return partial(ty.unexp2sus_youth_prob_function_gauld2018, sus_saturation_age=sus_saturation_age,
+    return partial(ty.unexp2sus_youth_prob_function_gauld2018,
+                   sus_saturation_age=sus_saturation_age,
                    sus_age_exposure_slope=sus_age_exposure_slope)
 
 
@@ -104,7 +105,7 @@ def get_mortality_rates_pakistan():
 
 def get_crude_birth_rates_pakistan():
     """
-    Placeholder to load and parse birth rates over mutiple year.
+    Placeholder to load and parse birth rates over mutiple years.
     The output df should have the columns "Year" and the column "CBR".
     CBR can expressed as birth rates are per 1000 people, per year; or
     percentages per year.
@@ -114,7 +115,7 @@ def get_crude_birth_rates_pakistan():
 
 def load_demogrphics_pakistan(json_file='TestDemographics_pak_updated.json'):
     """
-    Load demogrphics data from json file used in eMOD simulation
+    Load demogrphics data from json file used in EMOD simulation
     This file is usually found under the Assets/ directory.
     """
     data_home = ty.get_data_home()  # Assumes we have placed the file in typhoidsim/data directory
