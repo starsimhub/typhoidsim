@@ -203,8 +203,8 @@ class StateVariable(np.ndarray):
     """
     This class is identical to Results, but named to something more generic,
     so it can be used in different parts of the code and still make sense
-    from a code-readability perspective. The concept of Results is very
-    does not necessarily align with the internal-state of the model/simulation.
+    from a code-readability perspective. The concept of Results
+    does not necessarily align with the internal-state of a model.
     A results array may have outputs that are a transformed version of the
     internal 'state variables' and as such ideally we don't want them to be used
     directly. A Results arrary *can* also map one-to-one to one of the internal
@@ -212,9 +212,6 @@ class StateVariable(np.ndarray):
 
     This is a structure that holds an internal state of our system (ie, module)
     prior to any transformations for output.
-
-    A pattern can also be used to pass a timeseries that will be used
-    to perform amplitude-modulation of a module parameter.
     """
 
     def __new__(cls, module=None, name=None, shape=None, dtype=None, scale=None):
