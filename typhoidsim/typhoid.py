@@ -940,10 +940,6 @@ class Typhoid(ss.Disease):
         res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
-        # res.perc_infections_env[ti] = 100.0*sc.safedivide(np.count_nonzero((self.infc_origin == tyd.TransmissionRoute.ENVIRONMENT.value) &
-        #                                                (self.ti_infected == ti)), res.new_infections[ti])
-        # res.perc_infections_con[ti] = 100.0*sc.safedivide(np.count_nonzero((self.infc_origin == tyd.TransmissionRoute.CONTACT.value) &
-        #                                                (self.ti_infected == ti)), res.new_infections[ti])
         return
 
 
