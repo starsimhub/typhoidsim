@@ -206,7 +206,7 @@ class Calibration220(sc.prettyobj):
 
         self.build_fn = build_fn or self.translate_pars
         self.build_kw = build_kw or dict()
-        self.eval_fn = eval_fn or self._eval_fit
+        self.eval_fn = eval_fn or self._default_eval_fit
         self.eval_kwargs = eval_kwargs or dict()
         self.components = components
 
@@ -317,11 +317,20 @@ class Calibration220(sc.prettyobj):
 
         return pars
 
-    def _eval_fit(self, sim, **kwargs):
+    def _default_eval_fit(self, sim, **kwargs):
         """ Evaluate the fit by evaluating the negative log likelihood """
-        nll = 0  # Negative log likelihood
+        nlls = []  # Negative log likelihood
         for component in sc.tolist(self.components):
-            nll += component(sim)
+            nlls.append(component(sim))
+
+        as_scalar = kwargs.get('as_scalar')
+        nlls = np.array(nlls)
+        if as_scalar == 'mean':
+            nll = np.mean(nlls)  # If there are NaNs in any if the components, they will propagate
+        elif as_scalar == 'median':
+            nll = np.median(nlls)
+        else:
+            nll = np.sum(nlls)
         return nll
 
     def run_trial(self, trial):
@@ -400,7 +409,6 @@ class Calibration220(sc.prettyobj):
             calib_pars (dict): if supplied, overwrite stored calib_pars
             load (bool): whether to load existing trials from the database (if rerunning the same calibration)
             tidyup (bool): whether to delete temporary files from trial runs
-            verbose (bool): whether to print output from each trial
             kwargs (dict): if supplied, overwrite stored run_args (n_trials, n_workers, etc.)
         """
         # Load and validate calibration parameters
@@ -637,9 +645,11 @@ class CalibComponent220(sc.prettyobj):
 
             If 'incident', it means data reflects new instances over a period of time,
             like the number of new vaccinated. In this case, the data in 'actual'
-            will be transformed into a cumulative incidence form and then interpolated, ensuring they can be compared accurately with the progressive tally represented by incident data.
+            will be transformed into a cumulative incidence form and then interpolated,
+            ensuring they can be compared accurately with the progressive
+            tally represented by incident data.
 
-        nll_fn (str | callable)
+        nll_fn (str | callable): specify which negative log likelihood function to use
     """
 
     def __init__(self, name, expected, extract_fn, conform, nll_fn, weight=1):
@@ -686,9 +696,9 @@ class CalibComponent220(sc.prettyobj):
     def eval(self, sim):
         """ Compute and return the negative log likelihood """
         predicted = self.extract_fn(sim)                     # Extract simulated data
-        predicted = self.conform(self.expected, predicted)   # Conform
+        predicted = self.conform(self.expected, predicted)   # Conform/interpolate to common grid
         self.nll = self.nll_fn(self.expected, predicted)     # Negative log likelihood
-        return self.weight * np.sum(self.nll)
+        return self.weight * np.sum(self.nll)                # Sum across time
 
     def __call__(self, sim):
         return self.eval(sim)
