@@ -29,7 +29,7 @@ age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
 anz_1 = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
                                          age_bin_labels=age_bin_labels,
                                          aggregate_sex=True,
-                                         aggregate_time=True,
+                                         aggregate_time="mean",
                                          resampling_period=30.44/365.0,  # Duration of an average solar month
                                          name="hist_by_counts")
 
@@ -38,5 +38,5 @@ sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst, analyze
 sim.run()
 timevec = sim.get_analyzers()[0].yearvec
 ty.plot_sim(sim, key="hist_by_", yearvec=timevec)
-sim.plot(key="typhoid")
+sim.plot(key="typhoid_new")
 plt.show()
