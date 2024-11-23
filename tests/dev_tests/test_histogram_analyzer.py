@@ -19,25 +19,24 @@ age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
 age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
 # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
 
-to_record = dict(ti_infected=dict(path=("diseases", "typhoid")),
-                 alive=dict(path=("people",)),
-                 ti_positive=dict(path=("interventions", "base_test")),
-                 ti_tested=dict(path=("interventions", "base_test")),
-                 )
+# to_record = dict(ti_infected=dict(path=("diseases", "typhoid")),
+#                  alive=dict(path=("people",)),
+#                  ti_positive=dict(path=("interventions", "base_test")),
+#                  ti_tested=dict(path=("interventions", "base_test")),
+#                  )
 
-anz_1 = ty.histograms_by_age_sex(age_bins=age_bin_edges,
-                                 age_bin_labels=age_bin_labels,
-                                 modality="counts",
-                                 to_record=to_record,
-                                 name="hist_by_counts")
+anz_1 = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
+                                         age_bin_labels=age_bin_labels,
+                                         modality="counts",
+                                         name="hist_by_counts")
 
-anz_2 = ty.histograms_by_age_sex(age_bins=age_bin_edges,
-                                 age_bin_labels=age_bin_labels,
-                                 to_record=to_record,
-                                 modality="proportions",
-                                 name="hist_by_props")
+anz_2 = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
+                                         age_bin_labels=age_bin_labels,
+                                         modality="proportions",
+                                         name="hist_by_props")
 
 sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst, analyzers=[anz_1, anz_2])
 sim.run()
-sim.plot()
+sim.plot(key="hist_by_")
+sim.plot(key="typhoid")
 plt.show()
