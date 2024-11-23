@@ -40,52 +40,6 @@ class Monitor(ss.Analyzer):
         super().init_pre(sim)
         return
 
-
-    def setup_sampling_mode(self):
-        pass
-
-    # def downsample(self, mode=None):
-    #     """"
-    #     Implement temporal downsample of results
-    #     This modifies the self.results ndict.
-    #     """
-    #     if mode is None:
-    #         pass
-    #     elif mode == "subsample":
-    #         pass
-    #     elif mode == "aggregate":
-    #         if agg_type == "sum":
-    #             pass
-    #         elif agg_type == "min":
-    #         elif agg_type == "max":
-    #         elif agg_type == "mean":
-    #         elif agg_type == "sum":
-    #         else:
-    #             raise NotImplementedError(tyd.sorry_mssg)
-    #
-    #         pass
-    #
-    #     raise NotImplementedError(tyd.sorry_mssg)
-
-    def temporal_subsample(self):
-        pass
-
-    def temporal_aggregate(self):
-        pass
-
-    def aggregate_sum(self):
-        pass
-
-    def aggregate_min(self):
-        pass
-
-    def aggregate_max(self):
-        pass
-
-    def aggregate_mean(self):
-        pass
-
-
     def plot(self):
         raise NotImplementedError(tyd.sorry_mssg)
 
@@ -123,32 +77,57 @@ class histograms_by_age_sex_monitor(Monitor):
         self.resampling_period = resampling_period
         self.ti = 0
         # Attributes that will be set later
-        self.monitor_step = 1 # number of "dt" that fit in one resampling period
+        self.monitor_step = None  # number of "dt" that fit in one resampling period
+        self.monitor_period = None
         self.ntpts = None  # Number of timepoints to record
         self.nags  = None  # Number of age groups to record
-        self.itpts = None
         self.yearvec = None  # This monitor yearvec
         self.record = None
         self.agg_func = None
+        self.sample = None
         self._apply = None
+        self.stock_ntpts = None
+        self.stocks = ss.Results(self.name)
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
-
-        if self.aggregate_time:
+        self.set_observation_interval(sim)
+        aggregation_functions = {
+            "mean": np.mean,
+            "min": np.min,
+            "max": np.max,
+            "median": np.median,
+            "sum": np.sum,
+            "subsample": None
+        }
+        if self.aggregate_time in set(aggregation_functions):
             self.monitor_step = round(self.resampling_period/sim.dt)
+            self.monitor_period = self.resampling_period
+            self.agg_func = aggregation_functions.get(self.aggregate_time)
         else:
-            self.resampling_period = sim.dt
+            self.monitor_step = 1
+            self.monitor_period = sim.dt
 
-        self.ntpts = self.get_ntpts(sim)    # Get right number of timepoints
+        # Output year vector
+        self.yearvec = sc.inclusiverange(self.record_from, self.record_until, self.monitor_period)
+
+        if self.aggregate_time is None or self.aggregate_time == "subsample":
+            self.sample = self._default_sampling
+            self.ntpts = len(self.yearvec)
+            self.stock_ntpts = len(self.yearvec)
+        else:
+            self.sample = self._aggregate_sampling
+            self.ntpts = len(self.yearvec)
+            self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, sim.dt))
+
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
         if self.age_bin_labels is None:
             self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(self.nags)]
 
         if self.to_record is None:
-            states_of_interest = ["ti_infected", "infected", "infected_ever",
+            states_of_interest = ["ti_infected", "infected",
                                   "ti_prepatent", "prepatent",
                                   "ti_acute", "acute", "ti_subclinical", "subclinical",
                                   "ti_chronic", "chronic",
@@ -175,9 +154,14 @@ class histograms_by_age_sex_monitor(Monitor):
                 else:
                     sexes = ["f", "m"]
                 for sex in sexes:
-                    self.results += [ss.Result(self.name, f"hist_{sex}_{attrname}",
-                                               (self.ntpts, self.nags), dtype=res_dtype,
+                    self.stocks += [ss.Result(self.name, f"hist_{sex}_{attrname}",
+                                               (self.stock_ntpts, self.nags), dtype=res_dtype,
                                                scale=False, label=f"m_{res_lbl}"),]
+
+                    self.results += [
+                        ss.Result(self.name, f"hist_{sex}_{attrname}",
+                                  (self.ntpts, self.nags), dtype=res_dtype,
+                                  scale=False, label=f"m_{res_lbl}"), ]
         if self.aggregate_sex:
             self.record = self._record_b
             self._apply = self._apply_aggregated_sexes
@@ -186,7 +170,7 @@ class histograms_by_age_sex_monitor(Monitor):
             self._apply = self._apply_individual_sexes
         return
 
-    def get_ntpts(self, sim):
+    def set_observation_interval(self, sim):
         """ Get thr gith number of timepoints for the Result arrays"""
         if self.record_from is None and self.record_until is None:
             start_year = sim.pars.start
@@ -200,33 +184,18 @@ class histograms_by_age_sex_monitor(Monitor):
         else:
             start_year = self.record_from
             stop_year = self.record_until
-
-        self.yearvec = sc.inclusiverange(start_year, stop_year, self.resampling_period)
-        ntpts = len(self.yearvec)
-
         # Update
         self.record_from = start_year
         self.record_until = stop_year
-        return ntpts
-
-    def setup_sampling_mode(self):
-        # Integer number of time points to aggregate
-
-        aggregation_functions = {
-            'mean': np.mean,
-            'min': np.min,
-            'max': np.max,
-            'median': np.median
-        }
-        self.agg_func = aggregation_functions.get(self.aggregate_time)
+        return
 
     def _record_fm(self, f_vals, m_vals, attr_name):
-        self.results[f"hist_m_{attr_name}"][self.ti, :] = m_vals
-        self.results[f"hist_f_{attr_name}"][self.ti, :] = f_vals
+        self.stocks[f"hist_m_{attr_name}"][self.ti, :] = m_vals
+        self.stocks[f"hist_f_{attr_name}"][self.ti, :] = f_vals
         return
 
     def _record_b(self, b_vals, attr_name):
-        self.results[f"hist_b_{attr_name}"][self.ti, :] = b_vals
+        self.stocks[f"hist_b_{attr_name}"][self.ti, :] = b_vals
         return
 
     def _apply_individual_sexes(self, sim):
@@ -267,15 +236,39 @@ class histograms_by_age_sex_monitor(Monitor):
             self.record(b_vals, attrname)
         return
 
+    def _default_sampling(self, sim):
+        if sim.ti % self.monitor_step == 0:
+            self._apply(sim)
+            self.ti += 1
+        return
+
+    def _aggregate_sampling(self, sim):
+        # Stores everything, then aggregates at the end
+        self._apply(sim)
+        self.ti += 1
+        return
+
+    def aggregate(self, vals):
+        if self.aggregate_time is None:
+            return vals
+        remainder = self.ntpts % self.monitor_step
+        reshaped_data = vals[:self.ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
+        if remainder != 0:
+            downsampled_main = self.agg_func(reshaped_data, axis=1)
+            downsampled_remainder = self.agg_func(vals[-remainder:], axis=0)
+            return np.vstack([downsampled_main, downsampled_remainder[None, :]])
+        else:
+            return self.agg_func(reshaped_data, axis=1)
+
     def apply(self, sim):
         if sim.year >= self.record_from and (sim.year <= self.record_until):
-            if sim.ti % self.monitor_step == 0:
-                self._apply(sim)
-                self.ti += 1
+            self.sample(sim)
         return
 
     def finalize_results(self):
         super().finalize_results()
+        for stock_name in self.stocks:
+            self.results[stock_name][:] = self.aggregate(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
         return
 
 
