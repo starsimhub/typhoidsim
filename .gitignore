@@ -6,6 +6,14 @@ tests/devtests/figs/*
 figs/*
 modules.rst
 
+# Data
+*.csv
+*.xlsx
+
+# Dev stuff
+test*.py
+z_*
+
 # Other files
 .idea
 .vscode
