@@ -36,6 +36,7 @@ anz_1 = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
 
 sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst, analyzers=[anz_1])
 sim.run()
-sim.plot(key="hist_by_")
+timevec = sim.get_analyzers()[0].yearvec
+ty.plot_sim(sim, key="hist_by_", yearvec=timevec)
 sim.plot(key="typhoid")
 plt.show()
