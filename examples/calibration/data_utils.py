@@ -8,63 +8,29 @@ place, rather than being duplicated across multiple calibration scripts.
 
 import numpy as np
 import pandas as pd
-from functools import partial
 
 import sciris as sc
 import starsim as ss
 import typhoidsim as ty
 
 
-def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
-    """
-    Create a partially evaluated function from unexp2susc_prob_function_gauld2018
-    with given sus_saturation_age and sus_age_exposure_slope arguments.
-
-    Args:
-        sus_saturation_age (float): The age at which exposure reaches saturation.
-        sus_age_exposure_slope (float): The slope of exposure with increasing age.
-
-    Returns:
-        callable: A partially applied function of unexp2susc_prob_function_gauld2018.
-    """
-    return partial(ty.unexp2sus_youth_prob_function_gauld2018,
-                   sus_saturation_age=sus_saturation_age,
-                   sus_age_exposure_slope=sus_age_exposure_slope)
-
-
-def partial_env_trapezoidal(kwarg_pars):
-    """
-    Return a partially evaluated function. This means that the pattern is set
-    according to the parameters recieved in kwargs_pars. We can get exactly
-    the value of the environmental modulation at time t (expressed in years)
-    by calling
-
-    my_modulation = partial_env_trapezoidal(**kwargs_pars)
-    curent_modulation = my_modulation(t)
-
-    Args:
-        kwarg_pars of function typhoidsim.utils_math.asym_trapezoidal
-
-    Returns:
-         callable: A partially evaluated ty.asym_trapezoidal
-    """
-    return partial(ty.asym_trapezoidal, **kwarg_pars)
-
-
 def get_age_distribution_pakistan():
     """
-    Parse data from json file used in EMOD simulations to get
-    age distribution for Pakistan. Returns it in a format that
-    can be passed to starsim's People, to build the appropriate population.
+    Parse data from json file used in EMOD simulations to get age distribution
+    for Pakistan. Returns it in a format that can be passed to starsim's People,
+    to build the appropriate population.
 
     Returns:
-         df (pd.DataFrame): A dataframe with columns 'age' and 'value' that capture age distribution
+         df (pd.DataFrame): A dataframe with columns 'age' and 'value' that
+             specifies the age distribution for this population.
     """
     # Lower edge of an age bin
     json_data = load_demogrphics_pakistan()
-    age_bin_lb = np.array(json_data["Nodes"][0]["IndividualAttributes"]["AgeDistribution"]["ResultValues"])  # Drop the last value of age because is the right edge of the last age bin
+    age_bin_lb   = np.array(json_data["Nodes"][0]["IndividualAttributes"]["AgeDistribution"]["ResultValues"])
     age_cum_prob = json_data["Nodes"][0]["IndividualAttributes"]["AgeDistribution"]["DistributionValues"]
     age_probs = np.diff(age_cum_prob)
+    # Drop the last value of age_bin_lb because it is the right edge of the last
+    # age bin, we only want the lower boundary (lb) values of each bin
     df = pd.DataFrame({'age': age_bin_lb[0:-1], 'value': age_probs})
     return df
 
@@ -72,11 +38,11 @@ def get_age_distribution_pakistan():
 def get_mortality_rates_pakistan():
     """
     Parse mortality rates from json file used in EMOD simulations.
-
     These rates are expressed as mortality rate in units of 1/year".
 
     Returns:
-        df (pd.DataFrame): A dataframe with columns
+        df (pd.DataFrame): A dataframe (with columns Time, Sex, AgeGrpStart and mx)
+            that starsim's demographic Death module understands.
     """
     json_data = load_demogrphics_pakistan()
     # Get lower bound of each age bin
@@ -202,7 +168,7 @@ def check_age_distribution(n_agents=100_000):
     return
 
 
-def save_outputs(sim, output_dir=None):
+def save_simulation_outputs(sim, batch_name="calib_pak_sindh", output_dir=None):
     """
     Saves results from the simulation in an analysis friendly format (.csv)
 
@@ -220,8 +186,8 @@ def save_outputs(sim, output_dir=None):
 
     # Export to df -- we can export results to a dataframe (and save as csv) for offline analysis
     sim_df = ty.to_df(sim)
+    # TODO: export csv of histogram analyzer
 
-    batch_name = "calib_pak_sindh"
     filename = ty.generate_unique_filename(root_str=batch_name)
     csv_ext = ".csv"
     sim_df.to_csv(output_dir / f"{filename}{csv_ext}", index=False)
