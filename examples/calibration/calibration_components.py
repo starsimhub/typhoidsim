@@ -1,0 +1,73 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import datetime
+
+import sciris as sc
+import starsim as ss
+import typhoidsim as ty
+
+import calibration_pakistan_utils as utils
+
+
+def parse_update_sim_pars(sim, calib_pars, **kwargs):
+    """
+    Also known as build_sim
+
+    Tell the Calibration class how to reach and update parameters
+    for our specific model.
+
+    The more module our model has, the more complex to navigate the path
+    to find and update the required paraemeters.
+    """
+    # Access the modules whose parameters we need to modify dueing optimisation
+    typh = sim.pars.diseases
+    env = sim.pars.demographics[2]  # NOTE This is ugly but cannot do it a different way atm, there are three demographics modules: birtrhs, deaths and environment
+
+    for k, pars in calib_pars.items():  # Loop over the calibration parameters
+        v = pars['value']
+        # Each item in calib_pars is a dictionary with keys like 'low', 'high',
+        # 'guess', 'suggest_type', and importantly 'value'. The 'value' key is
+        # the one we want to use as that's the one selected by the algorithm
+        if k == 'tai':
+            typh.pars.tai = v
+        elif k == 'teer':
+            env.pars.transmission.env2ppl_exposure_rate.lam = v
+        else:
+            raise NotImplementedError(f'Parameter {k} not recognized.')
+    return sim
+
+
+
+def make_calib_components():
+    df = utils.load_empirical_data_pakistan()
+    # Add a column with a similar representation of time
+    df["yearvec"] = np.array([sc.datetoyear(t) for t in df["Date"] if isinstance(t, datetime.date)])
+    df_2_to_15 = df.loc[(df["Ages"] == "Kids2to15"), :]
+    data = df_2_to_15["Sindh_positive"].astype(float).to_numpy()
+
+    # TODO: find a better way to do this, in case we change the age bins
+    age_bin_labels = ['<2', '2-15', '15+']  # human readable labels
+    # Make dictionary to map labes to array index in analyzer result array
+    age_bins_dict = {label: idx for idx, label in enumerate(age_bin_labels)}
+
+    # Example with females between 2 <= age < 4
+    f_infectious_2_to_15 = ty.CalibComponent220(
+        name='f_positive_2_15',
+        # Reference data
+        expected=pd.DataFrame({
+            'n': data * 5.0,  # !!! TODO: CHANGE!!! Made up scaling because "Sindh_tested" is all NaNs for this age group
+            'x': data,  # Count/Number of individuals found to test positive
+        }, index=pd.Index(df_2_to_15["yearvec"], name='t')),  # On these dates
+        # Extract equivalent data from the simulation
+        extract_fn=lambda sim: pd.DataFrame({
+            'n': sim.analyzers.hist_by_age_sex.results.hist_f_ti_tested[:, age_bins_dict['2-15']],    # Number of individuals who were tested
+            'x': sim.analyzers.hist_by_age_sex.results.hist_f_ti_positive[:, age_bins_dict['2-15']],  # Number of individuals whose test was positive
+        }, index=pd.Index(sim.analyzers.hist_by_age_sex.yearvec, name='t')),  # Index is time
+
+        conform='incident',
+        nll_fn='beta',
+        weight=1,  # Not required if only one component
+    )
+    components = [f_infectious_2_to_15]
+    return components
