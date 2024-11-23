@@ -76,7 +76,7 @@ def baseline_model():
                      'tppi': 0.98,
                      'p_cpg': 0.108,
                      'p_acute': ss.bernoulli(p=0.16),
-                     'init_prev': ss.bernoulli(p=0.05),         # Initial prevalence: This is how we seed infections at the start of a simulation. In this case approx 5% of the total population of agents, will be infected at t=0
+                     'init_prev': ss.bernoulli(p=0.06),         # Initial prevalence: This is how we seed infections at the start of a simulation. In this case approx 5% of the total population of agents, will be infected at t=0
                      'p_unexp2sus': ss.bernoulli(p=p_unexp2sus_parc_fun)}
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
