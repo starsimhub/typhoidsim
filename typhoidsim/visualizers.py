@@ -9,7 +9,69 @@ import sciris as sc
 
 from .networks import CommunityNet
 
-__all__ = ["plot_age_histogram", "plot_age_mixing"]
+__all__ = ["plot_age_histogram", "plot_age_mixing", "plot_sim"]
+
+
+def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearvec=None):
+    """
+    Plot all results in the Sim object after the simulation has run
+
+    Args:
+        sim
+        key (str): the results key to plot (by default, all)
+        fig (Figure): if provided, plot results into an existing figure
+        style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
+        fig_kw (dict): passed to ``plt.subplots()``
+        plot_kw (dict): passed to ``plt.plot()``
+        yearvec (arr): the time vector (in years) we want to use for plotting the results, defaults to sim.yearvec
+
+    """
+    # Configuration
+    flat = sim.results.flatten()
+    n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
+    default_figsize = np.array([8, 6])
+    figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,
+                             1.5)  # Scale the default figure size based on the number of rows and columns
+    figsize = default_figsize * figsize_factor
+    fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
+    plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
+    modmap = {m.name: m for m in sim.modules}  # Find modules
+
+    # Do the plotting
+    with sc.options.with_style(style):
+        if yearvec is None:
+            yearvec = flat.pop('yearvec')
+        if key is not None:
+            flat = {k: v for k, v in flat.items() if k.startswith(key)}
+
+        # Get the figure
+        if fig is None:
+            fig, axs = sc.getrowscols(len(flat), make=True, **fig_kw)
+            if isinstance(axs, np.ndarray):
+                axs = axs.flatten()
+        else:
+            axs = fig.axes
+        if not sc.isiterable(axs):
+            axs = [axs]
+
+        # Do the plotting
+        for ax, (key, res) in zip(axs, flat.items()):
+            ax.plot(yearvec, res, **plot_kw, label=sim.label)
+            title = getattr(res, 'label', key)
+            if res.module != 'sim':
+                try:
+                    mod = modmap[res.module]
+                    modtitle = mod.__class__.__name__
+                    assert res.module == modtitle.lower()  # Only use the class name if the module name is the default
+                except:
+                    modtitle = res.module
+                title = f'{modtitle}: {title}'
+            ax.set_title(title)
+            ax.set_xlabel('Year')
+
+    sc.figlayout(fig=fig)
+
+    return fig
 
 
 def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
@@ -18,7 +80,7 @@ def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
     Plot population age distribution
 
     Args:
-        people       (starsim People): the people object. Must be intialized.
+        people    (starsim People): the people object. Must be intialized.
         bins      (arr)   : age bins to use (default, 0-100 in one-year bins)
         width     (float) : bar width
         alpha     (float) : transparency of the plots
