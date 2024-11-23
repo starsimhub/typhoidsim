@@ -119,7 +119,7 @@ class Typhoid(ss.Disease):
             ss.BoolArr("subclinical", default=False, label="Subclinical"),
             ss.BoolArr("chronic", default=False, label="Chronic"),
             ss.BoolArr("recovered", default=False, label="Recovered/Been Infected"),
-            ss.BoolArr("infected_ever", default=False, label="Ever Infected"),
+            ss.BoolArr("infected_ever", default=False, label="Ever X Infected"),
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
@@ -262,7 +262,7 @@ class Typhoid(ss.Disease):
         npts = self.sim.npts
         self.results += [
             ss.Result(self.name, "prevalence", npts, dtype=float, scale=False, label="Prevalence"),
-            ss.Result(self.name, "new_infections", npts, dtype=int, scale=False, label="Newly infections"),
+            ss.Result(self.name, "new_infections", npts, dtype=int, scale=False, label="New infections"),
             ss.Result(self.name, "cum_infections", npts, dtype=int, scale=False, label="Cumulative infections"),
             ss.Result(self.name, "new_susceptible", npts, dtype=int, scale=False, label="Newly Susceptible"),
             ss.Result(self.name, "new_prepatent", npts, dtype=int, scale=False, label="Newly Prepatent"),
