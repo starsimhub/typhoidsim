@@ -7,36 +7,40 @@ import sciris as sc
 import starsim as ss
 import typhoidsim as ty
 
-import calibration_pakistan_utils as utils
+import data_utils as utils
 
 
 def parse_update_sim_pars(sim, calib_pars, **kwargs):
     """
-    Also known as build_sim
+    Also referred to as as build_sim function.
 
-    Tell the Calibration class how to reach and update parameters
+    Tell the Calibration class how to reach and update a parameter value
     for our specific model.
 
-    The more module our model has, the more complex to navigate the path
-    to find and update the required paraemeters.
+    The more modules our full model has, the more complex to navigate the path
+    to find and update the required parameters.
     """
     # Access the modules whose parameters we need to modify dueing optimisation
     typh = sim.pars.diseases
-    env = sim.pars.demographics[2]  # NOTE This is ugly but cannot do it a different way atm, there are three demographics modules: birtrhs, deaths and environment
+    # NOTE This way of getting to the environment is ugly but cannot do it a
+    # different way atm in starsim, there are three demographics modules: births, deaths and environment
+    env = sim.pars.demographics[2]
 
-    for k, pars in calib_pars.items():  # Loop over the calibration parameters
-        v = pars['value']
+    for par_name, par_attrs in calib_pars.items():  # Loop over the calibration parameters
+        v = par_attrs['value']
         # Each item in calib_pars is a dictionary with keys like 'low', 'high',
         # 'guess', 'suggest_type', and importantly 'value'. The 'value' key is
         # the one we want to use as that's the one selected by the algorithm
-        if k == 'tai':
-            typh.pars.tai = v
-        elif k == 'teer':
-            env.pars.transmission.env2ppl_exposure_rate.lam = v
-        else:
-            raise NotImplementedError(f'Parameter {k} not recognized.')
+        match par_name:
+            case "tai":
+                typh.pars.tai = v
+            case "teer":
+                env.pars.transmission.env2ppl_exposure_rate.lam = v
+            case "init_prev":
+                typh.pars.init_prev = ss.bernoulli(v)
+            case _:
+                raise NotImplementedError(f"Do not know how to update parameter {par_name}.")
     return sim
-
 
 
 def make_calib_components():
