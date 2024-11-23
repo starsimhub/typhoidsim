@@ -27,15 +27,11 @@ age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']
 
 anz_1 = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
                                          age_bin_labels=age_bin_labels,
-                                         modality="counts",
+                                         aggregate_sex=True,
                                          name="hist_by_counts")
 
-anz_2 = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
-                                         age_bin_labels=age_bin_labels,
-                                         modality="proportions",
-                                         name="hist_by_props")
 
-sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst, analyzers=[anz_1, anz_2])
+sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst, analyzers=[anz_1])
 sim.run()
 sim.plot(key="hist_by_")
 sim.plot(key="typhoid")
