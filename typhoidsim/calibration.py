@@ -652,7 +652,7 @@ class CalibComponent220(sc.prettyobj):
         nll_fn (str | callable): specify which negative log likelihood function to use
     """
 
-    def __init__(self, name, expected, extract_fn, conform, nll_fn, weight=1):
+    def __init__(self, name, expected, extract_fn, conform, nll_fn, weight=1.0):
         self.name = name
         self.expected = expected
         self.extract_fn = extract_fn
