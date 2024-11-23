@@ -50,10 +50,9 @@ class Monitor(ss.Analyzer):
 class histograms_by_age_sex_monitor(Monitor):
     """
     Records statistics (counts) by age and sex for each timestep.
-    By default, this analyzer records new cases for every time step.
 
-    # A number to adjust the number of cases for imperfect sampling/testing
-    in the real-world
+    Scaling is a number to adjust the number of cases for imperfect sampling/testing
+    in the real-world.
 
     For instance in the Pakistan simulations with EMOD a value of 0.6 * 0.75 *
     reporting_rate (emod parameter) is used 60% blood culture sensitivity
@@ -148,7 +147,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
             else:
                 res_dtype = specs["path"] if "dtype" in specs else float
-                res_lbl   = specs["label"] if "label" in specs else attrname
+                attrlbl = attrname.replace("ti", "new")
+                res_lbl   = specs["label"] if "label" in specs else attrlbl
                 if self.aggregate_sex:
                     sexes = ["b"]   # aggregate both sexes
                 else:
@@ -156,12 +156,12 @@ class histograms_by_age_sex_monitor(Monitor):
                 for sex in sexes:
                     self.stocks += [ss.Result(self.name, f"hist_{sex}_{attrname}",
                                                (self.stock_ntpts, self.nags), dtype=res_dtype,
-                                               scale=False, label=f"m_{res_lbl}"),]
+                                               scale=False, label=f"{sex}_{res_lbl}"),]
 
                     self.results += [
                         ss.Result(self.name, f"hist_{sex}_{attrname}",
                                   (self.ntpts, self.nags), dtype=res_dtype,
-                                  scale=False, label=f"m_{res_lbl}"), ]
+                                  scale=False, label=f"{sex}_{res_lbl}"), ]
         if self.aggregate_sex:
             self.record = self._record_b
             self._apply = self._apply_aggregated_sexes
