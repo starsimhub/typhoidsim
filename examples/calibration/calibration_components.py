@@ -21,7 +21,7 @@ def parse_update_sim_pars(sim, calib_pars, **kwargs):
     to find and update the required parameters.
     """
     # Access the modules whose parameters we need to modify dueing optimisation
-    typh = sim.pars.diseases
+    typh = sim.pars.diseases[0]
     # NOTE This way of getting to the environment is ugly but cannot do it a
     # different way atm in starsim, there are three demographics modules: births, deaths and environment
     env = sim.pars.demographics[2]
@@ -43,7 +43,23 @@ def parse_update_sim_pars(sim, calib_pars, **kwargs):
     return sim
 
 
-def make_calib_components():
+def get_calib_pars(calibration_step="step_1"):
+    match calibration_step:
+        case "step_1":
+            calib_pars = dict(
+                # typhoid acute infectiousness
+                tai=dict(low=1e-4, high=1e5, guess=42_808, log=True),
+                # typhoid environmental exposure rate
+                teer=dict(low=0.0, high=10.0, guess=1.99)
+                # The path always consists of three components/steps.
+            )
+        case _:
+            raise ValueError(f"Do not have calibration parameters: {calibration_step}. "
+                             f"Please define them in this function.")
+    return calib_pars
+
+
+def make_calib_components(targets="all_cases"):
     df = utils.load_empirical_data_pakistan()
     # Add a column with a similar representation of time
     df["yearvec"] = np.array([sc.datetoyear(t) for t in df["Date"] if isinstance(t, datetime.date)])
@@ -56,6 +72,7 @@ def make_calib_components():
     age_bins_dict = {label: idx for idx, label in enumerate(age_bin_labels)}
 
     # Example with females between 2 <= age < 4
+    # NOTE: This calib components objects are like the Analyzers in typhoid-pakistan-calibration repo
     f_infectious_2_to_15 = ty.CalibComponent220(
         name='f_positive_2_15',
         # Reference data
@@ -65,11 +82,11 @@ def make_calib_components():
         }, index=pd.Index(df_2_to_15["yearvec"], name='t')),  # On these dates
         # Extract equivalent data from the simulation
         extract_fn=lambda sim: pd.DataFrame({
-            'n': sim.analyzers.hist_by_age_sex.results.hist_f_ti_tested[:, age_bins_dict['2-15']],    # Number of individuals who were tested
-            'x': sim.analyzers.hist_by_age_sex.results.hist_f_ti_positive[:, age_bins_dict['2-15']],  # Number of individuals whose test was positive
+            'n': sim.analyzers.hist_by_age_sex.results.hist_f_alive[:, age_bins_dict['2-15']],     # Number of individuals who were tested
+            'x': sim.analyzers.hist_by_age_sex.results.hist_f_infected[:, age_bins_dict['2-15']],  # Number of individuals whose test was positive
         }, index=pd.Index(sim.analyzers.hist_by_age_sex.yearvec, name='t')),  # Index is time
 
-        conform='incident',
+        conform='prevalent',
         nll_fn='beta',
         weight=1,  # Not required if only one component
     )
