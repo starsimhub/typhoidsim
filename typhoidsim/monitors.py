@@ -18,6 +18,7 @@ import sciris as sc
 import starsim as ss
 
 import typhoidsim.defaults as tyd
+import typhoidsim.utils as tyu
 
 
 __all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor"]
@@ -25,13 +26,9 @@ __all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor"]
 
 class Monitor(ss.Analyzer):
     """
-    Base class for screening and triage.
+    Base class for passive measurments / observation processes.
 
     Args:
-         product        (Product)       : the diagnostic to use
-         prob           (float/arr)     : annual probability of eligible people receiving the diagnostic
-         eligibility    (inds/callable) : indices OR callable that returns inds
-         kwargs         (dict)          : passed to Intervention()
     """
 
     def __init__(self, period=None, **kwargs):
@@ -43,6 +40,10 @@ class Monitor(ss.Analyzer):
         super().init_pre(sim)
         return
 
+
+    def setup_sampling_mode(self):
+        pass
+
     def downsample(self, mode=None):
         """"
         Implement temporal downsample of results
@@ -52,9 +53,38 @@ class Monitor(ss.Analyzer):
             pass
         elif mode == "subsample":
             pass
-        elif mode == "average":
+        elif mode == "aggregate":
+            if agg_type == "sum":
+                pass
+            elif agg_type == "min":
+            elif agg_type == "max":
+            elif agg_type == "mean":
+            elif agg_type == "sum":
+            else:
+                raise NotImplementedError(tyd.sorry_mssg)
+
             pass
+
         raise NotImplementedError(tyd.sorry_mssg)
+
+    def temporal_subsample(self):
+        pass
+
+    def temporal_aggregate(self):
+        pass
+
+    def aggregate_sum(self):
+        pass
+
+    def aggregate_min(self):
+        pass
+
+    def aggregate_max(self):
+        pass
+
+    def aggregate_mean(self):
+        pass
+
 
     def plot(self):
         raise NotImplementedError(tyd.sorry_mssg)
@@ -63,60 +93,22 @@ class Monitor(ss.Analyzer):
         raise NotImplementedError(tyd.sorry_mssg)
 
 
-class states_consistency_monitor(Monitor):
-    """ Analyzer to track everything -- use for debug pruposes """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.name = 'states_consistency'
-        self.success = True
-        return
-
-    def update_results(self, sim):
-        return self.apply(sim)
-
-    def apply(self, sim):
-        """
-        Checks states that should be mutually exlusive and collectively exhaustive
-        """
-        typ = sim.diseases.typhoid
-
-        # Mutually exclusive estates
-        mut_exc_1 = ~(typ.immune & typ.susceptible & typ.prepatent & typ.acute & typ.subclinical & typ.chronic & typ.recovered).any()
-        mut_exc_2 = ~(typ.asymptomatic & typ.symptomatic).any()
-        mut_exc_3 = ~(typ.susceptible & typ.infected).any()
-        mut_exc_4 = ~(typ.immune & typ.infected).any()
-
-        if not mut_exc_1:
-            raise ValueError('Individual Boolean States should be mutually exclusive but are not.')
-
-        if not mut_exc_2:
-            raise ValueError('States Symptomatic and Asymptomatic should be mutually exclusive but are not.')
-
-        if not mut_exc_3:
-            raise ValueError('States Susceptible and Infected should be mutually exclusive but are not.')
-
-        if not mut_exc_4:
-            raise ValueError('States Immune and Infected should be mutually exclusive but are not.')
-
-        # Collectively ehaustive
-        coll_exh = (typ.immune | typ.susceptible | typ.prepatent | typ.acute | typ.subclinical | typ.chronic | typ.recovered | sim.people.dead).all()
-
-        if not coll_exh:
-            raise ValueError('Individual Boolean States should be collectively exhaustive but are not.')
-
-        checkall = np.array([mut_exc_1, mut_exc_2, mut_exc_3, mut_exc_4, coll_exh])
-        if not checkall.all():
-            self.success = False
-        return
-
-
 class histograms_by_age_sex_monitor(Monitor):
     """
     Records statistics (counts) by age and sex for each timestep.
     By default, this analyzer records new cases for every time step.
+
+    # A number to adjust the number of cases for imperfect sampling/testing
+    in the real-world
+
+    For instance in the Pakistan simulations with EMOD a value of 0.6 * 0.75 *
+    reporting_rate (emod parameter) is used 60% blood culture sensitivity
+    and 75% health care seeking. By default scaling=1.0, as if we had
+    perfect sampling of the whole population.
     """
-    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None, record_until=None, modality="counts", name=None):
+    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None,
+                 record_until=None, aggregate_sex=False, scaling=1.0,
+                 name=None):
         super().__init__()
         self.name = "hist_by_age_sex" if name is None else name
         self.age_bins = age_bins
@@ -124,18 +116,21 @@ class histograms_by_age_sex_monitor(Monitor):
         self.to_record = to_record
         self.record_from = record_from
         self.record_until = record_until
-        self.record_modality = modality
+        self.scaling = scaling
+        self.aggregate_sex = aggregate_sex
         self.ti = 0
         self.ntpts = None  # Number of timepoints to record
         self.nags  = None  # Number of age groups to record
         self.yearvec = None # This monitor yearvec
+        self.record = None
+        self._apply = None
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
 
         self.ntpts = self.get_ntpts(sim)    # Get right number of timepoints
-        self.nags = len(self.age_bins) - 1  # number of age groups
+        self.nags = len(self.age_bins) - 1  # Number of age groups
 
         if self.age_bin_labels is None:
             self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(self.nags)]
@@ -163,10 +158,20 @@ class histograms_by_age_sex_monitor(Monitor):
             else:
                 res_dtype = specs["path"] if "dtype" in specs else float
                 res_lbl   = specs["label"] if "label" in specs else attrname
-                self.results += [ss.Result(self.name, f"hist_m_{attrname}", (self.ntpts, self.nags),
-                                           dtype=res_dtype, scale=False, label=f"m_{res_lbl}"),
-                                 ss.Result(self.name, f"hist_f_{attrname}", (self.ntpts, self.nags),
-                                           dtype=res_dtype, scale=False, label=f"f_{res_lbl}"),]
+                if self.aggregate_sex:
+                    sexes = ["b"]   # aggregate both sexes
+                else:
+                    sexes = ["f", "m"]
+                for sex in sexes:
+                    self.results += [ss.Result(self.name, f"hist_{sex}_{attrname}",
+                                               (self.ntpts, self.nags), dtype=res_dtype,
+                                               scale=False, label=f"m_{res_lbl}"),]
+        if self.aggregate_sex:
+            self.record = self._record_b
+            self._apply = self._apply_aggregated_sexes
+        else:
+            self.record = self._record_fm
+            self._apply = self._apply_individual_sexes
         return
 
     def get_ntpts(self, sim):
@@ -190,55 +195,116 @@ class histograms_by_age_sex_monitor(Monitor):
         self.record_until = stop_year
         return ntpts
 
-    def get_attr_vals(self, sim, attr_path, attr_name):
-        """Get values of the attribute in attr_path"""
-        attr = sim
-        for attr_link in attr_path:
-            attr = getattr(attr, attr_link)
-        target_attr = attr_name
-        vals = getattr(attr, target_attr)
-        return vals
-
-    def record(self, f_vals, m_vals, attr_name):
+    def _record_fm(self, f_vals, m_vals, attr_name):
         self.results[f"hist_m_{attr_name}"][self.ti, :] = m_vals
         self.results[f"hist_f_{attr_name}"][self.ti, :] = f_vals
         return
 
+    def _record_b(self, b_vals, attr_name):
+        self.results[f"hist_b_{attr_name}"][self.ti, :] = b_vals
+        return
+
+    def _apply_inidvidual_sexes(self, sim):
+        ti = sim.ti
+        living_folks = sim.people.alive
+        living_males = sim.people.male & living_folks
+        living_femal = sim.people.female & living_folks
+
+        for attrname, specs in sorted(self.to_record.items()):
+            attrpath = specs["path"]
+            vals = tyu.get_attr_vals(sim, attrpath, attrname)
+            if attrname.startswith("ti_"):
+                f_uids = ((vals == ti) & living_femal).uids
+                m_uids = ((vals == ti) & living_males).uids
+            else:
+                f_uids = (vals & living_femal).uids
+                m_uids = (vals & living_males).uids
+            f_vals = self.scaling * \
+                     np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
+            m_vals = self.scaling * \
+                     np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
+            self.record(f_vals, m_vals, attrname)
+        return
+
+    def _apply_aggregated_sexes(self, sim):
+        ti = sim.ti
+        living_folks = sim.people.alive
+
+        for attrname, specs in sorted(self.to_record.items()):
+            attrpath = specs["path"]
+            vals = tyu.get_attr_vals(sim, attrpath, attrname)
+            if attrname.startswith("ti_"):
+                b_uids = ((vals == ti) & living_folks).uids
+            else:
+                b_uids = (vals & living_folks).uids
+            b_vals = self.scaling * \
+                     np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
+            self.record(b_vals, attrname)
+        return
+
     def apply(self, sim):
         if sim.year >= self.record_from and (sim.year <= self.record_until):
-            ti = sim.ti
-            living_folks = sim.people.alive
-            living_males = sim.people.male & living_folks
-            living_femal = sim.people.female & living_folks
-
-            for attrname, specs in sorted(self.to_record.items()):
-                attrpath = specs["path"]
-                vals = self.get_attr_vals(sim, attrpath, attrname)
-                if attrname.startswith("ti_"):
-                    f_uids = ((vals == ti) & living_femal).uids
-                    m_uids = ((vals == ti) & living_males).uids
-                else:
-                    f_uids = (vals & living_femal).uids
-                    m_uids = (vals & living_males).uids
-                f_vals = np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
-                m_vals = np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
-                self.record(f_vals, m_vals, attrname)
+            self._apply(sim)
             self.ti += 1
         return
 
     def finalize_results(self):
         super().finalize_results()
-        if self.record_modality in ["proportion", "proportions", "props", "perc"]:
-            for resname, vals in self.results.items():
-                if not resname.endswith("_alive"):
-                    # Proportion of people with attribute "resname" relative to the number of people in each age group
-                    if "_f_" in resname:
-                        denom = "hist_f_alive"
-                    else:
-                        denom = "hist_m_alive"
-                    self.results[f"{resname}"] /= self.results[f"{denom}"]
-                else:
-                    # Proportion of people alive in each age group with respect to total population
-                    self.results[f"hist_m_alive"] /= self.results[f"hist_m_alive"].sum(axis=1)[:, None]
-                    self.results[f"hist_f_alive"] /= self.results[f"hist_f_alive"].sum(axis=1)[:, None]
+        return
+
+
+
+class states_consistency_monitor(Monitor):
+    """ Analyzer to track everything -- use for debug pruposes """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.name = 'states_consistency'
+        self.success = True
+        return
+
+    def update_results(self, sim):
+        return self.apply(sim)
+
+    def apply(self, sim):
+        """
+        Checks states that should be mutually exlusive and collectively exhaustive
+        """
+        typ = sim.diseases.typhoid
+
+        # Mutually exclusive estates
+        mut_exc_1 = ~(
+                    typ.immune & typ.susceptible & typ.prepatent & typ.acute & typ.subclinical & typ.chronic & typ.recovered).any()
+        mut_exc_2 = ~(typ.asymptomatic & typ.symptomatic).any()
+        mut_exc_3 = ~(typ.susceptible & typ.infected).any()
+        mut_exc_4 = ~(typ.immune & typ.infected).any()
+
+        if not mut_exc_1:
+            raise ValueError(
+                'Individual Boolean States should be mutually exclusive but are not.')
+
+        if not mut_exc_2:
+            raise ValueError(
+                'States Symptomatic and Asymptomatic should be mutually exclusive but are not.')
+
+        if not mut_exc_3:
+            raise ValueError(
+                'States Susceptible and Infected should be mutually exclusive but are not.')
+
+        if not mut_exc_4:
+            raise ValueError(
+                'States Immune and Infected should be mutually exclusive but are not.')
+
+        # Collectively ehaustive
+        coll_exh = (
+                    typ.immune | typ.susceptible | typ.prepatent | typ.acute | typ.subclinical | typ.chronic | typ.recovered | sim.people.dead).all()
+
+        if not coll_exh:
+            raise ValueError(
+                'Individual Boolean States should be collectively exhaustive but are not.')
+
+        checkall = np.array(
+            [mut_exc_1, mut_exc_2, mut_exc_3, mut_exc_4, coll_exh])
+        if not checkall.all():
+            self.success = False
         return

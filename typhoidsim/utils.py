@@ -15,6 +15,7 @@ from . import settings as tys
 
 # Specify all externally visible things this file defines
 __all__ = ['get_data_home', 'load_dataset', 'get_dataset_names']
+__all__ += ['get_attr_vals']
 __all__ += ['digitize_ages_1yr']
 __all__ += ['test_cpu_performance']
 __all__ += ['generate_unique_filename', 'to_df']
@@ -38,6 +39,16 @@ def digitize_ages(ages, age_group_lb):
     This function returns the 0-based indices of the age bins passed in age_group_lb
     """
     return np.digitize(ages, age_group_lb) - 1  # returns 0-based indices of the group
+
+
+def get_attr_vals(sim, attr_path, attr_name):
+    """Get values of the attribute in attr_path"""
+    attr = sim
+    for attr_link in attr_path:
+        attr = getattr(attr, attr_link)
+    target_attr = attr_name
+    vals = getattr(attr, target_attr)
+    return vals
 
 
 def get_data_home(data_home=None):
