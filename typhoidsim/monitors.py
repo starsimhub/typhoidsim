@@ -44,28 +44,28 @@ class Monitor(ss.Analyzer):
     def setup_sampling_mode(self):
         pass
 
-    def downsample(self, mode=None):
-        """"
-        Implement temporal downsample of results
-        This modifies the self.results ndict.
-        """
-        if mode is None:
-            pass
-        elif mode == "subsample":
-            pass
-        elif mode == "aggregate":
-            if agg_type == "sum":
-                pass
-            elif agg_type == "min":
-            elif agg_type == "max":
-            elif agg_type == "mean":
-            elif agg_type == "sum":
-            else:
-                raise NotImplementedError(tyd.sorry_mssg)
-
-            pass
-
-        raise NotImplementedError(tyd.sorry_mssg)
+    # def downsample(self, mode=None):
+    #     """"
+    #     Implement temporal downsample of results
+    #     This modifies the self.results ndict.
+    #     """
+    #     if mode is None:
+    #         pass
+    #     elif mode == "subsample":
+    #         pass
+    #     elif mode == "aggregate":
+    #         if agg_type == "sum":
+    #             pass
+    #         elif agg_type == "min":
+    #         elif agg_type == "max":
+    #         elif agg_type == "mean":
+    #         elif agg_type == "sum":
+    #         else:
+    #             raise NotImplementedError(tyd.sorry_mssg)
+    #
+    #         pass
+    #
+    #     raise NotImplementedError(tyd.sorry_mssg)
 
     def temporal_subsample(self):
         pass
@@ -107,7 +107,8 @@ class histograms_by_age_sex_monitor(Monitor):
     perfect sampling of the whole population.
     """
     def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None,
-                 record_until=None, aggregate_sex=False, scaling=1.0,
+                 record_until=None, aggregate_sex=False, aggregate_time=None, scaling=1.0,
+                 resampling_period=None,
                  name=None):
         super().__init__()
         self.name = "hist_by_age_sex" if name is None else name
@@ -118,16 +119,27 @@ class histograms_by_age_sex_monitor(Monitor):
         self.record_until = record_until
         self.scaling = scaling
         self.aggregate_sex = aggregate_sex
+        self.aggregate_time = aggregate_time
+        self.resampling_period = resampling_period
         self.ti = 0
+        # Attributes that will be set later
+        self.monitor_step = 1 # number of "dt" that fit in one resampling period
         self.ntpts = None  # Number of timepoints to record
         self.nags  = None  # Number of age groups to record
-        self.yearvec = None # This monitor yearvec
+        self.itpts = None
+        self.yearvec = None  # This monitor yearvec
         self.record = None
+        self.agg_func = None
         self._apply = None
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
+
+        if self.aggregate_time:
+            self.monitor_step = round(self.resampling_period/sim.dt)
+        else:
+            self.resampling_period = sim.dt
 
         self.ntpts = self.get_ntpts(sim)    # Get right number of timepoints
         self.nags = len(self.age_bins) - 1  # Number of age groups
@@ -175,6 +187,7 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def get_ntpts(self, sim):
+        """ Get thr gith number of timepoints for the Result arrays"""
         if self.record_from is None and self.record_until is None:
             start_year = sim.pars.start
             stop_year = sim.pars.end
@@ -187,13 +200,25 @@ class histograms_by_age_sex_monitor(Monitor):
         else:
             start_year = self.record_from
             stop_year = self.record_until
-        self.yearvec = sc.inclusiverange(start_year, stop_year, sim.dt)
+
+        self.yearvec = sc.inclusiverange(start_year, stop_year, self.resampling_period)
         ntpts = len(self.yearvec)
 
         # Update
         self.record_from = start_year
         self.record_until = stop_year
         return ntpts
+
+    def setup_sampling_mode(self):
+        # Integer number of time points to aggregate
+
+        aggregation_functions = {
+            'mean': np.mean,
+            'min': np.min,
+            'max': np.max,
+            'median': np.median
+        }
+        self.agg_func = aggregation_functions.get(self.aggregate_time)
 
     def _record_fm(self, f_vals, m_vals, attr_name):
         self.results[f"hist_m_{attr_name}"][self.ti, :] = m_vals
@@ -204,7 +229,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.results[f"hist_b_{attr_name}"][self.ti, :] = b_vals
         return
 
-    def _apply_inidvidual_sexes(self, sim):
+    def _apply_individual_sexes(self, sim):
         ti = sim.ti
         living_folks = sim.people.alive
         living_males = sim.people.male & living_folks
@@ -244,14 +269,14 @@ class histograms_by_age_sex_monitor(Monitor):
 
     def apply(self, sim):
         if sim.year >= self.record_from and (sim.year <= self.record_until):
-            self._apply(sim)
-            self.ti += 1
+            if sim.ti % self.monitor_step == 0:
+                self._apply(sim)
+                self.ti += 1
         return
 
     def finalize_results(self):
         super().finalize_results()
         return
-
 
 
 class states_consistency_monitor(Monitor):
@@ -273,8 +298,9 @@ class states_consistency_monitor(Monitor):
         typ = sim.diseases.typhoid
 
         # Mutually exclusive estates
-        mut_exc_1 = ~(
-                    typ.immune & typ.susceptible & typ.prepatent & typ.acute & typ.subclinical & typ.chronic & typ.recovered).any()
+        mut_exc_1 = ~(typ.immune & typ.susceptible & typ.prepatent & typ.acute &
+                      typ.subclinical & typ.chronic & typ.recovered
+                      ).any()
         mut_exc_2 = ~(typ.asymptomatic & typ.symptomatic).any()
         mut_exc_3 = ~(typ.susceptible & typ.infected).any()
         mut_exc_4 = ~(typ.immune & typ.infected).any()
@@ -296,8 +322,9 @@ class states_consistency_monitor(Monitor):
                 'States Immune and Infected should be mutually exclusive but are not.')
 
         # Collectively ehaustive
-        coll_exh = (
-                    typ.immune | typ.susceptible | typ.prepatent | typ.acute | typ.subclinical | typ.chronic | typ.recovered | sim.people.dead).all()
+        coll_exh = (typ.immune | typ.susceptible | typ.prepatent | typ.acute |
+                    typ.subclinical | typ.chronic | typ.recovered | sim.people.dead
+                    ).all()
 
         if not coll_exh:
             raise ValueError(
