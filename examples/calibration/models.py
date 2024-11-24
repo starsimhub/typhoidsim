@@ -15,8 +15,8 @@ import data_utils as utils
 def get_common_simulation_pars():
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =2016.0,         # Start year
-        n_years  =8.0,            # Duration of the simulation in years
+        start    =2000.0,         # Start year
+        n_years  =30.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         n_agents =10_000,         # Number of agents in the population
         verbose  =0,              # Print details of the run
@@ -121,7 +121,8 @@ def baseline_model():
                                                      resampling_period=1.0,  # Record data on a yearly basis, so we can aggregate later
                                                      aggregate_sex=True,
                                                      aggregate_time="sum",   # Sum over the resampling period (to get incidence)
-                                                     record_from=2016.0,
+                                                     record_from=2017.0,
+                                                     record_until=2023.0,
                                                      name="monitor_1")
 
     monitor_population = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
@@ -130,7 +131,8 @@ def baseline_model():
                                                           resampling_period=1.0,  # Record data on a yearly basis, so we can aggregate later
                                                           aggregate_sex=True,
                                                           aggregate_time="mean",  # Average the number of living people over the resampling period
-                                                          record_from=2016.0,
+                                                          record_from=2017.0,
+                                                          record_until=2023.0,
                                                           name="monitor_2")
 
     model_definition = dict(pars=pars, people=ppl, diseases=[typhoid],
