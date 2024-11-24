@@ -66,3 +66,4 @@ timevec = sim.get_analyzers()[0].yearvec
 ty.plot_sim(sim, key="monitor_", yearvec=timevec)
 sim.plot(key="typhoid_new")
 plt.show()
+breakpoint()

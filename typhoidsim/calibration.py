@@ -567,7 +567,7 @@ class Calibration220(sc.prettyobj):
         ss.options.jupyter = False
 
         self.before_msim.reduce()
-        fig_before = self.before_msim.plot()
+        fig_before = self.before_msim.plot(**kwargs)
         fig_before.suptitle('Before calibration')
 
         self.after_msim.reduce()
@@ -655,6 +655,7 @@ class CalibComponent220(sc.prettyobj):
     def __init__(self, name, expected, extract_fn, conform, nll_fn, weight=1.0):
         self.name = name
         self.expected = expected
+        self.predicted = None
         self.extract_fn = extract_fn
         self.weight = weight
         self.nll = np.nan
@@ -696,7 +697,7 @@ class CalibComponent220(sc.prettyobj):
     def eval(self, sim):
         """ Compute and return the negative log likelihood """
         predicted = self.extract_fn(sim)                     # Extract simulated data
-        predicted = self.conform(self.expected, predicted)   # Conform/interpolate to common grid
+        self.predicted = self.conform(self.expected, predicted)   # Conform/interpolate to common grid
         self.nll = self.nll_fn(self.expected, predicted)     # Negative log likelihood
         return self.weight * np.sum(self.nll)                # Sum across time
 
@@ -707,6 +708,7 @@ class CalibComponent220(sc.prettyobj):
         return f"Calibration component with name {self.name}"
 
     def plot(self):
+
         raise NotImplementedError
 
 
