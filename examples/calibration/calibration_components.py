@@ -1,7 +1,14 @@
+"""
+This is a collection of functions, and classes to perform calibration.
+
+
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import datetime
+from functools import partial
 
 import sciris as sc
 import starsim as ss
@@ -12,10 +19,10 @@ import data_utils as utils
 
 def parse_update_sim_pars(sim, calib_pars, **kwargs):
     """
-    Also referred to as as build_sim function.
+    Also referred to as as build_sim function in some of starsim's ttutorials.
 
-    Tell the Calibration class how to reach and update a parameter value
-    for our specific model.
+    This function tells the Calibration class how to reach and update a parameter
+    value for our specific model encapuslated in the sim object..
 
     The more modules our full model has, the more complex to navigate the path
     to find and update the required parameters.
@@ -59,36 +66,90 @@ def get_calib_pars(calibration_step="step_1"):
     return calib_pars
 
 
-def make_calib_components(targets="all_cases"):
-    df = utils.load_empirical_data_pakistan()
-    # Add a column with a similar representation of time
-    df["yearvec"] = np.array([sc.datetoyear(t) for t in df["Date"] if isinstance(t, datetime.date)])
-    df_2_to_15 = df.loc[(df["Ages"] == "Kids2to15"), :]
-    data = df_2_to_15["Sindh_positive"].astype(float).to_numpy()
+def get_calib_components(calibration_targets="all_cases"):
 
-    # TODO: find a better way to do this, in case we change the age bins
-    age_bin_labels = ['<2', '2-15', '15+']  # human readable labels
-    # Make dictionary to map labes to array index in analyzer result array
-    age_bins_dict = {label: idx for idx, label in enumerate(age_bin_labels)}
+    match calibration_targets:
+        case "all_cases":
+            reference_data = utils.get_reference_dataset_csv(dataset_name="CasesByAgeAll",
+                                                             filepath="reference_data/reference_data_flat_sindh.csv")
+            return make_calib_components_by_age_yearly_incidence(reference_data)
+        case _:
+            raise NotImplementedError
 
-    # Example with females between 2 <= age < 4
-    # NOTE: This calib components objects are like the Analyzers in typhoid-pakistan-calibration repo
-    f_infectious_2_to_15 = ty.CalibComponent220(
-        name='f_positive_2_15',
-        # Reference data
-        expected=pd.DataFrame({
-            'n': data * 5.0,  # !!! TODO: CHANGE!!! Made up scaling because "Sindh_tested" is all NaNs for this age group
-            'x': data,  # Count/Number of individuals found to test positive
-        }, index=pd.Index(df_2_to_15["yearvec"], name='t')),  # On these dates
-        # Extract equivalent data from the simulation
-        extract_fn=lambda sim: pd.DataFrame({
-            'n': sim.analyzers.hist_by_age_sex.results.hist_f_alive[:, age_bins_dict['2-15']],     # Number of individuals who were tested
-            'x': sim.analyzers.hist_by_age_sex.results.hist_f_infected[:, age_bins_dict['2-15']],  # Number of individuals whose test was positive
-        }, index=pd.Index(sim.analyzers.hist_by_age_sex.yearvec, name='t')),  # Index is time
 
-        conform='prevalent',
-        nll_fn='beta',
-        weight=1,  # Not required if only one component
-    )
-    components = [f_infectious_2_to_15]
+def make_calib_components_by_age_yearly_incidence(reference_data):
+    """
+    Builds a list of calibration components. Each component is a data source
+    """
+    components = []
+    num_age_bins = reference_data.age_bin_label.nunique()
+    for this_age_bin in sorted(reference_data.age_bin_label.unique()):
+        expected_data = extract_reference_data(reference_data, selected_age_bin=this_age_bin)
+        extract_data_from_sim_fn = partial(extract_simulated_data_incidence, selected_age_bin=this_age_bin)
+        components.append(ty.CalibComponent220(
+                name=f"cases_by_age_{this_age_bin}",
+                expected=expected_data,
+                extract_fn=extract_data_from_sim_fn,
+                conform="prevalent",
+                nll_fn="beta",
+                weight=1.0/num_age_bins,  # Not strictly necessary to weight it like this
+            ))
     return components
+
+
+def extract_simulated_data_incidence(sim, selected_age_bin="<2"):
+    """
+    Receive a sim object, extract necessary data, and output a dataframe
+    that will be used by a CalibComponent.
+
+    This is similar to the method 'retrieve_age_data' in AgeDistAnalyzer_Count.py
+
+    We can have multiple extraction functions, depending on what data we need
+    from the simulation and how we need to aggregate simulated data to
+    match the empirical/reference data. Starsim's Calibration expects
+    a specific format for the dataframes it works with.
+
+    Each CalibComponent independently assesses pseudo-likelihood as part of
+    evaluating the quality of input parameters.
+
+    Returns:
+        simulated_data (pandas.Dataframe): with columns:
+         - 'n' number of agents in an age bin)
+         - 'x' counts of the metric of interest (ie, new cases)
+         - 'age_bin' a string with the human readable label of this age bin
+         - index is time; index name is 't'
+    """
+
+    sim_results = sim.results.flatten()
+    cases_key = "monitor_1_hist_b_ti_acute"    # New cases (acute), summed over the period of the monitor/report
+    population_key = "monitor_2_hist_b_alive"  # Average (mean) number of agents alive over the period of the monitor/report
+    lbl_to_idx = sim.get_analyzers()[0].age_bin_lbl_to_idx    # Mapping between age bin string labels and index in the results 2D arrays
+    yearvec = pd.Series(sim_results["monitor_1_yearvec"][:])  # The time vector of the simulated data, expressed in "float" calendar years, ie 2000.0, 2000.1 ...
+    this_idx = lbl_to_idx[selected_age_bin]
+    # Build the dataframe the calibration component needs
+    x = sim_results[cases_key][:, this_idx]
+    n = sim_results[population_key][:, this_idx]
+    simulated_data = pd.DataFrame(data={"n": n,
+                                        "x": x,
+                                        "age_bin": selected_age_bin},
+                                  index=pd.Index(yearvec, name="t"))
+    return simulated_data
+
+
+def extract_reference_data(reference_data, selected_age_bin="<2"):
+
+    """
+    This function is similar to get_age_ref_data in AgeDistAnalyzer_Count.py
+    """
+
+    age_bin_mask = (reference_data["age_bin_label"] == selected_age_bin)
+    dataset_data = reference_data.loc[age_bin_mask, :]
+    yearvec = dataset_data["year_start"].astype(float)
+
+    n = dataset_data["Population_surveillance"].astype(float).to_numpy()
+    x = dataset_data["Cases"].astype(float).to_numpy()
+    expected_data = pd.DataFrame(data={"n": n,
+                                       "x": x,
+                                       "age_bin": selected_age_bin},
+                                 index=pd.Index(yearvec, name="t"))
+    return expected_data

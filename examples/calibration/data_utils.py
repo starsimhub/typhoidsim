@@ -196,3 +196,46 @@ def save_simulation_outputs(sim, batch_name="calib_pak_sindh", output_dir=None):
     # gets hung up in recursion and serialisation of objects (starsim distributions)
     #sim.to_json(filename=output_dir + filename + ".json", keys=['parameters'])
     return sim_df  # in case we want to do something else with the data
+
+
+def get_reference_dataset_xls(dataset_name, filepath):
+    """
+    Dataset name refers to the sheet name in the excel file with all
+    the reference data.
+    """
+    xls_file = pd.ExcelFile(filepath)
+    if dataset_name in xls.sheet_names:
+        df = pd.read_excel(xls, dataset_name)
+        return df
+    else:
+        raise ValueError(f"Sheet {dataset_name} not found in {filepath}")
+
+
+def get_reference_dataset_csv(dataset_name, filepath):
+    """
+    Dataset name refers to the sheet name in the original excel file with all
+    the reference data. The sheetname now exists under the column
+    'dataset_name'
+    """
+    csv_file = pd.read_csv(filepath)
+    dataset_mask = (csv_file["dataset_name"] == dataset_name)
+    df = csv_file.loc[dataset_mask, :]
+    return df
+
+
+
+def parse_bin_edges(str_bin):
+    """
+    Parse age or year bins defined in strings as
+    [lower_bound, upper_bound) or [lower_bound, upper_bound].
+
+    This function returns the bin edges in numeric representation.
+
+    """
+    # print str_bin
+    str_bin = str_bin.replace('[', '')
+    str_bin = str_bin.replace(']', '')
+    str_bin = str_bin.replace(')', '')
+    arr = str_bin.split(',')
+    lower_bound, upper_bound = round(str(arr[0]).strip()), round(str(arr[1]).strip())
+    return lower_bound, upper_bound
