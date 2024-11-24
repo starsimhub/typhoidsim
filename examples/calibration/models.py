@@ -105,8 +105,11 @@ def baseline_model():
 
     # OBSERVATIONS AND REPORTING
     # Create an analyzer that will provide the results we need to compare to target empirical data
-    age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
-    age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']  # human readable labels
+    # age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
+    # age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']  # human readable labels
+
+    age_bin_edges = [0, 2, 15, ty.max_age]
+    age_bin_labels = ['<2', '2-14', '15+']  # human readable labels
 
     # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
     record_cases = dict(ti_acute=dict(path=("diseases", "typhoid"), label="cases"))
@@ -115,18 +118,18 @@ def baseline_model():
     monitor_cases = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
                                                      age_bin_labels=age_bin_labels,
                                                      to_record=record_cases,
-                                                     resampling_period=1.0,  # Record data on a montly basis, so we can aggregate later
+                                                     resampling_period=1.0,  # Record data on a yearly basis, so we can aggregate later
                                                      aggregate_sex=True,
-                                                     aggregate_time="sum",         # Sum over the resampling period (to get incidence)
+                                                     aggregate_time="sum",   # Sum over the resampling period (to get incidence)
                                                      record_from=2016.0,
                                                      name="monitor_1")
 
     monitor_population = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
                                                           age_bin_labels=age_bin_labels,
                                                           to_record=record_population,
-                                                          resampling_period=1.0,  # Record data on a montly basis, so we can aggregate later
+                                                          resampling_period=1.0,  # Record data on a yearly basis, so we can aggregate later
                                                           aggregate_sex=True,
-                                                          aggregate_time="mean",        # Average the number of living people over the resampling period
+                                                          aggregate_time="mean",  # Average the number of living people over the resampling period
                                                           record_from=2016.0,
                                                           name="monitor_2")
 
