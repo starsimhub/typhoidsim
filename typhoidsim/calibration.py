@@ -785,7 +785,7 @@ def linear_interp(expected, actual):
     """
     conformed = pd.DataFrame(index=expected.index)
     common_time_grid = expected.index
-    for col in actual:
+    for col in ["x", "n"]:
         conformed[col] = np.interp(x=common_time_grid, xp=actual.index, fp=actual[col])
     return conformed
 
@@ -814,15 +814,15 @@ def linear_accum(expected, actual):
     t_step = np.diff(common_time_grid )
     assert np.all(t_step == t_step[0])  # Check we have regularly sampled data
 
-    # Make common time grid
-    cum_time_grid = np.append(common_time_grid, common_time_grid[-1] + t_step)  # Add one more because later we'll diff
+    # Make cumulative
+    cum_time_grid = np.append(common_time_grid, common_time_grid[-1] + t_step[0])  # Add one more because later we'll diff
 
     if isinstance(actual.index, pd.DatetimeIndex):
         actual_time_grid = np.array([sc.datetoyear(t) for t in actual.index if isinstance(t, datetime.date)])
     else:
         actual_time_grid = actual.index
 
-    for col in actual:
+    for col in ["x", "n"]:
         sdi = np.interp(x=cum_time_grid, xp=actual_time_grid, fp=actual[col].cumsum())
         conformed[col] = pd.Series(np.diff(sdi), index=common_time_grid)
     return conformed
