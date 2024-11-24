@@ -60,8 +60,8 @@ def get_calib_pars(calibration_step="step_1"):
                 tai=dict(low=1e-4, high=1e5, guess=42_808, log=True),
                 # typhoid environmental exposure rate
                 teer=dict(low=0.0, high=10.0, guess=1.99),
-                rel_trans=dict(low=1e-4, high=1e-1, guess=1e-4, log=True),
-                init_prev=dict(low=0.01, high=0.1, guess=0.05)
+                rel_trans=dict(low=1e-4, high=1, guess=1.0, log=True),
+                init_prev=dict(low=0.0005, high=0.001, guess=0.0005)
             )
         case _:
             raise ValueError(f"Do not have calibration parameters: {calibration_step}. "

@@ -50,7 +50,7 @@ class Typhoid(ss.Disease):
             cfu_me_hi=55_000_000.0,  # Threshold CFU value to determine whether  to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
 
             # Infected/Diseased stage, (acute and sublinical)
-            p_acute=ss.bernoulli(p=0.234),  # Prob of becoming acute
+            p_acute=ss.bernoulli(p=0.16),  # Prob of becoming acute
             # Age-dependent acute and subclincial duration distribution parameters
             inf_dur_th_age=30.0,     # Duration of clinically diagnosable cases (acute/subclinical) age threshold.
             # For people aged less than threshold
@@ -82,10 +82,10 @@ class Typhoid(ss.Disease):
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Infectiousness parameters
             tai=40_000.0,  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
-            tpri=0.4,      # Typhoid relative (to acute) prepatent infectiousness
-            tsri=0.8,      # Typhoid relative (to acute) subclinic infectiousness
-            tcri=0.1,      # Typhoid relative (to acute) chronic infectiousness
-            tppi=0.99,     # Decrease in susceptibility per infection (exponential decrease)
+            tpri=0.5,      # Typhoid relative (to acute) prepatent infectiousness
+            tsri=1.0,      # Typhoid relative (to acute) subclinic infectiousness
+            tcri=0.241,      # Typhoid relative (to acute) chronic infectiousness
+            tppi=0.98,     # Decrease in susceptibility per infection (exponential decrease)
             drc_alpha=0.175,  # parameter in the Dose Response Curve
             drc_n50=1.11e6,   # parameter in the Dose Response Curve
 
@@ -206,6 +206,9 @@ class Typhoid(ss.Disease):
         # a class where they cannot get infected, and then
         # move to the susceptible class at probabilities
         # for each age.
+        over_20_uids = (self.sim.people.age > 20.0).uids
+        self.susceptible[over_20_uids] = True
+        self.unexposed[over_20_uids] = False
 
         # Determines which individuals enter the susceptible class.
         self.make_susceptible()

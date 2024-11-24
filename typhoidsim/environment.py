@@ -19,17 +19,17 @@ class EnvironmentalPool(ss.Demographics):
         super().__init__()
         self.default_pars(
             init_cfu=0,            # Initial level of CFUs in the environment.
-            decay_rate=0.2,        # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
+            decay_rate=0.3,        # Decay rate of environmental in fraction of CFUs that decay in 1/day (init_cfu*exp(-decay_rate*t))
             volume=1e4,            # Assumed volume of the environmental pool. Units: to be defined: See https://www.pnas.org/doi/full/10.1073/pnas.1719579115
             acceptable_level=600,  # CFU/volume, usually expressed in CFU/ml (not used at the moment) #TODO: to be used with an environmental monitor intervention
             transmission=ss.Pars(
                 rel_trans=1e-3,     # Long-cycle exposure (to the environment) multiplier, targeted by interventions, mEL in Gauld et al 2018
-                shedding_rate=0.3,                           # Rate at which infectious people shed colony-forming units to the environment (per day)
+                shedding_rate=1.0,                           # Rate at which infectious people shed colony-forming units to the environment (per day)
                 env2ppl_exposure_rate=ss.poisson(lam=2.0),   # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)/day -- lam is equivalent to typhoid_environmental_exposure_rate
 
             ),
             teer_lam=2.0,     # HACKY parameter, otherwise CAlibration class does not ru where the path to the parameter is longer than 3
-        # Temperature-parameters, not used at the moment
+            # Temperature-parameters, not used at the moment
             bs_temp=6.0,   # Baseline temperature at which bacteria would stop growing, in degree Celsius
             av_temp=14.0,  # typ.Pattern("av_temp", pars={'av_temp': 14.0}, pattern_name="Environmental Temperature"),
             b=0.0297,      # fraction of change (increase or decrease) in [growth rate/degree Celsius]
@@ -91,7 +91,7 @@ class EnvironmentalPool(ss.Demographics):
 
         # For external changes that may promote bacterial growth
         growth_rate = self.get_growth_rate()
-        change_rate = (p.decay_rate-growth_rate)
+        change_rate = (p.decay_rate)
         effective_rate = (change_rate / tyd.day2year)  # transform to yearly rate
         self.sv.cfu_conc[ti-1] = self.sv.cfu_conc[ti-2] * np.exp(-effective_rate*self.sim.dt)  # + shedded into environment + decay
         return

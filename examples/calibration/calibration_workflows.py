@@ -30,7 +30,7 @@ import models
 import calibration_components as cbcomp
 import data_utils as utils
 
-calib_debug = True  # If true, calibration will run in serial
+calib_debug = False  # If true, calibration will run in serial
 
 
 def run_starsim_calibration_step_1(do_plot=True):
@@ -45,7 +45,7 @@ def run_starsim_calibration_step_1(do_plot=True):
             sim=sim,
             build_fn=cbcomp.parse_update_sim_pars,  # Tell the calibration how to update parameters
             components=components,
-            total_trials=16,
+            total_trials=128,
             n_workers=4,
             die=True,
             debug=calib_debug

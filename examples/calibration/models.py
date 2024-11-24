@@ -76,7 +76,7 @@ def baseline_model():
                      'tppi': 0.98,
                      'p_cpg': 0.108,
                      'p_acute': ss.bernoulli(p=0.16),
-                     'init_prev': ss.bernoulli(p=0.06),         # Initial prevalence: This is how we seed infections at the start of a simulation. In this case approx 5% of the total population of agents, will be infected at t=0
+                     'init_prev': ss.bernoulli(p=0.0005),         # Initial prevalence: This is how we seed infections at the start of a simulation. In this case approx 5% of the total population of agents, will be infected at t=0
                      'p_unexp2sus': ss.bernoulli(p=p_unexp2sus_parc_fun)}
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
@@ -84,7 +84,7 @@ def baseline_model():
     # ENVIRONMENT
     environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  # TEER: Typhoid environmental exposure rate
                                              'volume': 1,       # Set the volume to 1 if we want to reproduce EMOD-like results
-                                             'transmission': ss.Pars({'rel_trans': 0.00001})})  # This parameter is equivalent to mEL parameter in Gauld etal 2018
+                                             'transmission': ss.Pars({'rel_trans': 0.001})})  # This parameter is equivalent to mEL parameter in Gauld etal 2018
 
     # INTERVENTIONS: Vaccination campaigns
 
@@ -130,7 +130,7 @@ def baseline_model():
                                                           to_record=record_population,
                                                           resampling_period=1.0,  # Record data on a yearly basis, so we can aggregate later
                                                           aggregate_sex=True,
-                                                          aggregate_time="mean",  # Average the number of living people over the resampling period
+                                                          aggregate_time="sum",  # Average the number of living people over the resampling period
                                                           record_from=2017.0,
                                                           record_until=2023.0,
                                                           name="monitor_2")
@@ -226,7 +226,7 @@ def run_debug_single_sim(do_plot=True):
     sim.run()
     if do_plot:
         timevec = sim.get_analyzers()[0].yearvec
-        ty.plot_sim(sim, key="monitor_", yearvec=timevec)
+        ty.plot_sim(sim, key="typhoid_")
         plt.show()
     return sim
 
@@ -243,7 +243,7 @@ def run_debug_multisim(do_plot=True):
 
     # Let's change a parameter in sim2
     sim2.initialize()
-    sim2.diseases.typhoid.pars.tai = 1_000
+    sim2.diseases.typhoid.pars.tai = 10_000
 
     sim3.initialize()
     sim3.diseases.typhoid.pars.tai = 100_000
@@ -251,10 +251,13 @@ def run_debug_multisim(do_plot=True):
     msim = ss.MultiSim(sims)
     msim.run()
     if do_plot:
-        msim.plot()
+        for sim in msim.sims:
+            timevec = sim.get_analyzers()[0].yearvec
+            ty.plot_sim(sim, key="typhoid_")
         plt.show()
     return msim
 
 
 if __name__ == "__main__":
     run_debug_single_sim()
+    #run_debug_multisim(do_plot=True)
