@@ -121,6 +121,8 @@ class histograms_by_age_sex_monitor(Monitor):
             self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, sim.dt))
 
         self.nags = len(self.age_bins) - 1  # Number of age groups
+        # Save a mapping between human readable age bin label and column index in the results array
+        self.age_bin_lbl_to_idx = {lbl: idx for idx, lbl in enumerate(self.age_bin_labels)}
 
         if self.age_bin_labels is None:
             self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(self.nags)]
@@ -157,6 +159,10 @@ class histograms_by_age_sex_monitor(Monitor):
                         ss.Result(self.name, f"hist_{sex}_{attrname}",
                                   (self.ntpts, self.nags), dtype=res_dtype,
                                   scale=False, label=f"{sex}_{res_lbl}"), ]
+
+        self.results += [ss.Result(self.name, f"yearvec", (self.ntpts, ),
+                                   dtype=float, scale=False, label=f"Calendar years (float representation)"), ]
+
         if self.aggregate_sex:
             self.record = self._record_b
             self._apply = self._apply_aggregated_sexes
@@ -171,11 +177,11 @@ class histograms_by_age_sex_monitor(Monitor):
             start_year = sim.pars.start
             stop_year = sim.pars.end
         elif self.record_from is not None and self.record_until is None:
-            start_year = self.record_from
+            start_year = self.record_from if not self.record_from < sim.pars.start else sim.pars.start
             stop_year = sim.pars.end
         elif self.record_from is None and self.record_until is not None:
             start_year = sim.pars.start
-            stop_year = self.record_until
+            stop_year = self.record_until if not self.record_until > sim.pars.end else sim.pars.end
         else:
             start_year = self.record_from
             stop_year = self.record_until
@@ -264,6 +270,7 @@ class histograms_by_age_sex_monitor(Monitor):
         super().finalize_results()
         for stock_name in self.stocks:
             self.results[stock_name][:] = self.aggregate(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
+        self.results["yearvec"][:] = self.yearvec
         return
 
 
