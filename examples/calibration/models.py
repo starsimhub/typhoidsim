@@ -15,8 +15,8 @@ import data_utils as utils
 def get_common_simulation_pars():
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =2017.0,         # Start year
-        n_years  =6.0,            # Duration of the simulation in years
+        start    =2016.0,         # Start year
+        n_years  =8.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         n_agents =10_000,         # Number of agents in the population
         verbose  =0,              # Print details of the run
@@ -103,22 +103,37 @@ def baseline_model():
     # Intervention that applies the seasonal pattern to modulate the relative transmissibility/exposure environemnt -> people
     exposure_modulation = ty.environmental_trapezoidal_modulation(efficacy=trapezoidal_pattern, start_year=pars["start"])
 
-    # Intervention base test. This mimics the imperfect/incomplete nature of empirical data through the lens of testing a fraction of the population.
-    test = ty.base_test(prob_t=0.3, prob_tp=1.0, eligibility=ty.eligibility_by_age)
-
     # OBSERVATIONS AND REPORTING
     # Create an analyzer that will provide the results we need to compare to target empirical data
-    age_bin_edges = [0, 2, 15, ty.max_age]
-    age_bin_labels = ['<2', '2-15', '15+']  # human readable labels
+    age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
+    age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']  # human readable labels
 
     # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
-    anz = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
-                                           age_bin_labels=age_bin_labels)
+    record_cases = dict(ti_acute=dict(path=("diseases", "typhoid"), label="cases"))
+    record_population = dict(alive=dict(path=("people",)))
+
+    monitor_cases = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
+                                                     age_bin_labels=age_bin_labels,
+                                                     to_record=record_cases,
+                                                     resampling_period=1.0,  # Record data on a montly basis, so we can aggregate later
+                                                     aggregate_sex=True,
+                                                     aggregate_time="sum",         # Sum over the resampling period (to get incidence)
+                                                     record_from=2016.0,
+                                                     name="monitor_1")
+
+    monitor_population = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
+                                                          age_bin_labels=age_bin_labels,
+                                                          to_record=record_population,
+                                                          resampling_period=1.0,  # Record data on a montly basis, so we can aggregate later
+                                                          aggregate_sex=True,
+                                                          aggregate_time="mean",        # Average the number of living people over the resampling period
+                                                          record_from=2016.0,
+                                                          name="monitor_2")
 
     model_definition = dict(pars=pars, people=ppl, diseases=[typhoid],
                             demographics=vital_dynamics + [environment],
-                            interventions=[test, exposure_modulation],
-                            analyzers=[anz])
+                            interventions=[exposure_modulation],
+                            analyzers=[monitor_cases, monitor_population])
 
     return model_definition
 
@@ -205,7 +220,8 @@ def run_debug_single_sim(do_plot=True):
     sim = make_sim(scenario="baseline")
     sim.run()
     if do_plot:
-        sim.plot()
+        timevec = sim.get_analyzers()[0].yearvec
+        ty.plot_sim(sim, key="monitor_", yearvec=timevec)
         plt.show()
     return sim
 
