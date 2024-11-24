@@ -134,11 +134,6 @@ class histograms_by_age_sex_monitor(Monitor):
             self.to_record = {state: dict(path=("diseases", "typhoid")) for state in states_of_interest}
             alive_dict = dict(alive=dict(path=("people",)))
             self.to_record.update(alive_dict)
-        else:
-            # Add alive as we need this to enable proportions
-            if "alive" not in self.to_record.keys():
-                alive_dict = dict(alive=dict(path=("people",)))
-                self.to_record.update(alive_dict)
 
         for attrname, specs in self.to_record.items():
             if "path" not in specs:
