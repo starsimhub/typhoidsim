@@ -204,8 +204,8 @@ def get_reference_dataset_xls(dataset_name, filepath):
     the reference data.
     """
     xls_file = pd.ExcelFile(filepath)
-    if dataset_name in xls.sheet_names:
-        df = pd.read_excel(xls, dataset_name)
+    if dataset_name in xls_file.sheet_names:
+        df = pd.read_excel(xls_file, dataset_name)
         return df
     else:
         raise ValueError(f"Sheet {dataset_name} not found in {filepath}")
@@ -223,6 +223,111 @@ def get_reference_dataset_csv(dataset_name, filepath):
     return df
 
 
+def excel_to_longform(filepath):
+    """
+    Transform multi-sheet excel spreadsheet into a tidy long-format
+    dataframe that is easy to handle, to extract information from for calibration
+    and can be passed to plotting functions like seaborn where different columns
+    can be used to group data by.
+    """
+
+    data_types = {"year_start": float,            # year_start and year_end define a year bin in the semi=open interval year_start <= year < year_end
+                  "year_end": float,              #
+                  "age_start": float,             # age_start and age_end define an age bin in the semi-open interval age_start <= age < age_end
+                  "age_end": float,               #
+                  "cases": float,                 # The quantity we track (renamed to "x" in starsim's calibration components
+                  "cases_corrected": float,       #
+                  "population": float,            # The number of people (renamed to "n" in starsim's calibration components). Usually the denominator to calculate a rate or proportion.
+                  "population_corrected": float,  #
+                  "age_aggregation": str,         # How "cases" and "population" have been aggregated if aggregating along the age dimension
+                  "year_aggregation": str,        # How "cases" and "population" have been aggregated if aggregating along the time/year dimension
+                  "dataset_name": str}            # A human readable label to identify a subset of data in the dataframe
+
+    cases_df = get_reference_dataset_xls("CasesByAgeAll", filepath)
+    cases_df["dataset_name"] = "data_1y_year_bins_4x_age_bins"
+    cases_df["year_aggregation"] = "sum"
+    cases_df["age_aggregation"] = "sum"
+
+    cases_df_agg_by_age = get_reference_dataset_xls("CasesByAge_pooled", filepath)
+    cases_df_agg_by_age["dataset_name"] = "data_1y_year_bins_1x_age_bins"
+    cases_df_agg_by_age["year_aggregation"] = "sum"
+    cases_df_agg_by_age["age_aggregation"] = "sum"
+
+    cases_df = pd.concat([cases_df, cases_df_agg_by_age])
+    cases_df = cases_df.rename(columns={"Cases": "cases",
+                                        "Cases_corrected": "cases_corrected"})
+
+    population_df = get_reference_dataset_xls("Population", filepath)
+    # Homogeneise column names
+    population_df = population_df.rename(columns={"Year": "YearBin",
+                                                  "Population_surveillance": "population",
+                                                  "Population_surveillance_corrected": "population_corrected"})
+
+    population_df["dataset_name"] = "data_1y_year_bins_4x_age_bins"
+
+    # Replace datasetname for the case where age has been aggregated
+    population_df.loc[population_df["AgeBin"] == "[0, 125)", "dataset_name"] = "data_1y_year_bins_1x_age_bins"
+    population_df["year_aggregation"] = "sum"
+    population_df["age_aggregation"] = "sum"
+
+    # Merge dataframes and handle column names
+    reference_data = cases_df.merge(population_df, on=["YearBin", "AgeBin"])
+    reference_data = reference_data.drop(reference_data.filter(regex="_y$", axis=1).columns, axis=1)
+    reference_data.rename(columns={col: col.replace("_x", "") for col in reference_data.columns if col.endswith("_x")}, inplace=True)
+
+    # Extract boundaries of year/time bins that are expressed as a single number
+    reference_data["year_start"] = reference_data["YearBin"]
+    reference_data["year_end"] = reference_data["YearBin"] + 1.0
+
+    # Extract boundaries of age bins that are expressed as a string representing a semi-open interval
+    reference_data["age_start"] = 0.0
+    reference_data["age_end"] = 125.0
+    reference_data[["age_start", "age_end"]] = reference_data["AgeBin"].apply(parse_bin_edges)
+
+    # Enforce "schema" (columns expected to exist and their type)
+    reference_data = reference_data.astype(data_types)
+    return reference_data
+
+
+def add_prevax_dataset(reference_data):
+    """
+    Calculate the prevax dataset. This is equivalent to the
+    data found in:
+    - 'CasesByAge_prevax' -- aggregated by time/year and
+    - 'TotalCases' -- aggegated by time/year and aggregated by age bins
+    """
+
+    pass
+
+
+def aggregate_data_by_time(reference_data, start_year, end_year):
+    time_mask = ((reference_data["year_start"] >= start_year) &
+                 (reference_data["year_start"] < end_year))
+
+    filtered_data = reference_data[time_mask]
+    year_bin_str = f"[{start_year}, {end_year})"
+    cols = ["cases", "cases_corrected", "population", "population_corrected"]
+
+    new_rows = []
+    for age_bin in filtered_data.AgeBin.unique():
+        new_row = {"AgeBin": age_bin, "YearBin": year_bin_str}
+        temp = filtered_data[filtered_data.AgeBin == age_bin]
+        for col in cols:
+            new_row.update({col: [temp[col].sum()]})
+        new_rows.append(pd.DataFrame(new_row))
+    reference_data = pd.concat([reference_data] + new_rows, ignore_index=True)
+    reference_data.reset_index()
+    return reference_data
+
+
+def add_postvax_dataset(reference_data):
+    """
+    Calculate the postvax dataset. This is equivalent to the
+    data found in:
+    - CasesByAge_postvax -- aggregated by time/year and
+    """
+    pass
+
 
 def parse_bin_edges(str_bin):
     """
@@ -230,12 +335,8 @@ def parse_bin_edges(str_bin):
     [lower_bound, upper_bound) or [lower_bound, upper_bound].
 
     This function returns the bin edges in numeric representation.
-
     """
-    # print str_bin
-    str_bin = str_bin.replace('[', '')
-    str_bin = str_bin.replace(']', '')
-    str_bin = str_bin.replace(')', '')
-    arr = str_bin.split(',')
-    lower_bound, upper_bound = round(str(arr[0]).strip()), round(str(arr[1]).strip())
-    return lower_bound, upper_bound
+    import re
+    values = re.sub(r'[\[\)]', '', str_bin).split(',')
+    values = [float(v) for v in values]
+    return pd.Series(values)
