@@ -265,11 +265,12 @@ class Typhoid(ss.Disease):
         npts = self.sim.npts
         self.results += [
             ss.Result(self.name, "prevalence", npts, dtype=float, scale=False, label="Prevalence"),
-            ss.Result(self.name, "new_infections", npts, dtype=int, scale=False, label="New infections"),
-            ss.Result(self.name, "cum_infections", npts, dtype=int, scale=False, label="Cumulative infections"),
+            ss.Result(self.name, "new_infections", npts, dtype=int, scale=False, label="New Infections"),
+            ss.Result(self.name, "cum_infections", npts, dtype=int, scale=False, label="Cumulative Infections"),
             ss.Result(self.name, "new_susceptible", npts, dtype=int, scale=False, label="Newly Susceptible"),
             ss.Result(self.name, "new_prepatent", npts, dtype=int, scale=False, label="Newly Prepatent"),
             ss.Result(self.name, "new_acute", npts, dtype=int, scale=False, label="Newly Acute"),
+            ss.Result(self.name, "cum_acute", npts, dtype=int, scale=False, label="Cumulative Acute"),
             ss.Result(self.name, "new_subclinical", npts, dtype=int, scale=False, label="Newly Subclinical"),
             ss.Result(self.name, "new_chronic", npts, dtype=int, scale=False, label="Newly Chronic"),
             ss.Result(self.name, "new_recovered", npts, dtype=int, scale=False, label="Newly Recovered"),
@@ -938,6 +939,7 @@ class Typhoid(ss.Disease):
         res.new_susceptible[ti] = np.count_nonzero(self.ti_susceptible == ti)
         res.new_prepatent[ti] = np.count_nonzero(self.ti_prepatent == ti)
         res.new_acute[ti] = np.count_nonzero(self.ti_acute == ti)
+        res.cum_acute[ti] = np.sum(res['new_acute'][:ti+1])
         res.new_subclinical[ti] = np.count_nonzero(self.ti_subclinical == ti)
         res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
