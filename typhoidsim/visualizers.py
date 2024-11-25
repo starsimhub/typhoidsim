@@ -12,7 +12,7 @@ from .networks import CommunityNet
 __all__ = ["plot_age_histogram", "plot_age_mixing", "plot_sim"]
 
 
-def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearvec=None):
+def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearvec=None, display_from=None, display_until=None):
     """
     Plot all results in the Sim object after the simulation has run
 
@@ -41,6 +41,12 @@ def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, 
     with sc.options.with_style(style):
         if yearvec is None:
             yearvec = flat.pop('yearvec')
+
+        time_masks = [
+            yearvec >= display_from if display_from is not None else True,
+            yearvec <= display_until if display_until is not None else True]
+        mask = np.logical_and(*time_masks) if time_masks else Ellipsis
+
         if key is not None:
             flat = {k: v for k, v in flat.items() if k.startswith(key)}
 
@@ -56,7 +62,7 @@ def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, 
 
         # Do the plotting
         for ax, (key, res) in zip(axs, flat.items()):
-            ax.plot(yearvec, res, **plot_kw, label=sim.label)
+            ax.plot(yearvec[mask], res[mask], **plot_kw, label=sim.label)
             title = getattr(res, 'label', key)
             if res.module != 'sim':
                 try:
