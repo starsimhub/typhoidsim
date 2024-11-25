@@ -57,7 +57,14 @@ def get_calib_pars(calibration_step="step_1"):
         case "step_1":
             calib_pars = dict(
                 # typhoid acute infectiousness
-                tai=dict(low=1e-4, high=1e5, guess=42_808, log=True),
+                tai=dict(low=1e4, high=1e6, guess=42_808, log=True),
+                # typhoid environmental exposure rate
+                teer=dict(low=0.0, high=10.0, guess=1.99),
+            )
+        case "debug":
+            calib_pars = dict(
+                # typhoid acute infectiousness
+                tai=dict(low=1e4, high=1e6, guess=42_808, log=True),
                 # typhoid environmental exposure rate
                 teer=dict(low=0.0, high=10.0, guess=1.99),
                 rel_trans=dict(low=1e-4, high=1, guess=1.0, log=True),

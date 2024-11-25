@@ -28,7 +28,6 @@ import typhoidsim as ty
 #Import modules specific to this project
 import models
 import calibration_components as cbcomp
-import data_utils as utils
 
 calib_debug = False  # If true, calibration will run in serial
 
