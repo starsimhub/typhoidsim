@@ -15,8 +15,8 @@ import data_utils as utils
 def get_common_simulation_pars():
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =2000.0,         # Start year
-        n_years  =30.0,            # Duration of the simulation in years
+        start    =1990.0,         # Start year
+        n_years  =40.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         n_agents =10_000,         # Number of agents in the population
         verbose  =0,              # Print details of the run
@@ -73,10 +73,10 @@ def baseline_model():
                      'tpri': 0.5,
                      'tsri': 1.0,
                      'tcri': 0.241,
-                     'tppi': 0.98,
+                     'tppi': 0.05,
                      'p_cpg': 0.108,
-                     'p_acute': ss.bernoulli(p=0.16),
-                     'init_prev': ss.bernoulli(p=0.0005),         # Initial prevalence: This is how we seed infections at the start of a simulation. In this case approx 5% of the total population of agents, will be infected at t=0
+                     'p_acute': ss.bernoulli(p=0.24),
+                     'init_prev': ss.bernoulli(p=0.00022),         # Initial prevalence: This is how we seed infections at the start of a simulation. In this case approx 5% of the total population of agents, will be infected at t=0
                      'p_unexp2sus': ss.bernoulli(p=p_unexp2sus_parc_fun)}
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
@@ -84,7 +84,8 @@ def baseline_model():
     # ENVIRONMENT
     environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  # TEER: Typhoid environmental exposure rate
                                              'volume': 1,       # Set the volume to 1 if we want to reproduce EMOD-like results
-                                             'transmission': ss.Pars({'rel_trans': 0.001})})  # This parameter is equivalent to mEL parameter in Gauld etal 2018
+                                             'transmission': ss.Pars({'rel_trans': 0.00001,  # This parameter is equivalent to mEL parameter in Gauld etal 2018
+                                                                      'shedding_rate': 0.7})})
 
     # INTERVENTIONS: Vaccination campaigns
 
@@ -115,6 +116,8 @@ def baseline_model():
     record_cases = dict(ti_acute=dict(path=("diseases", "typhoid"), label="cases"))
     record_population = dict(alive=dict(path=("people",)))
 
+    # TODO: rework monitors so one tracks quantities to calculate incidence and the other
+    # tracks quantities to caculate prevalence
     monitor_cases = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
                                                      age_bin_labels=age_bin_labels,
                                                      to_record=record_cases,
@@ -130,7 +133,7 @@ def baseline_model():
                                                           to_record=record_population,
                                                           resampling_period=1.0,  # Record data on a yearly basis, so we can aggregate later
                                                           aggregate_sex=True,
-                                                          aggregate_time="sum",  # Average the number of living people over the resampling period
+                                                          aggregate_time="sum",   # Sum the number of people over the resampling period, this is used to calculate incidence rate
                                                           record_from=2017.0,
                                                           record_until=2023.0,
                                                           name="monitor_2")
@@ -235,29 +238,36 @@ def run_debug_multisim(do_plot=True):
     sim1 = make_sim()
     sim2 = make_sim()
     sim3 = make_sim()
+    sim4 = make_sim()
+
 
     sims = sc.autolist()
-    sims.append(sim1)
     sims.append(sim2)
+    sims.append(sim1)
     sims.append(sim3)
+    sims.append(sim4)
+
 
     # Let's change a parameter in sim2
     sim2.initialize()
-    sim2.diseases.typhoid.pars.tai = 10_000
+    sim2.diseases.typhoid.pars.tai = 35_000
 
     sim3.initialize()
-    sim3.diseases.typhoid.pars.tai = 100_000
+    sim3.diseases.typhoid.pars.tai = 80_000
+
+    sim4.initialize()
+    sim4.diseases.typhoid.pars.tai = 150_000
 
     msim = ss.MultiSim(sims)
     msim.run()
     if do_plot:
         for sim in msim.sims:
             timevec = sim.get_analyzers()[0].yearvec
-            ty.plot_sim(sim, key="typhoid_")
+            ty.plot_sim(sim, key="typhoid_", display_from=2010.0, display_until=2025.0)
         plt.show()
     return msim
 
 
 if __name__ == "__main__":
-    run_debug_single_sim()
-    #run_debug_multisim(do_plot=True)
+    #run_debug_single_sim()
+    run_debug_multisim(do_plot=True)
