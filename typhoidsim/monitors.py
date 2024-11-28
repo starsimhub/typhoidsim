@@ -278,6 +278,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
     def to_df(self):
         """ Transform results to a pandas dataframe """
+        #TODO: export year bin information too, will be useful for calibration
         dfs = []
         for res_name, res_value in self.results.items():
             if res_name == "yearvec":
@@ -293,8 +294,7 @@ class histograms_by_age_sex_monitor(Monitor):
         df = pd.concat(dfs, axis=0)
         return df
 
-    def plot(self, key=None, t_index=0, fig=None, style='fancy', fig_kw=None, plot_kw=None,
-             display_from=None, display_until=None):
+    def plot(self, key=None, t_index=None, fig=None, style='fancy', fig_kw=None, plot_kw=None):
         """
         Plot all results in the Sim object after the simulation has run
 
@@ -319,6 +319,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
         yearvec = self.yearvec
         age_bin_centers = (self.age_bins[0:-1] + self.age_bins[1:])/2
+        if t_index is None:
+            t_index = [0, -1]  # Plot first and last available timepoint
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
@@ -336,7 +338,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
             # Do the plotting
             for ax, (key, res) in zip(axs, flat.items()):
-                ax.bar(age_bin_centers, res[t_index, :], **plot_kw, label=f"t={yearvec[t_index]}")
+                for tidx in t_index:
+                    ax.bar(age_bin_centers, res[tidx, :], **plot_kw, label=f"t={yearvec[tidx]}", alpha=0.2)
                 title = getattr(res, 'label', key)
                 ax.set_title(title)
                 ax.set_xlabel('Age (years)')
