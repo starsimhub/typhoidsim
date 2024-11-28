@@ -16,8 +16,7 @@ ss_int_ = ss.dtypes.int
 # The disease module
 __all__ = ["Typhoid"]
 # Context-specific functions that can be used as parameters of the Typhoid module
-__all__ += ["unexp2sus_youth_prob_function_gauld2018",
-            "unexp2sus_childhood_prob_function_gauld2018",]
+__all__ += ["unexp2sus_childhood_prob_function_gauld2018",]
 
 
 class Typhoid(ss.Disease):
@@ -38,7 +37,11 @@ class Typhoid(ss.Disease):
             p_unexp2sus_6m=ss.bernoulli(p=0.14),  # Proportion of never exposed/completely immune population at 6 months that moves to susceptible state
             p_unexp2sus_3y=ss.bernoulli(p=0.29),  # Proportion of never exposed/completely immune population at 3 years that moves to susceptible state
             p_unexp2sus_6y=ss.bernoulli(p=0.61),  # Proportion of never exposed/completely immune population at 6 years that moves to susceptible state
-            p_unexp2sus=ss.bernoulli(p=self.unexp2susc_prob_function),
+
+            # Default mechanism to move agents from never exposed/invulnerable to susceptible to exposure
+            p_unexp2sus=ss.bernoulli(p=self.unexp2susc_prob_gauld2018),
+            unexp2sus_saturation_age=20.0,    # Age after which 100% of people are susceptible to exposure
+            unexp2sus_slope=0.5,              # Slope of the sigmoid function (slope > -0.5), determines the proportion of people aged X who will be in the susceptible state
 
             # Prepatent stage, the parameters of the distribution of durations is CFU-dose dependent
             prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),   # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
@@ -84,10 +87,10 @@ class Typhoid(ss.Disease):
             tai=40_000.0,  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
             tpri=0.5,      # Typhoid relative (to acute) prepatent infectiousness
             tsri=1.0,      # Typhoid relative (to acute) subclinic infectiousness
-            tcri=0.241,      # Typhoid relative (to acute) chronic infectiousness
+            tcri=0.241,    # Typhoid relative (to acute) chronic infectiousness
             tppi=0.98,     # Decrease in susceptibility per infection (exponential decrease)
-            drc_alpha=0.175,  # parameter in the Dose Response Curve
-            drc_n50=1.11e6,   # parameter in the Dose Response Curve
+            drc_alpha=0.175,  # parameter in the Dose Response Curve to environmental exposure
+            drc_n50=1.11e6,   # parameter in the Dose Response Curve to environmental exposure
 
             # ENVIRONMENT PARAMETERS
             has_environment=None,
@@ -206,11 +209,11 @@ class Typhoid(ss.Disease):
         # a class where they cannot get infected, and then
         # move to the susceptible class at probabilities
         # for each age.
-        over_20_uids = (self.sim.people.age > 20.0).uids
-        self.susceptible[over_20_uids] = True
-        self.unexposed[over_20_uids] = False
 
-        # Determines which individuals enter the susceptible class.
+        # Determines which individuals enter the susceptible class. The age-based
+        # mechanism is specified in the typhoid module parameters as
+        #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_function)
+        #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_gauld2018),
         self.make_susceptible()
 
         if self.pars.init_prev is None:
@@ -324,13 +327,13 @@ class Typhoid(ss.Disease):
     def make_susceptible(self):
         """
         Our model assumes all individuals are born into an unexposed, completely
-        immune state and move to the susceptible class at probabilities.
+        immune state and move to the susceptible class based on some probability.
 
         The mechanism that moves individuals from one state to the other,
         can depend on age and/or other factors.
 
         By default, we do not assume any age-specific structure. Thus, agents are
-        born into the unexposed state and move immediately to the susceptible
+        born into the unexposed state and are moved immediately to the susceptible
         state.
 
         However, there are a couple of predefined age-specific susceptibilty
@@ -338,10 +341,10 @@ class Typhoid(ss.Disease):
          - unexp2sus_youth_prob_function_gauld2018()
          - unexp2sus_childhood_prob_function_gauld2018()
 
-        These function can be passed as arguments to the Typhoid parameter. For
+        These functions can be passed as arguments to the Typhoid parameter. For
         instance:
 
-           >> p_unexp2sus=ss.bernoulli(p=unexp2sus_youth_prob_function_gauld2018),
+           >> p_unexp2sus=ss.bernoulli(p=unexp2sus_prob_gauld2018),
         or
            >> p_unexp2sus=ss.bernoulli(p=unexp2sus_childhood_prob_function_gauld2018),
 
@@ -349,7 +352,6 @@ class Typhoid(ss.Disease):
         https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/SusceptibilityTyphoid.cpp
 
         """
-
         never_exposed = (self.unexposed).uids
         self.susceptible[never_exposed] = self.pars.p_unexp2sus.rvs(never_exposed)
         self.unexposed[never_exposed] = ~self.susceptible[never_exposed]
@@ -561,6 +563,41 @@ class Typhoid(ss.Disease):
         """
         p_sus = np.ones(len(uids))
         return p_sus
+
+    @staticmethod
+    def unexp2sus_prob_gauld2018(module, sim, uids):
+        """
+        Estimate the age-dependent probability of transistioning from
+        unexposed to susceptible. From Gauld et al 2018, Fig. 2B.
+
+        Args:
+            module: a startsim (disease) Module
+            sim: the starsim Sim object (fully initialised)
+            uids: the uids of the eligible people
+
+            # Parameters for age-based transition from unexposed to susceptible (Gauld et al. 2018)
+            sus_saturation_age=20.0,     # Age (years) after which agents are 100% susceptible
+            sus_age_exposure_slope=1.0,  # Called typhoid_exposure_lambda in emod
+
+        Returns:
+            p_sus (array): array of probabilities for every agent in uids.
+
+        EMOD:
+        if( ( age < twenty_years_old_days ) && mod_acquire == 0 )
+        {
+                    float lambda = IndividualHumanTyphoidConfig::typhoid_exposure_lambda;
+
+                    perc2 = 1.0f - ((twenty_years_old_days - age) / (age*lambda + twenty_years_old_days ));
+                    perc1 = 1.0f - ((twenty_years_old_days - (age-1)) / ((age-1)*lambda + twenty_years_old_days ));
+                    perc = (perc2 - perc1) / (1 - perc1); <--- probability
+        }
+        """
+        sat_age = module.pars.unexp2sus_saturation_age
+        slope = module.pars.unexp2sus_slope
+        p2 = tyum.sigmoid(sim.people.age[uids], sat_age, slope)
+        p1 = tyum.sigmoid(sim.people.age[uids] - sim.dt, sat_age, slope)
+        p_sus = (p2 - p1) / (1.0 - p1)
+        return np.array(p_sus)
 
     @staticmethod
     def chronic_gall_prob_function(module, sim, uids):
@@ -947,31 +984,6 @@ class Typhoid(ss.Disease):
         return
 
 
-# Functions that are typhoid-specific but are context dependent (ie, location)
-def unexp2sus_youth_prob_function_gauld2018(module, sim, uids, sus_saturation_age=20.0,
-                                            sus_age_exposure_slope=1.0):
-    """
-    Estimate the age-dependent probability of transistioning from
-    unexposed to susceptible. From Gauld et al 2018, Fig. 2B.
-
-    Args:
-        module: a startsim (disease) Module
-        sim: the starsim Sim object (fully initialised)
-        uids: the uids of the eligible people
-
-        # Parameters for age-based transition from unexposed to susceptible (Gauld et al. 2018)
-        sus_saturation_age=20.0,     # Age (years) after which agents are 100% susceptible
-        sus_age_exposure_slope=1.0,  # Called typhoid_exposure_lambda in emod
-
-    Returns:
-        p_sus (array): array of probabilities for every agent in uids.
-    """
-    p2 = tyum.sigmoid(sim.people.age[uids], sus_saturation_age, sus_age_exposure_slope)
-    p1 = tyum.sigmoid(sim.people.age[uids]-sim.dt, sus_saturation_age, sus_age_exposure_slope)
-    p_sus = (p2 - p1) / (1.0 - p1)
-    return np.array(p_sus)
-
-
 def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
     """
     Estimate the age-dependent probability of transistioning from
@@ -1022,24 +1034,45 @@ def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
 
 
 def _detect_age_anniversary(sim, age_anniversary):
-    # Detect people who crossed their age_anniversary. Returns Boolean array
+    """
+    Detect people who crossed a specific age_anniversary, does not
+    have to be birthday necesarrily.
+
+    Returns Boolean array
+    """
     reached_anniv = (((sim.people.age - sim.dt) < age_anniversary) &
-                    (sim.people.age >= age_anniversary))
+                      (sim.people.age >= age_anniversary))
     return reached_anniv
+
+
+def _detect_birthday(sim):
+
+    """
+    Detect who had their birthdays. Assumes the time step dt is less than
+    or equal to 1.
+
+    Returns Boolean array
+    """
+    prev_int_age = sim.people.age - sim.dt
+    current_int_age = sim.people.age
+    had_bday = (current_int_age.astype(int) - prev_int_age.astype(int)) == 1
+    return had_bday
 
 
 def stratify_parameter_by_age(bin_edges, bin_values):
     """
     Create a function that, given an age, returns the value of a parameter
-    corresponding assigned to the age bin that the age falls into.
+    assigned to the age bin that the age falls into.
 
     Args:
-        bin_edges (np.ndarray): The edges of the age bins. Should be in ascending order.
-        bin_values (np.ndarray): The values corresponding to each age bin. Should be the of length bin_edges - 1.
+        bin_edges (np.ndarray): The edges of the age bins. Should be in
+            ascending order.
+        bin_values (np.ndarray): The values corresponding to each age bin.
+            Should be the of length bin_edges - 1.
 
     Returns:
-        age_bin_function (callable): A function that takes an age and returns the value for the bin that
-                  the age falls into.
+        age_bin_function (callable): A function that takes an age
+            and returns the value for the bin that the age falls into.
 
     bin_edges = np.array([0, 2, 5, 120])
     bin_values = np.array([904.4, 240.9, 0.0])
