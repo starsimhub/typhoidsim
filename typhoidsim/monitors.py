@@ -13,6 +13,7 @@ an optimisation process.
 """
 
 import numpy as np
+import pandas as pd
 
 import sciris as sc
 import starsim as ss
@@ -67,6 +68,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.name = "hist_by_age_sex" if name is None else name
         self.age_bins = age_bins
         self.age_bin_labels = age_bin_labels
+        self.age_bin_lbl_to_idx = None
         self.to_record = to_record
         self.record_from = record_from
         self.record_until = record_until
@@ -122,9 +124,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
-
         if self.age_bin_labels is None:
-            self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1] - 1:.0f}" for i in range(self.nags)]
+            self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1]:.0f}" for i in range(self.nags)]
 
         # Save a mapping between human readable age bin label and column index in the results array
         self.age_bin_lbl_to_idx = {lbl: idx for idx, lbl in enumerate(self.age_bin_labels)}
@@ -274,6 +275,23 @@ class histograms_by_age_sex_monitor(Monitor):
             self.results[stock_name][:] = self.aggregate(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
         self.results["yearvec"][:] = self.yearvec
         return
+
+    def to_df(self):
+        """ Transform results to a pandas dataframe """
+        dfs = []
+        for res_name, res_value in self.results.items():
+            if res_name == "yearvec":
+                break
+            for ab_idx in range(res_value.shape[1]):
+                data = {"label": res_name,
+                        "x": res_value[:, ab_idx],
+                        "age_bin_ub": self.age_bins[ab_idx],
+                        "age_bin_lb": self.age_bins[ab_idx+1],
+                        "age_bin_label": self.age_bin_labels[ab_idx],
+                        "year": self.yearvec}
+                dfs.append(pd.DataFrame(data))
+        df = pd.concat(dfs, axis=0)
+        return df
 
 
 class states_consistency_monitor(Monitor):
