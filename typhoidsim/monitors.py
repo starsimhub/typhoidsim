@@ -293,6 +293,58 @@ class histograms_by_age_sex_monitor(Monitor):
         df = pd.concat(dfs, axis=0)
         return df
 
+    def plot(self, key=None, t_index=0, fig=None, style='fancy', fig_kw=None, plot_kw=None,
+             display_from=None, display_until=None):
+        """
+        Plot all results in the Sim object after the simulation has run
+
+        Args:
+            key (str): the results key to plot (by default, all)
+            t_index (int): the time index in the monitor's yearvec vector
+            fig (Figure): if provided, plot results into an existing figure
+            style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
+            fig_kw (dict): passed to ``plt.subplots()``
+            plot_kw (dict): passed to ``plt.plot()``
+        """
+        # Configuration
+        flat = self.results.flatten()
+        flat.pop('yearvec')
+        n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
+        default_figsize = np.array([8, 6])
+        figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,
+                                 1.5)  # Scale the default figure size based on the number of rows and columns
+        figsize = default_figsize * figsize_factor
+        fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
+        plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
+
+        yearvec = self.yearvec
+        age_bin_centers = (self.age_bins[0:-1] + self.age_bins[1:])/2
+        # Do the plotting
+        with sc.options.with_style(style):
+            if key is not None:
+                flat = {k: v for k, v in flat.items() if k.startswith(key) and k.name != "yearvec"}
+
+            # Get the figure
+            if fig is None:
+                fig, axs = sc.getrowscols(len(flat), make=True, **fig_kw)
+                if isinstance(axs, np.ndarray):
+                    axs = axs.flatten()
+            else:
+                axs = fig.axes
+            if not sc.isiterable(axs):
+                axs = [axs]
+
+            # Do the plotting
+            for ax, (key, res) in zip(axs, flat.items()):
+                ax.bar(age_bin_centers, res[t_index, :], **plot_kw, label=f"t={yearvec[t_index]}")
+                title = getattr(res, 'label', key)
+                ax.set_title(title)
+                ax.set_xlabel('Age (years)')
+                ax.legend()
+
+        sc.figlayout(fig=fig)
+        return fig
+
 
 class states_consistency_monitor(Monitor):
     """ Analyzer to track everything -- use for debug pruposes """
