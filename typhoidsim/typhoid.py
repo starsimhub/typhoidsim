@@ -41,7 +41,7 @@ class Typhoid(ss.Disease):
             # Default mechanism to move agents from never exposed/invulnerable to susceptible to exposure
             p_unexp2sus=ss.bernoulli(p=self.unexp2sus_prob_gauld2018),
             unexp2sus_saturation_age=20.0,    # Age after which 100% of people are susceptible to exposure
-            unexp2sus_slope=0.5,              # Slope of the sigmoid function (slope > -0.5), determines the proportion of people aged X who will be in the susceptible state
+            unexp2sus_slope=1.0,              # Slope of the sigmoid function (slope > -0.5), determines the proportion of people aged X who will be in the susceptible state
 
             # Prepatent stage, the parameters of the distribution of durations is CFU-dose dependent
             prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),   # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
@@ -214,9 +214,7 @@ class Typhoid(ss.Disease):
         # mechanism is specified in the typhoid module parameters as
         #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_function)
         #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_gauld2018),
-        breakpoint()
         self.make_susceptible()
-        breakpoint()
 
         if self.pars.init_prev is None:
             return
@@ -593,12 +591,22 @@ class Typhoid(ss.Disease):
                     perc1 = 1.0f - ((twenty_years_old_days - (age-1)) / ((age-1)*lambda + twenty_years_old_days ));
                     perc = (perc2 - perc1) / (1 - perc1); <--- probability
         }
+
+        From Gauld 2018:
+        Specifically, at each month of age a fitted curve determines the
+        probability of an individual entering the susceptible class.
+
+        But the EMOD code does not seem to assess at every month of age, rather
+        at every time step of 1 day.
         """
         sat_age = module.pars.unexp2sus_saturation_age
         slope = module.pars.unexp2sus_slope
         p2 = tyum.sigmoid(sim.people.age[uids], sat_age, slope)
         p1 = tyum.sigmoid(sim.people.age[uids] - sim.dt, sat_age, slope)
-        p_sus = (p2 - p1) / (1.0 - p1)
+        if sim.ti == 0:
+            p_sus = p2
+        else:
+            p_sus = ((p2 - p1) / (1.0 - p1))
         return np.array(p_sus)
 
     @staticmethod
