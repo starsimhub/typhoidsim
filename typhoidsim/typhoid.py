@@ -39,7 +39,7 @@ class Typhoid(ss.Disease):
             p_unexp2sus_6y=ss.bernoulli(p=0.61),  # Proportion of never exposed/completely immune population at 6 years that moves to susceptible state
 
             # Default mechanism to move agents from never exposed/invulnerable to susceptible to exposure
-            p_unexp2sus=ss.bernoulli(p=self.unexp2susc_prob_gauld2018),
+            p_unexp2sus=ss.bernoulli(p=self.unexp2sus_prob_gauld2018),
             unexp2sus_saturation_age=20.0,    # Age after which 100% of people are susceptible to exposure
             unexp2sus_slope=0.5,              # Slope of the sigmoid function (slope > -0.5), determines the proportion of people aged X who will be in the susceptible state
 
@@ -214,7 +214,9 @@ class Typhoid(ss.Disease):
         # mechanism is specified in the typhoid module parameters as
         #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_function)
         #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_gauld2018),
+        breakpoint()
         self.make_susceptible()
+        breakpoint()
 
         if self.pars.init_prev is None:
             return
