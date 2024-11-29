@@ -68,6 +68,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.name = "hist_by_age_sex" if name is None else name
         self.age_bins = age_bins
         self.age_bin_labels = age_bin_labels
+        self.age_bin_centers = None
         self.age_bin_lbl_to_idx = None
         self.to_record = to_record
         self.record_from = record_from
@@ -129,6 +130,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
         # Save a mapping between human readable age bin label and column index in the results array
         self.age_bin_lbl_to_idx = {lbl: idx for idx, lbl in enumerate(self.age_bin_labels)}
+        self.age_bin_centers = (self.age_bins[0:-1] +  self.age_bins[1:])/2.0
 
         if self.to_record is None:
             states_of_interest = ["ti_infected", "infected",
@@ -317,8 +319,9 @@ class histograms_by_age_sex_monitor(Monitor):
         fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
         plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
 
+        # Time vector
         yearvec = self.yearvec
-        age_bin_centers = (self.age_bins[0:-1] + self.age_bins[1:])/2
+
         if t_index is None:
             t_index = [0, -1]  # Plot first and last available timepoint
         # Do the plotting
@@ -339,12 +342,105 @@ class histograms_by_age_sex_monitor(Monitor):
             # Do the plotting
             for ax, (key, res) in zip(axs, flat.items()):
                 for tidx in t_index:
-                    ax.bar(age_bin_centers, res[tidx, :], **plot_kw, label=f"t={yearvec[tidx]}", alpha=0.2)
+                    ax.bar(self.age_bin_centers, res[tidx, :], **plot_kw, label=f"t={yearvec[tidx]}", alpha=0.2)
                 title = getattr(res, 'label', key)
                 ax.set_title(title)
                 ax.set_xlabel('Age (years)')
                 ax.legend()
 
+        sc.figlayout(fig=fig)
+        return fig
+
+    def plot_waterfall(self, key=None, max_timepoints=16,  fig=None, style='fancy', fig_kw=None, plot_kw=None):
+        """
+        Plot a waterfall plot showing the evolution of the distribution of
+        a given metric (ie, number of new acute cases) with respect to age.
+
+        Args:
+            key (str): the results key to plot (by default, all)
+            max_timepoints (int, optional): The maximum number of timepoints to plot, defaults to 16.
+            fig (Figure): if provided, plot results into an existing figure
+            style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
+            fig_kw (dict): passed to ``plt.subplots()``
+            plot_kw (dict): passed to ``plt.plot()``
+
+        Returns:
+            figure handle
+
+        The function generates uses kernel density estimation to visualize the data. If there's not data for the
+        min max age specified, for a specific time step (ie, there are no agents in that age group), it adds a
+        textbox. This is an edge case that can happen for a simulation with very few agents, and a very narrow
+        age group.
+        """
+        from scipy.stats import gaussian_kde
+
+        # Configuration
+        flat = self.results.flatten()
+        flat.pop('yearvec')
+
+        n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
+        default_figsize = np.array([8, 6])
+        figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,
+                                 1.5)  # Scale the default figure size based on the number of rows and columns
+        figsize = default_figsize * figsize_factor
+        fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
+        plot_kw = sc.mergedicts({'lw': 2, 'y_scaling': 0.9}, plot_kw)
+
+        if self.ntpts < max_timepoints:
+            ntpts = self.ntpts
+        else:
+            ntpts = max_timepoints
+        t_indices = np.linspace(0,  ntpts-1, ntpts, dtype=int)
+
+        # Time vector
+        yearvec = self.yearvec
+        y_scaling = plot_kw['y_scaling']
+
+        # Do the plotting
+        with sc.options.with_style(style):
+            if key is not None:
+                flat = {k: v for k, v in flat.items() if
+                        k.startswith(key) and k.name != "yearvec"}
+
+            # Get the figure
+            if fig is None:
+                fig, axs = sc.getrowscols(n=len(flat), nrows=1, make=True, **fig_kw)
+                if isinstance(axs, np.ndarray):
+                    axs = axs.flatten()
+            else:
+                axs = fig.axes
+            if not sc.isiterable(axs):
+                axs = [axs]
+
+            # Do the plotting
+            for ax, (key, res) in zip(axs, flat.items()):
+                # Loop through the selected time points and create kernel density estimates
+                for idx, ti in enumerate(t_indices):
+                    data_ti = res[ti, :]
+                    try:
+                        resamples = np.random.choice(self.age_bin_centers, size=self.nags * 100,
+                                                     p=data_ti/data_ti.sum())
+                        kde = gaussian_kde(resamples)
+                        kde_data = kde(self.age_bin_centers)
+                        kde_data = kde_data / kde_data.max() + y_scaling * idx
+                        data_ti = data_ti / data_ti.max() + 0.9*y_scaling * idx
+
+                        ax.fill_between(self.age_bin_centers, y_scaling * idx, kde_data, color='#2f72de', alpha=0.3)
+                        ax.bar(self.age_bin_centers, data_ti, bottom=kde_data.min(), color='#2f72de', alpha=0.3, edgecolor="white")
+                        ax.plot(self.age_bin_centers, kde_data, color='black', alpha=0.7)
+                    except:
+                        pass
+
+                # Labels and annotations
+                ax.set_xlim([self.age_bins[0], self.age_bins[-1]])
+                ax.set_xlabel('Age (years)')
+                # Set the y-axis (time) labels
+                ax.set_yticks(y_scaling * np.arange(len(t_indices)))
+                ax.set_yticklabels(yearvec[t_indices])
+                ax.set_ylabel('Year')
+                title = getattr(res, 'label', key)
+                ax.set_title(title)
+#                ax.legend()
         sc.figlayout(fig=fig)
         return fig
 
