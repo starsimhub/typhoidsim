@@ -423,10 +423,9 @@ class histograms_by_age_sex_monitor(Monitor):
                         kde = gaussian_kde(resamples)
                         kde_data = kde(self.age_bin_centers)
                         kde_data = kde_data / kde_data.max() + y_scaling * idx
-                        data_ti = data_ti / data_ti.max() + 0.9*y_scaling * idx
-
+                        data_ti = data_ti / data_ti.max()
                         ax.fill_between(self.age_bin_centers, y_scaling * idx, kde_data, color='#2f72de', alpha=0.3)
-                        ax.bar(self.age_bin_centers, data_ti, bottom=kde_data.min(), color='#2f72de', alpha=0.3, edgecolor="white")
+                        ax.bar(self.age_bin_centers, data_ti, bottom=y_scaling * idx, color='#2f72de', alpha=0.3, edgecolor="white")
                         ax.plot(self.age_bin_centers, kde_data, color='black', alpha=0.7)
                     except:
                         pass
