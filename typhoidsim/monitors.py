@@ -107,7 +107,7 @@ class histograms_by_age_sex_monitor(Monitor):
             self.monitor_period = self.resampling_period
             self.agg_func = aggregation_functions.get(self.aggregate_time)
         else:
-            self.monitor_step = 1
+            self.monitor_step = 1.0
             self.monitor_period = sim.dt
 
         # Output year vector
@@ -119,8 +119,8 @@ class histograms_by_age_sex_monitor(Monitor):
             self.stock_ntpts = len(self.yearvec)
         else:
             self.sample = self._aggregate_sampling
-            self.ntpts = len(self.yearvec)
-            self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, sim.dt))
+            self.ntpts = len(self.yearvec) # number of time points in the final result arrays
+            self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, sim.dt))  # number of time points for the internal stock arrays
 
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
@@ -148,7 +148,7 @@ class histograms_by_age_sex_monitor(Monitor):
             else:
                 res_dtype = specs["path"] if "dtype" in specs else float
                 attrlbl = attrname.replace("ti", "new")
-                res_lbl   = specs["label"] if "label" in specs else attrlbl
+                res_lbl = specs["label"] if "label" in specs else attrlbl
                 if self.aggregate_sex:
                     sexes = ["b"]   # aggregate both sexes
                 else:
@@ -175,7 +175,7 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def set_observation_interval(self, sim):
-        """ Get thr gith number of timepoints for the Result arrays"""
+        """ Set the correction endpoints of the observation period recorded by this monitor"""
         if self.record_from is None and self.record_until is None:
             start_year = sim.pars.start
             stop_year = sim.pars.end
@@ -255,8 +255,8 @@ class histograms_by_age_sex_monitor(Monitor):
     def aggregate(self, vals):
         if self.aggregate_time is None:
             return vals
-        remainder = self.ntpts % self.monitor_step
-        reshaped_data = vals[:self.ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
+        remainder = self.stock_ntpts % self.monitor_step
+        reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
         if remainder != 0:
             downsampled_main = self.agg_func(reshaped_data, axis=1)
             downsampled_remainder = self.agg_func(vals[-remainder:], axis=0)
