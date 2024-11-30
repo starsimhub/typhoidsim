@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import starsim as ss
 from scipy.special import gammaln
 
+from . import utils as tyu
+
 
 __all__ = ['Calibration220', 'CalibComponent220', 'compute_gof']
 
@@ -707,9 +709,20 @@ class CalibComponent220(sc.prettyobj):
     def __repr__(self):
         return f"Calibration component with name {self.name}"
 
-    def plot(self):
-        breakpoint()
-        raise NotImplementedError
+    def plot(self, ax=None):
+        import seaborn as sns
+        df1 = self.predicted
+        df1["data"] = "predicted"
+        df2 = self.expected
+        df2["data"] = "expected"
+        df = pd.concat([df1, df2])
+        df.reset_index(inplace=True)
+        df = df[["t", "data", "x"]]
+        ax = sns.barplot(df, x="t", y="x", hue="origin", ax=ax)
+        ax.set_title(self.name)
+        ax.set_xlabel('Years (time)')
+        ax.legend()
+        return ax
 
 
 def nll_beta(expected, actual):
