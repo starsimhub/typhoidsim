@@ -132,7 +132,7 @@ def extract_simulated_data_incidence(sim, selected_age_bin="<2"):
 
     sim_results = sim.results.flatten()
     cases_key = "monitor_1_hist_b_ti_acute"    # New cases (acute), summed over the period of the monitor/report
-    population_key = "monitor_2_hist_b_alive"  # Average (mean) number of agents alive over the period of the monitor/report
+    population_key = "monitor_2_hist_b_alive"  # Sum number of agents alive over the period of the monitor/report
     lbl_to_idx = sim.get_analyzers()[0].age_bin_lbl_to_idx    # Mapping between age bin string labels and index in the results 2D arrays
     yearvec = pd.Series(sim_results["monitor_1_yearvec"][:])  # The time vector of the simulated data, expressed in "float" calendar years, ie 2000.0, 2000.1 ...
     this_idx = lbl_to_idx[selected_age_bin]
