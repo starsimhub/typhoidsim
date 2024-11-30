@@ -708,7 +708,7 @@ class CalibComponent220(sc.prettyobj):
         return f"Calibration component with name {self.name}"
 
     def plot(self):
-
+        breakpoint()
         raise NotImplementedError
 
 
