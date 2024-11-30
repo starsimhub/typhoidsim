@@ -130,7 +130,6 @@ class histograms_by_age_sex_monitor(Monitor):
 
         # Save a mapping between human readable age bin label and column index in the results array
         self.age_bin_lbl_to_idx = {lbl: idx for idx, lbl in enumerate(self.age_bin_labels)}
-        breakpoint()
         self.age_bin_centers = (self.age_bins[0:-1] + self.age_bins[1:])/2.0
 
         if self.to_record is None:
