@@ -18,7 +18,7 @@ __all__ = ['get_data_home', 'load_dataset', 'get_dataset_names']
 __all__ += ['get_attr_vals']
 __all__ += ['digitize_ages_1yr']
 __all__ += ['test_cpu_performance']
-__all__ += ['generate_unique_filename', 'to_df']
+__all__ += ['generate_unique_filename', 'to_df', 'promotetoiterable']
 
 
 @nb.jit((nb.float64[:], ), cache=True, nopython=True)
@@ -255,3 +255,11 @@ def to_df(sim, sep='_'):
 
     df = sc.dataframe.from_dict(flat)
     return df
+
+
+def promotetoiterable(axs):
+    if isinstance(axs, np.ndarray):
+        axs = axs.flatten()
+    if not sc.isiterable(axs):
+        axs = [axs]
+    return axs
