@@ -619,11 +619,31 @@ class Calibration220(sc.prettyobj):
         return fig
 
     def plot_components(self):
+        """ Plot indiviudal components """
         for component in self.components:
             component.plot()
+        return
 
-        # TODO: something smart to plot mutiple age bins together
-        raise NotImplementedError
+    def to_df(self):
+        if self.after_msim is None:
+            print("Please run .check_fit()")
+            return
+        dfs = []
+        for component in self.components:
+            sim_df = []
+            for sim in self.after_msim.sims:
+                df1 = component.extract_fn(sim)
+                df1["source_data"] = "predicted"
+                df1["rand_seed"] = int(sim.pars["rand_seed"])
+                sim_df.append(df1)
+            sim_df = pd.concat(sim_df)
+            exp_df = component.expected
+            exp_df["source_data"] = "expected"
+            df = pd.concat([sim_df, exp_df])
+            df.reset_index(inplace=True)
+            dfs.append(df)
+        dfs = pd.concat(dfs)
+        return dfs
 
 
 class CalibComponent220(sc.prettyobj):
@@ -725,7 +745,7 @@ class CalibComponent220(sc.prettyobj):
         df = pd.concat([df1, df2])
         df.reset_index(inplace=True)
         df = df[["t", "data", "x"]]
-        #ax = sns.barplot(df, x="t", y="x", hue="origin", ax=ax)
+        ax = sns.barplot(df, x="t", y="x", hue="origin", ax=ax)
         ax.set_title(self.name)
         ax.set_xlabel('Years (time)')
         ax.legend()
