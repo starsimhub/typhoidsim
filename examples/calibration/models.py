@@ -59,16 +59,6 @@ def baseline_model():
     ]
 
     # DISEASE CONFIGURATION
-
-    # Define the susceptible introduction curve
-    # This curve defines an age-based transition from completeley immune to susceptible.
-    sus_saturation_age = 20.0       # in years
-    sus_age_exposure_slope = 6.94   # ? not sure about the units
-
-    # Function that defines the probability of becoming susceptible
-    p_unexp2sus_parc_fun = partial_unexp2susc(sus_saturation_age=sus_saturation_age,
-                                              sus_age_exposure_slope=sus_age_exposure_slope)
-
     typhoids_pars = {'tai': 42_000,
                      'tpri': 0.5,
                      'tsri': 1.0,
@@ -76,8 +66,10 @@ def baseline_model():
                      'tppi': 0.05,
                      'p_cpg': 0.108,
                      'p_acute': ss.bernoulli(p=0.24),
-                     'init_prev': ss.bernoulli(p=0.00022),         # Initial prevalence: This is how we seed infections at the start of a simulation. In this case approx 5% of the total population of agents, will be infected at t=0
-                     'p_unexp2sus': ss.bernoulli(p=p_unexp2sus_parc_fun)}
+                     'init_prev': ss.bernoulli(p=0.00022),
+                     "unexp2sus_saturation_age": 20.0,
+                     "unexp2sus_slope": 1.0
+                     }
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
@@ -88,7 +80,6 @@ def baseline_model():
                                                                       'shedding_rate': 0.7})})
 
     # INTERVENTIONS: Vaccination campaigns
-
     # Parameters of seasonal trapezoidal pattern
     seasonal_env_pars = {
         'period': 365.0,           # in days
@@ -185,25 +176,6 @@ def make_sim(scenario="baseline"):
     return sim
 
 
-def partial_unexp2susc(sus_saturation_age, sus_age_exposure_slope):
-    """
-    Create a partially evaluated function from unexp2susc_prob_function_gauld2018
-    with given sus_saturation_age and sus_age_exposure_slope arguments.
-
-    Args:
-        sus_saturation_age (float): The age at which exposure reaches saturation.
-        sus_age_exposure_slope (float): The slope of exposure with increasing age.
-
-    Returns:
-        callable: A partially evaluated function of unexp2susc_prob_function_gauld2018.
-                  In the simulation the ages of agents will be passed to this function,
-                  to determine whether the agent becomes suseptible.
-    """
-    return partial(ty.unexp2sus_youth_prob_function_gauld2018,
-                   sus_saturation_age=sus_saturation_age,
-                   sus_age_exposure_slope=sus_age_exposure_slope)
-
-
 def partial_env_trapezoidal(kwarg_pars):
     """
     Return a partially evaluated function. This means that the pattern is set
@@ -262,7 +234,9 @@ def run_debug_multisim(do_plot=True):
     msim.run()
     if do_plot:
         for sim in msim.sims:
-            timevec = sim.get_analyzers()[0].yearvec
+            # Display the entire simulation period -- takes long to plot everything if simulation is long
+            #ty.plot_sim(sim, key="typhoid_")
+            # Display a fraction of the simulation period
             ty.plot_sim(sim, key="typhoid_", display_from=2010.0, display_until=2025.0)
         plt.show()
     return msim
