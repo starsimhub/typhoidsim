@@ -66,7 +66,7 @@ class histograms_by_age_sex_monitor(Monitor):
                  name=None):
         super().__init__()
         self.name = "hist_by_age_sex" if name is None else name
-        self.age_bins = age_bins
+        self.age_bins = sc.promotetoarray(age_bins)
         self.age_bin_labels = age_bin_labels
         self.age_bin_centers = None
         self.age_bin_lbl_to_idx = None
@@ -130,7 +130,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
         # Save a mapping between human readable age bin label and column index in the results array
         self.age_bin_lbl_to_idx = {lbl: idx for idx, lbl in enumerate(self.age_bin_labels)}
-        self.age_bin_centers = (self.age_bins[0:-1] +  self.age_bins[1:])/2.0
+        breakpoint()
+        self.age_bin_centers = (self.age_bins[0:-1] + self.age_bins[1:])/2.0
 
         if self.to_record is None:
             states_of_interest = ["ti_infected", "infected",
