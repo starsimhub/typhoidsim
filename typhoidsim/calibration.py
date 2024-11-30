@@ -618,6 +618,13 @@ class Calibration220(sc.prettyobj):
         sc.figlayout()
         return fig
 
+    def plot_components(self):
+        for component in self.components:
+            component.plot()
+
+        # TODO: something smart to plot mutiple age bins together
+        raise NotImplementedError
+
 
 class CalibComponent220(sc.prettyobj):
     """
