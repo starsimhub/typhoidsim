@@ -1,7 +1,4 @@
 from functools import partial
-import numpy as np
-import pandas as pd
-import datetime
 import matplotlib.pyplot as plt
 
 
@@ -16,9 +13,9 @@ def get_common_simulation_pars():
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
         start    =1990.0,         # Start year
-        n_years  =40.0,            # Duration of the simulation in years
+        n_years  =15.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
-        n_agents =10_000,         # Number of agents in the population
+        n_agents =100_000,         # Number of agents in the population
         verbose  =0,              # Print details of the run
     )
     return pars
@@ -66,9 +63,9 @@ def baseline_model():
                      'tppi': 0.05,
                      'p_cpg': 0.108,
                      'p_acute': ss.bernoulli(p=0.24),
-                     'init_prev': ss.bernoulli(p=0.00022),
+                     'init_prev': ss.bernoulli(p=0.05),
                      "unexp2sus_saturation_age": 20.0,
-                     "unexp2sus_slope": 1.0
+                     "unexp2sus_slope": 7.0
                      }
 
     typhoid = ty.Typhoid(pars=typhoids_pars)
@@ -76,8 +73,8 @@ def baseline_model():
     # ENVIRONMENT
     environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  # TEER: Typhoid environmental exposure rate
                                              'volume': 1,       # Set the volume to 1 if we want to reproduce EMOD-like results
-                                             'transmission': ss.Pars({'rel_trans': 0.00001,  # This parameter is equivalent to mEL parameter in Gauld etal 2018
-                                                                      'shedding_rate': 0.7})})
+                                             'transmission': ss.Pars({'rel_trans': 0.025/pars["n_agents"],  # This parameter is equivalent to mEL parameter in Gauld etal 2018
+                                                                      'shedding_rate': 0.3})})
 
     # INTERVENTIONS: Vaccination campaigns
     # Parameters of seasonal trapezoidal pattern
@@ -201,8 +198,9 @@ def run_debug_single_sim(do_plot=True):
     sim.run()
     if do_plot:
         timevec = sim.get_analyzers()[0].yearvec
-        ty.plot_sim(sim, key="typhoid_")
+        sim.plot(key="typhoid_")
         plt.show()
+    breakpoint()
     return sim
 
 
@@ -235,9 +233,9 @@ def run_debug_multisim(do_plot=True):
     if do_plot:
         for sim in msim.sims:
             # Display the entire simulation period -- takes long to plot everything if simulation is long
-            #ty.plot_sim(sim, key="typhoid_")
+            sim.plot(key="typhoid_")
             # Display a fraction of the simulation period
-            ty.plot_sim(sim, key="typhoid_", display_from=2010.0, display_until=2025.0)
+            #ty.plot_sim(sim, key="typhoid_", display_from=2010.0, display_until=2025.0)
         plt.show()
     return msim
 

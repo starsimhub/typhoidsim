@@ -725,7 +725,7 @@ class CalibComponent220(sc.prettyobj):
         df = pd.concat([df1, df2])
         df.reset_index(inplace=True)
         df = df[["t", "data", "x"]]
-        ax = sns.barplot(df, x="t", y="x", hue="origin", ax=ax)
+        #ax = sns.barplot(df, x="t", y="x", hue="origin", ax=ax)
         ax.set_title(self.name)
         ax.set_xlabel('Years (time)')
         ax.legend()
