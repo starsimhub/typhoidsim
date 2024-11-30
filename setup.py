@@ -48,5 +48,6 @@ setup(
         'numba',
         'networkx',
         'numexpr',
+        'seaborn'
     ],
 )
