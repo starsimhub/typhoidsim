@@ -321,10 +321,12 @@ class Calibration220(sc.prettyobj):
 
     def _default_eval_fit(self, sim, **kwargs):
         """ Evaluate the fit by evaluating the negative log likelihood """
-        nlls = []  # Negative log likelihood
+        nlls = []  # Negative log likelihoods
+        # Each of these components returns a single value for nll
         for component in sc.tolist(self.components):
             nlls.append(component(sim))
 
+        # Decide what to do with all the negatve log likelihoods, for instance, across multiple bins
         as_scalar = kwargs.get('as_scalar')
         nlls = np.array(nlls)
         if as_scalar == 'mean':
@@ -727,10 +729,10 @@ class CalibComponent220(sc.prettyobj):
 
     def eval(self, sim):
         """ Compute and return the negative log likelihood """
-        predicted = self.extract_fn(sim)                     # Extract simulated data
-        self.predicted = self.conform(self.expected, predicted)   # Conform/interpolate to common grid
-        self.nll = self.nll_fn(self.expected, predicted)     # Negative log likelihood
-        return self.weight * np.sum(self.nll)                # Sum across time
+        predicted = self.extract_fn(sim)                          # Extract simulated data
+        self.predicted = self.conform(self.expected, predicted)   # Conform/interpolate to common time grid based on timepoints available in expected data
+        self.nll = self.nll_fn(self.expected, predicted)          # Negative log likelihood
+        return self.weight * np.sum(self.nll)                     # Sum across timepoints
 
     def __call__(self, sim):
         return self.eval(sim)
@@ -777,7 +779,7 @@ def nll_beta(expected, actual):
         actual (pd.Dataframe): dataframe containing the 'current' or 'actual' data we have (usually simulated) data
              The index should be the time in either floating point years or datetime.
     Returns
-        -logL (float): negative likelihood
+        -logL (float): negative log likelihood
     """
     e_n, e_x = expected['n'], expected['x']
     a_n, a_x = actual['n'], actual['x']
@@ -800,7 +802,7 @@ def nll_gamma(expected, actual):
              The index should be the time in either floating point years or datetime.
 
     Returns
-        -logL (float): negative likelihood
+        -logL (float): negative log-likelihood
     """
     e_n, e_x = expected['n'], expected['x']
     a_n, a_x = actual['n'], actual['x']
@@ -836,8 +838,8 @@ def linear_interp(expected, actual):
 
 def linear_accum(expected, actual):
     """
-    Interpolate in the accumulation, then difference.
-    Use for incident data like incidence or new_deaths
+    Interpolate in the cumulative of column "x", then differentiate.
+    Use for incident-like data such as new_deaths
 
     Args:
         expected (pd.Dataframe): dataframe containing reference data (usually from empirical sources).
@@ -872,39 +874,94 @@ def linear_accum(expected, actual):
     return conformed
 
 
-def dirichlet_single(raw_data, sim_data):
-    # from emod-based calibration
-    # TODO: document and refactor
-    num_cat_bins = len(raw_data)
-    raw_nobs = sum(raw_data)
-    sim_nobs = sum(sim_data)
-    ll = 0.
-    ll += gammaln(raw_nobs + 1)
-    ll += gammaln(sim_nobs + num_cat_bins)
-    ll -= gammaln(raw_nobs + sim_nobs + num_cat_bins)
-    for catbin in range(num_cat_bins):
-        ll += gammaln(raw_data[catbin] + sim_data[catbin] + 1)
-        ll -= gammaln(sim_data[catbin] + 1)
-        ll -= gammaln(raw_data[catbin] + 1)
-    ll /= num_cat_bins
-    return ll
+def dirichlet_single(expected, predicted):
+    """
+    Also called negative binomial, but parameterized differently. The gamma-poisson
+    likelihood is a Poisson likelihood with a gamma-distributed rate parameter
+
+    Args:
+        expected (pd.Dataframe): dataframe containing reference data (usually empirical data).
+             The index should be the time in either floating point years or datetime.
+        predicted/actual (pd.Dataframe): dataframe containing the 'current' or 'actual'
+            data we have (usually simulated) data. The index should be the time in either
+            floating point years or datetime.
+
+    Returns
+        nll (float/array): negative likelihood
+    """
+
+    e_n, e_x = expected["n"], expected["x"]
+    a_n, a_x = predicted["n"], predicted["x"]
+
+    # n/obs
+    ll = gammaln(e_n + 1)
+    ll += gammaln(a_n + 1)
+    ll -= gammaln(e_n + a_n + 1)
+    # x
+    ll += gammaln(e_x + a_x + 1)
+    ll -= gammaln(a_x + 1)
+    ll -= gammaln(e_x + 1)
+    return -ll
 
 
-def beta_binomial(raw_nobs, sim_nobs, raw_data, sim_data, return_mean=True):
-    # from emod-based calibration
-    # TODO: document and refactor
-    num_bins = len(raw_data)
-    ll = 0.
-    for this_bin in range(num_bins):
-        ll += gammaln(raw_nobs[this_bin] + 1)
-        ll += gammaln(sim_nobs[this_bin] + 2)
-        ll -= gammaln(raw_nobs[this_bin] + sim_nobs[this_bin] + 2)
-        ll += gammaln(raw_data[this_bin] + sim_data[this_bin] + 1)
-        ll += gammaln(raw_nobs[this_bin] - raw_data[this_bin] + sim_nobs[this_bin] - sim_data[this_bin] + 1)
-        ll -= gammaln(raw_data[this_bin] + 1)
-        ll -= gammaln(raw_nobs[this_bin] - raw_data[this_bin] + 1)
-        ll -= gammaln(sim_data[this_bin] + 1)
-        ll -= gammaln(sim_nobs[this_bin] - sim_data[this_bin] + 1)
-    if num_bins != 0 and return_mean:
-        ll /= num_bins
-    return ll
+def beta_binomial(expected, predicted):
+    """
+    Translated from emod ll calculators, **without** the averaging over possible
+    age bins in the data. Averaging or summing of likelihoods over age bins is
+    handled by the Calibration class.
+
+    Args:
+        expected (pd.Dataframe): dataframe containing reference data (usually empirical data).
+             The index should be the time in either floating point years or datetime.
+        predicted/actual (pd.Dataframe): dataframe containing the 'current' or 'actual'
+            data we have (usually simulated) data. The index should be the time in either
+            floating point years or datetime.
+
+    Returns
+        nll (float/array): negative likelihood
+    """
+    e_n, e_x = expected["n"], expected["x"]
+    a_n, a_x = predicted["n"], predicted["x"]
+    ll = gammaln(a_n + 1)
+    ll += gammaln(a_n + 2)
+    ll -= gammaln(e_n + a_n + 2)
+    ll += gammaln(e_x + a_x + 1)
+    ll += gammaln(e_n, - e_x + a_n - a_x + 1)
+    ll -= gammaln(e_x + 1)
+    ll -= gammaln(e_n - e_x + 1)
+    ll -= gammaln(a_x + 1)
+    ll -= gammaln(a_n - a_x + 1)
+    return -ll
+
+
+def euclidean(expected, predicted):
+    """
+    Euclidean distance between expected and predictec/simulated data
+
+    Args:
+        expected (pd.DataFrame): dataframe with column "x", the quantity or metric of interest, from the reference dataset.
+        predicted (pd.DataFrame): dataframe with column "x", the quantity or metric of interest, from simulated dataset.
+
+    Returns:
+        nll (float): negative Euclidean distance between expected and predicted values.
+    """
+    e_x, a_x = expected["x"], predicted["x"]
+    ll = np.sqrt(((e_x - a_x)**2).sum())
+    return -ll
+
+
+def wighted_euclidean(expected, predicted):
+    """
+    Weighted Euclidean distance between expected and predictec/simulated data. Also called
+    weighted_squares in calibra ll calculators.
+
+    Args:
+        expected (pd.DataFrame): dataframe with column "x", the quantity or metric of interest, from the reference dataset.
+        predicted (pd.DataFrame): dataframe with column "x", the quantity or metric of interest, from simulated dataset.
+
+    Returns:
+        nll (float): negative weighted Euclidean distance between expected and predicted values.
+    """
+    e_x, a_x = expected["x"], predicted["x"]
+    ll = np.sqrt(((e_x - a_x)**2 / e_x).sum())
+    return -ll
