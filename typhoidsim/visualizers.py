@@ -9,7 +9,7 @@ import sciris as sc
 
 from .networks import CommunityNet
 
-__all__ = ["plot_age_histogram", "plot_age_mixing", "plot_sim"]
+__all__ = ["plot_age_histogram", "plot_age_mixing", "plot_sim", "plot_calib"]
 
 
 def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearvec=None, display_from=None, display_until=None):
@@ -75,6 +75,59 @@ def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, 
             ax.set_title(title)
             ax.set_xlabel('Year')
 
+    sc.figlayout(fig=fig)
+
+    return fig
+
+
+def plot_calib(calib, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearvec=None, display_from=None, display_until=None):
+    """
+    Plot all results in the Sim object after the simulation has run
+
+    Args:
+        calib (typhoidsim.Calibration220): a Calibration object for which check_fit() has been run
+        key (str): the timepoint to plot (by default, all)
+        fig (Figure): if provided, plot results into an existing figure
+        style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
+        fig_kw (dict): passed to ``plt.subplots()``
+        plot_kw (dict): passed to ``plt.plot()``
+        yearvec (arr): the time vector (in years) we want to use for plotting the results, defaults to sim.yearvec
+
+    """
+    import seaborn as sns
+    if calib.after_msim is None:
+        print("Please run calib.check_fit()")
+        return
+
+    df = calib.to_df()
+
+    # Configuration
+    n_cols = np.ceil(np.sqrt(df["t"].nunique()))  # Number of columns of axes
+    default_figsize = np.array([8, 6])
+    figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,1.5)  # Scale the default figure size based on the number of rows and columns
+    figsize = default_figsize * figsize_factor
+    fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
+    plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
+
+    # Do the plotting
+    with sc.options.with_style(style):
+        # Get the figure
+        if fig is None:
+            fig, axs = sc.getrowscols(df["t"].nunique(), make=True, **fig_kw)
+            if isinstance(axs, np.ndarray):
+                axs = axs.flatten()
+        else:
+            axs = fig.axes
+        if not sc.isiterable(axs):
+            axs = [axs]
+
+        # Do the plotting
+        for ax, t in zip(axs, df["t"].unique()):
+            sim_data = df.loc[df["t"] == t, :]
+            # This will calculate the mean and stadard across seeds
+            ax = sns.barplot(sim_data, x="age_bin", y="x", hue="source_data", estimator="mean", errorbar="sd", ax=ax)
+            ax.set_title(f"{df["component_name"].unique()[0]} - year: {t}")
+            ax.set_xlabel('Year')
     sc.figlayout(fig=fig)
 
     return fig
