@@ -635,10 +635,12 @@ class Calibration220(sc.prettyobj):
                 df1 = component.extract_fn(sim)
                 df1["source_data"] = "predicted"
                 df1["rand_seed"] = int(sim.pars["rand_seed"])
+                df1["component_name"] = component.name
                 sim_df.append(df1)
             sim_df = pd.concat(sim_df)
             exp_df = component.expected
             exp_df["source_data"] = "expected"
+            exp_df["component_name"] = component.name
             df = pd.concat([sim_df, exp_df])
             df.reset_index(inplace=True)
             dfs.append(df)
