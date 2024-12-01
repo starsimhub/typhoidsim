@@ -34,7 +34,7 @@ def parse_update_sim_pars(sim, calib_pars, **kwargs):
     env = sim.pars.demographics[2]
 
     for par_name, par_attrs in calib_pars.items():  # Loop over the calibration parameters
-        v = par_attrs['value']
+        v = par_attrs["value"]
         # Each item in calib_pars is a dictionary with keys like 'low', 'high',
         # 'guess', 'suggest_type', and importantly 'value'. The 'value' key is
         # the one we want to use as that's the one selected by the algorithm
@@ -44,7 +44,7 @@ def parse_update_sim_pars(sim, calib_pars, **kwargs):
             case "teer":
                 env.pars.transmission.env2ppl_exposure_rate.lam = v
             case "rel_trans":
-                env.pars.transmission.rel_trans = v
+                env.pars.transmission.rel_trans = v / sim.pars["n_agents"]
             case "init_prev":
                 typh.pars.init_prev = ss.bernoulli(v)
             case _:
@@ -97,7 +97,7 @@ def make_calib_components_by_age_yearly_incidence(reference_data):
         expected_data = extract_reference_data(reference_data, selected_age_bin=this_age_bin)
         extract_data_from_sim_fn = partial(extract_simulated_data_incidence, selected_age_bin=this_age_bin)
         components.append(ty.CalibComponent220(
-                name=f"cases_by_age_{this_age_bin}",
+                name=f"cases_by_age",
                 expected=expected_data,
                 extract_fn=extract_data_from_sim_fn,
                 conform="incident",
