@@ -965,3 +965,19 @@ def wighted_euclidean(expected, predicted):
     e_x, a_x = expected["x"], predicted["x"]
     ll = np.sqrt(((e_x - a_x)**2 / e_x).sum())
     return -ll
+
+
+def normalized_median_absolute_error(expected, predicted):
+    """
+    The normalized median absolute error. A highly robust goodness-of-fit metric.
+
+    Args:
+        expected (pd.DataFrame): dataframe with column "x", the quantity or metric of interest, from the reference dataset.
+        predicted (pd.DataFrame): dataframe with column "x", the quantity or metric of interest, from simulated dataset.
+
+    Returns:
+        ngof (float): negative goodness of fit -- the Calibration class tries to maximise the score of the objective function.
+    """
+    e_x, a_x = expected["x"], predicted["x"]
+    gof = compute_gof(e_x, a_x, as_scalar='median')  # Normalized median absolute error -- highly robust
+    return -gof
