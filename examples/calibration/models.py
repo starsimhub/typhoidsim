@@ -12,8 +12,8 @@ import data_utils as utils
 def get_common_simulation_pars():
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =2017.0,         # Start year
-        n_years  =1.0,            # Duration of the simulation in years
+        start    =2017.0,         # Start year -- #TODO: change once everything is readt
+        n_years  =8.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         n_agents =100_000,         # Number of agents in the population
         verbose  =0,              # Print details of the run
