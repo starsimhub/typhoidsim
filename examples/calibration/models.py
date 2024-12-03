@@ -13,7 +13,7 @@ def get_common_simulation_pars():
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
         start    =2017.0,         # Start year
-        n_years  =8.0,            # Duration of the simulation in years
+        n_years  =1.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         n_agents =100_000,         # Number of agents in the population
         verbose  =0,              # Print details of the run
@@ -94,19 +94,16 @@ def baseline_model():
 
     # OBSERVATIONS AND REPORTING
     # Create an analyzer that will provide the results we need to compare to target empirical data
-    age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
-    age_bin_labels = ['0-2', '2-4', '5-9', '10-14', '15+']  # human readable labels
+    age_bin_edges = [0, 2, 5, 10, 15, 125]
 
     # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
     record_sum = dict(ti_acute=dict(path=("diseases", "typhoid"), label="cases"),
                       alive=dict(path=("people",)))
     record_n   = dict(alive=dict(path=("people",)))
 
-
     monitor_sum = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
-                                                   age_bin_labels=age_bin_labels,
                                                    to_record=record_sum,
-                                                   resampling_period=30.44/365,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
+                                                   resampling_period=1.0,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
                                                    aggregate_sex=True,
                                                    aggregate_time="sum",   # Sum over the resampling period (to get incidence)
                                                    record_from=2017.0,
@@ -114,9 +111,8 @@ def baseline_model():
                                                    name="monitor_1")
 
     monitor_population = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
-                                                          age_bin_labels=age_bin_labels,
                                                           to_record=record_n,
-                                                          resampling_period=30.44/365,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
+                                                          resampling_period=1.0,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
                                                           aggregate_sex=True,
                                                           aggregate_time="median",      # Record the median number of people alive on that period, gives an idea of population size if needed
                                                           record_from=2017.0,
@@ -238,5 +234,6 @@ def run_debug_multisim(do_plot=True):
 
 
 if __name__ == "__main__":
-    #run_debug_single_sim()
-    run_debug_multisim(do_plot=True)
+    run_debug_single_sim()
+
+    #run_debug_multisim(do_plot=True)
