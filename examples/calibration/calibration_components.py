@@ -76,44 +76,18 @@ def get_calib_pars(calibration_step="step_1"):
     return calib_pars
 
 
-def get_calib_components(calibration_targets="all_cases"):
-
+def get_calib_components(calibration_targets="cases_prevax"):
     match calibration_targets:
-        case "all_cases":
-            reference_data = utils.get_reference_dataset_csv(dataset_name="CasesByAgeAll",
-                                                             filepath="reference_data/reference_data_flat_sindh.csv")
-            return make_calib_components_by_age_yearly_incidence(reference_data)
+        case "cases_prevax":
+            reference_data = utils.get_reference_data_prevax()
+            return make_calib_components_by_age_prevax(reference_data)
         case _:
             raise NotImplementedError
 
 
-def make_calib_components_by_age_yearly_incidence(reference_data):
+def make_calib_components_by_age_prevax(reference_data):
     """
-    Builds a list of calibration components. Each component is a data source
-    """
-    components = []
-    num_age_bins = reference_data.age_bin_label.nunique()
-    for this_age_bin in sorted(reference_data.age_bin_label.unique()):
-        expected_data = extract_reference_data(reference_data, selected_age_bin=this_age_bin)
-        extract_data_from_sim_fn = partial(extract_simulated_data_incidence, selected_age_bin=this_age_bin)
-        components.append(ty.CalibComponent220(
-                name=f"cases_by_age",
-                expected=expected_data,
-                extract_fn=extract_data_from_sim_fn,
-                conform="incident",
-                nll_fn="beta",
-                weight=1.0/num_age_bins,  # Not strictly necessary to weight it like this
-            ))
-    return components
-
-
-def extract_simulated_data_incidence(sim, selected_age_bin="<2"):
-    """
-    Receive a sim object, extract necessary data, and output a dataframe
-    that will be used by a CalibComponent.
-
-    This is similar to the method 'retrieve_age_data' in AgeDistAnalyzer_Count.py
-
+    Builds a list of calibration components. Each component is a data source.
     We can have multiple extraction functions, depending on what data we need
     from the simulation and how we need to aggregate simulated data to
     match the empirical/reference data. Starsim's Calibration expects
@@ -121,24 +95,55 @@ def extract_simulated_data_incidence(sim, selected_age_bin="<2"):
 
     Each CalibComponent independently assesses pseudo-likelihood as part of
     evaluating the quality of input parameters.
+    """
+    components = []
+    num_age_bins = reference_data.age_bin_label.nunique()
+    for this_age_bin in sorted(reference_data.age_bin_label.unique()):
+        expected_data = extract_reference_data_prevax(reference_data, selected_age_bin=this_age_bin)
+        extract_data_from_sim_fn = partial(extract_simulated_data_prevax, selected_age_bin=this_age_bin,
+                                           start_year=2017.0, start_end=2020.0)
+        components.append(ty.CalibComponent220(
+                name=f"cases_prevax",
+                expected=expected_data,
+                extract_fn=extract_data_from_sim_fn,
+                conform="prevalent",
+                nll_fn=ty.euclidean,
+                weight=1.0/num_age_bins,  # Not strictly necessary to weight it like this
+            ))
+    return components
+
+
+def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2018.0, end_year=2020.0):
+    """
+    Receive a sim object, extract necessary data, and output a dataframe
+    that will be used by a CalibComponent.
+
+    This is similar to the method 'retrieve_age_data' in AgeDistAnalyzer_Count.py,
+    but also does some of the steps calculate_likelihood() in AgeDistAnalyzer_Count.py,
+    mainly the preprocessing steps needed to get exactly the data/qubaitty used
+    to calculate the likelihgood/distance between reference data and simulated data.
 
     Returns:
         simulated_data (pandas.Dataframe): with columns:
-         - 'n' number of agents in an age bin)
-         - 'x' counts of the metric of interest (ie, new cases)
+         - 'n' number of observations; in this case is the total number of cases: sum over age bins and time interval of interest (start_year <= time < end year)
+            - 'n' is not always used during calibration, this depends on the likelihood function used
+         - 'x' value of the metric of interest (ie, can be counts like new cases, or a proportion)
          - 'age_bin' a string with the human readable label of this age bin
          - index is time; index name is 't'
     """
 
     sim_results = sim.results.flatten()
-    cases_key = "monitor_1_hist_b_ti_acute"    # New cases (acute), summed over the period of the monitor/report
-    population_key = "monitor_2_hist_b_alive"  # Sum number of agents alive over the period of the monitor/report
-    lbl_to_idx = sim.get_analyzers()[0].age_bin_lbl_to_idx    # Mapping between age bin string labels and index in the results 2D arrays
-    yearvec = pd.Series(sim_results["monitor_1_yearvec"][:])  # The time vector of the simulated data, expressed in "float" calendar years, ie 2000.0, 2000.1 ...
+    cases_key = "monitor_1_hist_b_ti_acute"        # New cases (acute), summed over the period of the monitor/report
+
+    lbl_to_idx = sim.get_analyzers()[0].age_bin_lbl_to_idx      # Mapping between age bin string labels and index in the monitor results 2D arrays
+    yearvec = sim_results["monitor_1_yearvec"][:]  # The time vector of the monitored simulated data, expressed in "float" calendar years, ie 2000.0, 2000.1 ...
+    time_mask = ((yearvec >= start_year) & (yearvec < end_year))
+    # Apply lockdown mask
+
     this_idx = lbl_to_idx[selected_age_bin]
     # Build the dataframe the calibration component needs
-    x = sim_results[cases_key][:, this_idx]
-    n = sim_results[population_key][:, this_idx]
+    x = sim_results[cases_key][time_mask, this_idx].sum()  # Sum over time, here we are only processing one age bin
+    n = sim_results[cases_key][time_mask, :].sum().sum()   # Sum over time and over age bins
     simulated_data = pd.DataFrame(data={"n": n,
                                         "x": x,
                                         "age_bin": selected_age_bin},
@@ -146,10 +151,12 @@ def extract_simulated_data_incidence(sim, selected_age_bin="<2"):
     return simulated_data
 
 
-def extract_reference_data(reference_data, selected_age_bin="<2"):
-
+def extract_reference_data_prevax(reference_data, selected_age_bin=None):
     """
-    This function is similar to get_age_ref_data in AgeDistAnalyzer_Count.py
+    This function is similar to get_age_ref_data in AgeDistAnalyzer_Count.py,
+    plus the steps done in calculate_likelihood() to get exactly the data/quantity
+    that is actually used to calculate likelihood/distance/cost during
+    the calibration process.
     """
 
     age_bin_mask = (reference_data["age_bin_label"] == selected_age_bin)
