@@ -137,8 +137,9 @@ def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2018.0,
 
     lbl_to_idx = sim.get_analyzers()[0].age_bin_lbl_to_idx      # Mapping between age bin string labels and index in the monitor results 2D arrays
     yearvec = sim_results["monitor_1_yearvec"][:]  # The time vector of the monitored simulated data, expressed in "float" calendar years, ie 2000.0, 2000.1 ...
-    time_mask = ((yearvec >= start_year) & (yearvec < end_year))
     # Apply lockdown mask
+    not_lockdown = utils.lockdown_mask(yearvec)
+    time_mask = ((yearvec >= start_year) & (yearvec < end_year) & not_lockdown)
 
     this_idx = lbl_to_idx[selected_age_bin]
     # Build the dataframe the calibration component needs
