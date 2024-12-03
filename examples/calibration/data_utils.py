@@ -325,3 +325,14 @@ def parse_bin_edges(str_bin):
     values = re.sub(r'[\[\)]', '', str_bin).split(',')
     values = [float(v) for v in values]
     return pd.Series(values)
+
+
+def lockdown_mask(years, target_year=2019.0):
+    """
+    Returns a mask that can be used to exclude the months of lockdown.
+    Assumes years is the time in calendar years, in float representation.
+    """
+    year = years.astype(int)
+    month = np.round((years - year) * 12)
+    is_lockdown = ((year == target_year) & (month >= 2) & (month <= 6))
+    return ~is_lockdown
