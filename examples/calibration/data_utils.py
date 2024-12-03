@@ -100,41 +100,6 @@ def load_empirical_data_pakistan(csv_file='TahirData_0928.csv'):
     return df
 
 
-def get_data_for_calibration_prevax(province="Sindh"):
-    """
-    Example script to prepare a df for starsim's Calibration class.
-    This function extracts data from Pakistan from the yers 2018 and 2019,
-    and arranges them in a dataframe with columns named "typhoid.new_infections",
-    and "typhoid.prevalence". These column names correspond to 'paths' to results
-    in the simulation object (after running the simulation).
-
-    sim.results.typhoid.new_infections --> is a timeseries
-    sim.results.typhoid.new_infections --> is a timeseries
-
-    The Calibration class requires column names in dataframe that matches a
-    'stream' or 'array' of data inside the simulation.
-    """
-
-    data = load_empirical_data_pakistan()
-
-    # Column name indicate "results" available in the simulation.
-    df = pd.DataFrame({"date": data[f"Date"],
-                       "typhoid.new_infections": data[f"{province}_positive"],
-                       "typhoid.prevalence": data[f"{province}_positivity"],   # TODO: need to update the name of the columns once we include tests with a testing report rate
-                       "age_group_name": data[f"Ages"]})
-
-    # Filter data
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.loc[df['date'].dt.year.isin([2018, 2019]) &  # Keep only rows with year equal to 2018 or 2019.
-               (df['age_group_name'] == 'All')] # Keep only rows with age_group_name equals 'All'.
-    df['time'] = df['date'].dt.year + (df['date'].dt.month - 1) / 12
-    df['time'] = df['time'].astype(float)
-    df['typhoid.new_infections'] = df['typhoid.new_infections'].astype(float)
-    df.drop(columns=['date', 'age_group_name'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
-    return df
-
-
 def check_age_distribution(n_agents=100_000):
     """
     Run a quick sim to get the age distribution of the population, and plots the
@@ -209,6 +174,26 @@ def get_reference_dataset_xls(dataset_name, filepath):
         return df
     else:
         raise ValueError(f"Sheet {dataset_name} not found in {filepath}")
+
+
+def get_reference_data_prevax(filepath=None):
+    if filepath is None:
+        filepath = "reference_data/SindhCalibration_newage_excludelockdown_2019.xlsx"
+    reference_data = get_reference_dataset_xls(dataset_name="CasesByAge_prevax",
+                                               filepath=filepath)
+    reference_data = reference_data.rename(columns={"Cases_sum": "cases_sum",
+                                                    "Cases_sum_corrected": "cases_sum_corrected"})
+
+    # Parse age bins
+    reference_data[["age_start", "age_end"]] = reference_data["AgeBin"].apply(parse_bin_edges)
+    # Parse year bins
+    reference_data[["year_start", "year_end"]] = reference_data["YearBin"].apply(parse_bin_edges)
+
+    reference_data["age_bin_label"] = list(
+        map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
+            zip(reference_data["age_start"], reference_data["age_end"])))
+
+    return reference_data
 
 
 def get_reference_dataset_csv(dataset_name, filepath):
