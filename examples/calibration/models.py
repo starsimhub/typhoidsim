@@ -12,8 +12,8 @@ import data_utils as utils
 def get_common_simulation_pars():
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =1990.0,         # Start year
-        n_years  =15.0,            # Duration of the simulation in years
+        start    =2017.0,         # Start year
+        n_years  =8.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         n_agents =100_000,         # Number of agents in the population
         verbose  =0,              # Print details of the run
@@ -94,42 +94,39 @@ def baseline_model():
 
     # OBSERVATIONS AND REPORTING
     # Create an analyzer that will provide the results we need to compare to target empirical data
-    # age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
-    # age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15+']  # human readable labels
-
-    age_bin_edges = [0, 2, 15, ty.max_age]
-    age_bin_labels = ['<2', '2-14', '15+']  # human readable labels
+    age_bin_edges = [0, 2, 5, 10, 15, ty.max_age]
+    age_bin_labels = ['0-2', '2-4', '5-9', '10-14', '15+']  # human readable labels
 
     # Track cases by age and by sex -- this analyzer returns counts in number of agents, not people. Scaling can be performed offline.
-    record_cases = dict(ti_acute=dict(path=("diseases", "typhoid"), label="cases"))
-    record_population = dict(alive=dict(path=("people",)))
+    record_sum = dict(ti_acute=dict(path=("diseases", "typhoid"), label="cases"),
+                      alive=dict(path=("people",)))
+    record_n   = dict(alive=dict(path=("people",)))
 
-    # TODO: rework monitors so one tracks quantities to calculate incidence and the other
-    # tracks quantities to caculate prevalence
-    monitor_cases = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
-                                                     age_bin_labels=age_bin_labels,
-                                                     to_record=record_cases,
-                                                     resampling_period=1.0,  # Record data on a yearly basis, so we can aggregate later
-                                                     aggregate_sex=True,
-                                                     aggregate_time="sum",   # Sum over the resampling period (to get incidence)
-                                                     record_from=2017.0,
-                                                     record_until=2023.0,
-                                                     name="monitor_1")
+
+    monitor_sum = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
+                                                   age_bin_labels=age_bin_labels,
+                                                   to_record=record_sum,
+                                                   resampling_period=30.44/365,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
+                                                   aggregate_sex=True,
+                                                   aggregate_time="sum",   # Sum over the resampling period (to get incidence)
+                                                   record_from=2017.0,
+                                                   record_until=2024.0,
+                                                   name="monitor_1")
 
     monitor_population = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
                                                           age_bin_labels=age_bin_labels,
-                                                          to_record=record_population,
-                                                          resampling_period=1.0,  # Record data on a yearly basis, so we can aggregate later
+                                                          to_record=record_n,
+                                                          resampling_period=30.44/365,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
                                                           aggregate_sex=True,
-                                                          aggregate_time="sum",   # Sum the number of people over the resampling period, this is used to calculate incidence rate
+                                                          aggregate_time="median",      # Record the median number of people alive on that period, gives an idea of population size if needed
                                                           record_from=2017.0,
-                                                          record_until=2023.0,
+                                                          record_until=2024.0,
                                                           name="monitor_2")
 
     model_definition = dict(pars=pars, people=ppl, diseases=[typhoid],
                             demographics=vital_dynamics + [environment],
                             interventions=[exposure_modulation],
-                            analyzers=[monitor_cases, monitor_population])
+                            analyzers=[monitor_sum, monitor_population])
 
     return model_definition
 
