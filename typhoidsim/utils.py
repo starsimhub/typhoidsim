@@ -245,6 +245,8 @@ def generate_age_bin_labels(age_bins, inclusive_range=False):
     else:
         offset = 0
     age_bin_labels = [f"{age_bins[i]:.0f}-{age_bins[i + 1]-offset:.0f}" for i in range(len(age_bins)-1)]
+    if len(age_bin_labels) == 1:
+        age_bin_labels = age_bin_labels[0]
     return age_bin_labels
 
 
