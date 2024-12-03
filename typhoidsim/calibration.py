@@ -15,7 +15,8 @@ from scipy.special import gammaln
 from . import utils as tyu
 
 
-__all__ = ['Calibration220', 'CalibComponent220', 'compute_gof']
+__all__ = ['Calibration220', 'CalibComponent220', 'compute_gof', 'euclidean',
+           'weighted_euclidean', 'normalized_median_absolute_error']
 
 
 def compute_gof(expected, predicted, normalize=True, use_frac=False, use_squared=False,
@@ -950,7 +951,7 @@ def euclidean(expected, predicted):
     return -ll
 
 
-def wighted_euclidean(expected, predicted):
+def weighted_euclidean(expected, predicted):
     """
     Weighted Euclidean distance between expected and predictec/simulated data. Also called
     weighted_squares in calibra ll calculators.
