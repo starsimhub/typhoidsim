@@ -101,7 +101,7 @@ def make_calib_components_by_age_prevax(reference_data):
     for this_age_bin in sorted(reference_data.age_bin_label.unique()):
         expected_data = extract_reference_data_prevax(reference_data, selected_age_bin=this_age_bin)
         extract_data_from_sim_fn = partial(extract_simulated_data_prevax, selected_age_bin=this_age_bin,
-                                           start_year=2017.0, start_end=2020.0)
+                                           start_year=2017.0, end_year=2020.0)
         components.append(ty.CalibComponent220(
                 name=f"cases_prevax",
                 expected=expected_data,
@@ -145,10 +145,12 @@ def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2018.0,
     # Build the dataframe the calibration component needs
     x = sim_results[cases_key][time_mask, this_idx].sum()  # Sum over time, here we are only processing one age bin
     n = sim_results[cases_key][time_mask, :].sum().sum()   # Sum over time and over age bins
+
+    year_index = np.array([0.0])
     simulated_data = pd.DataFrame(data={"n": n,
                                         "x": x,
                                         "age_bin": selected_age_bin},
-                                  index=pd.Index(yearvec, name="t"))
+                                  index=pd.Index(year_index, name="t"))
     return simulated_data
 
 
@@ -161,13 +163,12 @@ def extract_reference_data_prevax(reference_data, selected_age_bin=None):
     """
 
     age_bin_mask = (reference_data["age_bin_label"] == selected_age_bin)
-    dataset_data = reference_data.loc[age_bin_mask, :]
-    yearvec = dataset_data["year_start"].astype(float)
 
-    n = dataset_data["Population_surveillance"].astype(float).to_numpy()
-    x = dataset_data["Cases"].astype(float).to_numpy()
-    expected_data = pd.DataFrame(data={"n": n,
+    nn = reference_data["cases_sum"].astype(float).sum()
+    x = reference_data.loc[age_bin_mask, ["cases_sum"]].astype(float).to_numpy()[0][0]
+    year_index = np.array([0.0])
+    expected_data = pd.DataFrame(data={"n": nn,
                                        "x": x,
                                        "age_bin": selected_age_bin},
-                                 index=pd.Index(yearvec, name="t"))
+                                 index=pd.Index(year_index, name="t"))
     return expected_data

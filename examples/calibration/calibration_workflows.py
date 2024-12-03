@@ -29,14 +29,14 @@ import typhoidsim as ty
 import models
 import calibration_components as cbcomp
 
-calib_debug = True  # If true, calibration will run in serial
+calib_debug = False  # If true, calibration will run in serial
 
 
 def run_starsim_calibration_step_1(do_plot=True):
     # Make the sim, get the right reference data (in components), get
     # the correct calibration parameters
     sim = models.make_sim(scenario="baseline")
-    components = cbcomp.get_calib_components(calibration_targets="all_cases")
+    components = cbcomp.get_calib_components(calibration_targets="cases_prevax")
     calib_pars = cbcomp.get_calib_pars(calibration_step="step_1")
 
     calib = ty.Calibration220(
@@ -45,7 +45,7 @@ def run_starsim_calibration_step_1(do_plot=True):
             build_fn=cbcomp.parse_update_sim_pars,  # Tell the calibration how to update parameters
             components=components,
             total_trials=4,
-            n_workers=4,
+            n_workers=8,
             die=True,
             debug=calib_debug
         )
@@ -55,10 +55,11 @@ def run_starsim_calibration_step_1(do_plot=True):
     calib.calibrate(confirm_fit=False)
     print(calib.best_pars)
     # Confirm
-    # sc.printcyan('\nConfirming fit...')
-    # calib.check_fit(n_runs=5)
-
+    sc.printcyan('\nConfirming fit...')
+    calib.check_fit(n_runs=10)
+    # Save fig
     if do_plot:
+        #ty.plot_calib(calib)
         calib.plot_trend()
     plt.show()
     return calib
