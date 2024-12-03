@@ -126,7 +126,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
         if self.age_bin_labels is None:
-            self.age_bin_labels = [f"{self.age_bins[i]:.0f}-{self.age_bins[i + 1]:.0f}" for i in range(self.nags)]
+            self.age_bin_labels = tyu.generate_age_bin_labels(self.age_bins)
 
         # Save a mapping between human readable age bin label and column index in the results array
         self.age_bin_lbl_to_idx = {lbl: idx for idx, lbl in enumerate(self.age_bin_labels)}
