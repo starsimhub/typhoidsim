@@ -18,7 +18,7 @@ __all__ = ['get_data_home', 'load_dataset', 'get_dataset_names']
 __all__ += ['get_attr_vals']
 __all__ += ['digitize_ages_1yr']
 __all__ += ['test_cpu_performance']
-__all__ += ['generate_unique_filename', 'to_df', 'promotetoiterable']
+__all__ += ['generate_unique_filename', 'to_df', 'promotetoiterable', 'generate_age_bin_labels']
 
 
 @nb.jit((nb.float64[:], ), cache=True, nopython=True)
@@ -215,6 +215,37 @@ def test_cpu_performance():
         t_bls.append(t_bl)
     t_bl = min(t_bls)
     return t_bl  # baseline performance in seconds
+
+
+def generate_age_bin_labels(age_bins, inclusive_range=False):
+    """
+    Generates consistent age bin labels.
+
+    This function creates age bin labels in the format of "start-end", and they
+    define a semi-open interval of age [start, end) by default. If inclusive is
+    True, the age bin labels are [start, end-1]
+
+    Args:
+        age_bins (list): A list of age bins given as single age values.
+        inclusive_range (bool): whether the age bin labels should represent an inclusive
+            age range [age_low, age_high] or a semi-open interval [age_low, age_high)
+
+    Returns:
+        list: A list of strings representing each age bin in the format
+              "start-end".
+
+    Example:
+        >>> generate_age_bin_labels([10, 20, 30, 40])
+        ["10-20", "20-30", "30-40"]
+        >>> generate_age_bin_labels([10, 20, 30, 40], inclusive_range=True)
+        ["10-19", "20-19", "30-39"]
+    """
+    if inclusive_range:
+        offset = 1
+    else:
+        offset = 0
+    age_bin_labels = [f"{age_bins[i]:.0f}-{age_bins[i + 1]-offset:.0f}" for i in range(len(age_bins)-1)]
+    return age_bin_labels
 
 
 def generate_unique_filename(root_str="typhoidsim"):
