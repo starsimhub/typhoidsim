@@ -54,6 +54,8 @@ sim1.run()
 sim2.run()
 
 report1 = sim1.get_analyzers()[0]
+report2 = sim2.get_analyzers()[0]
 report1.plot()
 report1.plot_waterfall()
+report2.plot_waterfall()
 plt.show()
