@@ -13,7 +13,7 @@ def get_common_simulation_pars():
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
         start    =2017.0,         # Start year -- #TODO: change once everything is readt
-        n_years  =8.0,            # Duration of the simulation in years
+        n_years  =2.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
         n_agents =100_000,         # Number of agents in the population
         verbose  =0,              # Print details of the run
@@ -103,7 +103,7 @@ def baseline_model():
 
     monitor_sum = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
                                                    to_record=record_sum,
-                                                   resampling_period=1.0,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
+                                                   resampling_period=1.0/12.0,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
                                                    aggregate_sex=True,
                                                    aggregate_time="sum",   # Sum over the resampling period (to get incidence)
                                                    record_from=2017.0,
@@ -112,7 +112,7 @@ def baseline_model():
 
     monitor_population = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
                                                           to_record=record_n,
-                                                          resampling_period=1.0,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
+                                                          resampling_period=1.0/12.0,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
                                                           aggregate_sex=True,
                                                           aggregate_time="median",      # Record the median number of people alive on that period, gives an idea of population size if needed
                                                           record_from=2017.0,

@@ -261,6 +261,8 @@ class histograms_by_age_sex_monitor(Monitor):
         reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
         if remainder != 0:
             downsampled_main = self.agg_func(reshaped_data, axis=1)
+            if downsampled_main.shape[0] == self.ntpts:
+                return downsampled_main
             downsampled_remainder = self.agg_func(vals[-remainder:], axis=0)
             return np.vstack([downsampled_main, downsampled_remainder[None, :]])
         else:
