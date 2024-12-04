@@ -14,6 +14,8 @@ __all__ = ['sigmoid', 'gompertz', 'gompertz_dfun', 'double_sigmoid_exp', 'double
 def sigmoid(x, max_x, slope):
     """
     Compute a sigmoid-like function. The range of x is between [0, max_x].
+    The values of returned by the function are always between 0-1, as they
+    often represent probabilities.
 
     This function is used in the age-based exposure mechanism in typhoid.
 
@@ -29,7 +31,10 @@ def sigmoid(x, max_x, slope):
       (ndarray): An array of y values corresponding to the sigmoid-like function
        evaluated at the input x values -- which are expected to represent age.
     """
-    return 1.0 - (max_x - x) / (x * slope + max_x)
+    vals = 1.0 - (max_x - x) / (x * slope + max_x)
+    vals[vals < 0] = 0.0
+    vals[vals > 1.0] = 1.0
+    return vals
 
 
 def double_sigmoid_exp(x, l1, l2, l3, x_12, x_23, s12, s23):
