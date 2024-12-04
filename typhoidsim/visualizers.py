@@ -127,6 +127,8 @@ def plot_calib(calib, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearve
         # Do the plotting
         for ax, t in zip(axs, df["t"].unique()):
             sim_data = df.loc[df["t"] == t, :]
+            sim_data["sort_age"] = sim_data['age_bin'].apply(lambda x: int(x.split('-')[0]))
+            sim_data.sort_values("sort_age", inplace=True)
             # This will calculate the mean and stadard across seeds
             ax = sns.barplot(sim_data, x="age_bin", y="x", hue="source_data", estimator="mean", errorbar="sd", ax=ax)
             component_name = df["component_name"].unique()[0]
