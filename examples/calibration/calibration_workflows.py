@@ -44,7 +44,7 @@ def run_starsim_calibration_step_1(do_plot=True):
             sim=sim,
             build_fn=cbcomp.parse_update_sim_pars,  # Tell the calibration how to update parameters
             components=components,
-            total_trials=4,
+            total_trials=2,
             n_workers=8,
             die=True,
             debug=calib_debug
@@ -56,10 +56,10 @@ def run_starsim_calibration_step_1(do_plot=True):
     print(calib.best_pars)
     # Confirm
     sc.printcyan('\nConfirming fit...')
-    calib.check_fit(n_runs=10)
+    calib.check_fit(n_runs=2)
     # Save fig
     if do_plot:
-        #ty.plot_calib(calib)
+        ty.plot_calib(calib)
         calib.plot_trend()
     plt.show()
     return calib
