@@ -34,6 +34,7 @@ def sigmoid(x, max_x, slope):
     vals = 1.0 - (max_x - x) / (x * slope + max_x)
     vals[vals < 0] = 0.0
     vals[vals > 1.0] = 1.0
+    vals[x >= max_x] = 1.0
     return vals
 
 
