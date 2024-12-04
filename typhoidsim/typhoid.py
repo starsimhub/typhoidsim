@@ -198,17 +198,15 @@ class Typhoid(ss.Disease):
 
     def init_post(self):
         """
-        Set initial values for states and new cases. This could involve passing in a full
-        set of initial conditions, or using init_prev (initial prevalence), or other.
+        Set initial values for all agent states, and seed new cases if initial
+        prevalence is provided.
 
-        Note that this is different to initialization of the Arr objects i.e.,
-        creating their dynamic array, linking them to a People instance.
-        That should have already taken place by the time this method is called.
+        This function could involve passing in a full set of initial conditions,
+        or using init_prev (initial prevalence), or other.
         """
         # NOTE: Typhoid assumes that all individuals are born into an
-        # a class where they cannot get infected, and then
-        # move to the susceptible class at probabilities
-        # for each age.
+        # a class where they cannot get infected (called unexposed here) and then
+        # move to the susceptible class at probabilities for each age.
 
         # Determines which individuals enter the susceptible class. The age-based
         # mechanism is specified in the typhoid module parameters as
