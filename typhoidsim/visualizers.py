@@ -113,7 +113,10 @@ def plot_calib(calib, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearve
     with sc.options.with_style(style):
         # Get the figure
         if fig is None:
-            fig, axs = sc.getrowscols(df["t"].nunique(), make=True, **fig_kw)
+            n = np.array([df["t"].nunique()])
+            if df["t"].nunique() == 1:
+                n = 2
+            fig, axs = sc.getrowscols(n, make=True, remove_extra=True, **fig_kw)
             if isinstance(axs, np.ndarray):
                 axs = axs.flatten()
         else:
