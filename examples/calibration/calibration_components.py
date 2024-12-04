@@ -19,7 +19,7 @@ import data_utils as utils
 
 def parse_update_sim_pars(sim, calib_pars, **kwargs):
     """
-    Also referred to as as build_sim function in some of starsim's ttutorials.
+    Also referred to as as build_sim function in some of starsim's tutorials.
 
     This function tells the Calibration class how to reach and update a parameter
     value for our specific model encapuslated in the sim object..
@@ -136,6 +136,7 @@ def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2018.0,
     cases_key = "monitor_1_hist_b_ti_acute"        # New cases (acute), summed over the period of the monitor/report
 
     lbl_to_idx = sim.get_analyzers()[0].age_bin_lbl_to_idx      # Mapping between age bin string labels and index in the monitor results 2D arrays
+
     yearvec = sim_results["monitor_1_yearvec"][:]  # The time vector of the monitored simulated data, expressed in "float" calendar years, ie 2000.0, 2000.1 ...
     # Apply lockdown mask
     not_lockdown = utils.lockdown_mask(yearvec)
