@@ -148,7 +148,7 @@ def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2018.0,
 
     year_index = np.array([0.0])
     simulated_data = pd.DataFrame(data={"n": n,
-                                        "x": x,
+                                        "x": x/n,
                                         "age_bin": selected_age_bin},
                                   index=pd.Index(year_index, name="t"))
     return simulated_data
@@ -164,11 +164,11 @@ def extract_reference_data_prevax(reference_data, selected_age_bin=None):
 
     age_bin_mask = (reference_data["age_bin_label"] == selected_age_bin)
 
-    nn = reference_data["cases_sum"].astype(float).sum()
+    n = reference_data["cases_sum"].astype(float).sum()
     x = reference_data.loc[age_bin_mask, ["cases_sum"]].astype(float).to_numpy()[0][0]
     year_index = np.array([0.0])
-    expected_data = pd.DataFrame(data={"n": nn,
-                                       "x": x,
+    expected_data = pd.DataFrame(data={"n": n,
+                                       "x": x/n,
                                        "age_bin": selected_age_bin},
                                  index=pd.Index(year_index, name="t"))
     return expected_data
