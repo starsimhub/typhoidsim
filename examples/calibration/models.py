@@ -25,6 +25,7 @@ Arguments:
 """
 
 import argparse
+import pathlib
 from functools import partial
 import matplotlib.pyplot as plt
 
@@ -241,6 +242,8 @@ def run_debug_single_sim(do_plot=True):
     """ Run one simulation using the baseline components"""
     sim = make_sim(scenario="baseline")
     sim.run()
+    # Save results in csv files
+    utils.simulation_outputs_to_df(sim, output_dir=pathlib.Path("outputs"), do_save=True)
     if do_plot:
         sim.plot(key="typhoid_")
         plt.show()
