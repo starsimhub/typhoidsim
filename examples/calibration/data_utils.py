@@ -133,34 +133,46 @@ def check_age_distribution(n_agents=100_000):
     return
 
 
-def save_simulation_outputs(sim, batch_name="calib_pak_sindh", output_dir=None):
+def simulation_outputs_to_df(sim, batch_name="calib_pak_sindh", output_dir=None,
+                             do_save=False):
     """
-    Saves results from the simulation in an analysis friendly format (.csv)
+    Saves results from the simulation, and monitors in an friendly format (.csv)
 
     Args:
         sim(ss.Sim): a Sim object, already run
-        output_dir (pathlib.Path):  a Path object with the absolute path where to save the results
+        batch_name (str): a string that will be prepended to all filenames generated
+            within this function.
+        output_dir (pathlib.Path): a Path object with the absolute path where to save the results
+        do_save (bool): whether to save dataframes as csv files or not. Default: False
 
     Returns:
-         sim_df (pd.DataFrame): the dataframe with results for every time step of the simulation
+         tuple with multiple dfs (pd.DataFrame): the dataframes with results for every
+             time step of the simulation, and the dataframes of each monitor
+             found in the simulation.
     """
 
     if output_dir is None:
         import pathlib
         output_dir = pathlib.Path.cwd()
 
-    # Export to df -- we can export results to a dataframe (and save as csv) for offline analysis
-    sim_df = ty.to_df(sim)
-    # TODO: export csv of histogram analyzer
 
-    filename = ty.generate_unique_filename(root_str=batch_name)
-    csv_ext = ".csv"
-    sim_df.to_csv(output_dir / f"{filename}{csv_ext}", index=False)
-    json_ext = ".json"
-    #TODO: Save simulation parameters --  not working properly right now,
-    # gets hung up in recursion and serialisation of objects (starsim distributions)
-    #sim.to_json(filename=output_dir + filename + ".json", keys=['parameters'])
-    return sim_df  # in case we want to do something else with the data
+    # Export to df -- we can export results to a dataframe (and save as csv) for offline analysis
+    dfs = [ty.to_df(sim)]
+    names = ["sim"]
+    #dfs = dict("sim":)
+    monitors = sim.get_analyzers(label="monitor", partial=True)
+
+    for monitor in monitors:
+        monitor_df = monitor.to_df()
+        dfs.append(monitor_df)
+        names.append(monitor.name)
+
+    if do_save:
+        filename = ty.generate_unique_filename(root_str=batch_name)
+        csv_ext = ".csv"
+        for df, name in zip(dfs, names):
+            df.to_csv(output_dir / f"{filename}-{name}{csv_ext}", index=False)
+    return dfs
 
 
 def get_reference_dataset_xls(dataset_name, filepath):
