@@ -1,3 +1,30 @@
+"""
+This module contains definitions of the different models,
+that make up an entire simulation.
+
+We include models of :
+- the population, their vital dynamics, reporting, etc.
+- the environment
+- interventions
+
+In addition this script accepts command line arguments to modify
+its default behaviour, mainly for debugging purposes.
+
+The general usage is
+python models.py --debug_sim <value>
+
+
+Arguments:
+--debug_sim
+   The --debug_sim argument defines which debug function you want to
+   run. It can be either 'single' or 'multi'.
+       - 'single' is used for running a single baseline simulation
+       - 'multi' is used for running a multisim, with multiple versions
+          of the bseline simulation, each of which has a different parameter
+          value for TAI (typhoid acute infectiousness).
+"""
+
+import argparse
 from functools import partial
 import matplotlib.pyplot as plt
 
@@ -8,6 +35,11 @@ import typhoidsim as ty
 
 import data_utils as utils
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--debug_sim",
+                    default="single",
+                    choices=["single", "multi"])
+
 
 def get_common_simulation_pars():
     # HIGH-LEVEL SIM PARAMETERS
@@ -15,7 +47,7 @@ def get_common_simulation_pars():
         start    =2017.0,         # Start year -- #TODO: change once everything is readt
         n_years  =2.0,            # Duration of the simulation in years
         dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
-        n_agents =100_000,         # Number of agents in the population
+        n_agents =100_000,        # Number of agents in the population
         verbose  =0,              # Print details of the run
     )
     return pars
@@ -23,14 +55,16 @@ def get_common_simulation_pars():
 
 def baseline_model():
     """
-    Specify the complete model, and create a simulation instance of typhoid
-    with a simple vaccination intervention.
+    Specify the common/baseline model components needed for
+    any simulation for Pakistan (or the specific scenario/geolocation)
+    modelled.
 
     Args:
         None
 
     Returns:
-    sim (starsim.Sim): a starsim simulation object, configured with the model we want to run.
+        dict : a dictionary with starsim model components that
+        can be passed to a starsim Sim.
     """
 
     # The comon parameters to all models/simulations
@@ -39,6 +73,7 @@ def baseline_model():
     # Loads age distribution data from the json file used in EMOD simulations
     # NOTE: Any adjustments to the age distribution needs to be done here ie,
     #  to scale age_data to adjust to the demographics of a specific province
+    #TODO: how to rescale demographics appropriately for each province?
     age_data = utils.get_age_distribution_pakistan()
 
     # POPULATION
@@ -49,6 +84,7 @@ def baseline_model():
     death_rates_df = utils.get_mortality_rates_pakistan()
 
     # Crude birth rate in Pakistan 2020 per 1000 people
+    #TODO: is there a data source with better estimates for CBR?
     cbr = 27
     vital_dynamics = [
         ss.Births(birth_rate=cbr, units=1e-3),         # units=1e-3 mean rates are expressed per 1000 people
@@ -105,7 +141,7 @@ def baseline_model():
                                                    to_record=record_sum,
                                                    resampling_period=1.0/12.0,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
                                                    aggregate_sex=True,
-                                                   aggregate_time="sum",   # Sum over the resampling period (to get incidence)
+                                                   aggregate_time="sum",        # Sum over the resampling period
                                                    record_from=2017.0,
                                                    record_until=2024.0,
                                                    name="monitor_1")
@@ -114,7 +150,7 @@ def baseline_model():
                                                           to_record=record_n,
                                                           resampling_period=1.0/12.0,  # Record data on a monthly basis, so we can exclude covid-periods, and aggregate later
                                                           aggregate_sex=True,
-                                                          aggregate_time="median",      # Record the median number of people alive on that period, gives an idea of population size if needed
+                                                          aggregate_time="median",     # Record the median number of people alive on that period, gives an idea of population size if needed
                                                           record_from=2017.0,
                                                           record_until=2024.0,
                                                           name="monitor_2")
@@ -128,6 +164,9 @@ def baseline_model():
 
 
 def vaccination_model():
+    """
+    Define model components relevant to vaccination
+    """
     # Define the model of a vaccination intervention/campaign
     campaign_vax_2_5_yo = ty.vaccination_with_waning(
         start_year=2020.0,
@@ -145,36 +184,49 @@ def vaccination_model():
 
 
 def make_sim(scenario="baseline"):
+    """
+    A function that builds a Sim object with all the necessary
+    ingredients, or model components.
+
+    Args:
+        scenario (str): a string describing which case we should use.
+        Each case defines which components are added to the simulation.
+
+    Returns:
+        Sim (starsim.Sim): a simulation object, uninitialised, not run
+    """
     to_concat = ["diseases", "demographics", "interventions", "analyzers"]
     match scenario:
         case "baseline":
-            model = baseline_model()
+            model_components = baseline_model()
         case "with_vaccination_campaign":
-            baseline = baseline_model()
-            vaccination = vaccination_model()  # Add vaccination campaign
-            model = dict()
-            for key in set(baseline) | set(vaccination):
+            baseline_component = baseline_model()
+            vaccination_component = vaccination_model()  # Add vaccination campaign
+            model_components = dict()
+            for key in set(baseline_component) | set(vaccination_component):
                 if key in to_concat:
-                    model[key] = baseline.get(key, []) + vaccination.get(key, [])
+                    model_components[key] = (baseline_component.get(key, []) +
+                                             vaccination_component.get(key, []))
                 else:
-                    model[key] = baseline.get(key)
+                    model_components[key] = baseline_component.get(key)
         case _:
             raise ValueError(f'Unrecognized simulation scenario: {scenario}')
 
     # PUT EVERYTHING TOGETHER IN A SIMULATION
-    sim = ss.Sim(**model)
+    sim = ss.Sim(**model_components)
     return sim
 
 
 def partial_env_trapezoidal(kwarg_pars):
     """
-    Return a partially evaluated function. This means that the pattern is set
-    according to the parameters recieved in kwargs_pars. We can get exactly
-    the value of the environmental modulation at time t (expressed in years)
-    by calling
+    Return a partially evaluated function. This means that the environmental
+    pattern is set according to the parameters recieved in kwargs_pars.
 
-    my_modulation = partial_env_trapezoidal(**kwargs_pars)
-    curent_modulation = my_modulation(t)
+    We can get exactly the value of the environmental modulation at time
+    t (expressed in years) by calling
+
+        my_modulation = partial_env_trapezoidal(**kwargs_pars)
+        curent_modulation = my_modulation(t)
 
     Args:
         kwarg_pars of function typhoidsim.utils_math.asym_trapezoidal
@@ -186,23 +238,25 @@ def partial_env_trapezoidal(kwarg_pars):
 
 
 def run_debug_single_sim(do_plot=True):
-    """ Run one simulation"""
+    """ Run one simulation using the baseline components"""
     sim = make_sim(scenario="baseline")
     sim.run()
     if do_plot:
-        timevec = sim.get_analyzers()[0].yearvec
         sim.plot(key="typhoid_")
         plt.show()
-    breakpoint()
     return sim
 
 
 def run_debug_multisim(do_plot=True):
+    """
+    Run multiple sims in parallel using the baseline components,
+    but changing a typhoid parameter.
+    """
+
     sim1 = make_sim()
     sim2 = make_sim()
     sim3 = make_sim()
     sim4 = make_sim()
-
 
     sims = sc.autolist()
     sims.append(sim2)
@@ -228,12 +282,17 @@ def run_debug_multisim(do_plot=True):
             # Display the entire simulation period -- takes long to plot everything if simulation is long
             sim.plot(key="typhoid_")
             # Display a fraction of the simulation period
-            #ty.plot_sim(sim, key="typhoid_", display_from=2010.0, display_until=2025.0)
+            ty.plot_sim(sim, key="typhoid_", display_from=2010.0, display_until=2025.0)
         plt.show()
     return msim
 
 
 if __name__ == "__main__":
-    run_debug_single_sim()
-
-    #run_debug_multisim(do_plot=True)
+    # What to do if we call this file as a script
+    args = parser.parse_args()
+    if args.debug_sim == "single":
+        run_debug_single_sim(do_plot=True)
+    elif args.debug_sim == "multi":
+        run_debug_multisim(do_plot=True)
+    else:
+        ValueError(f"Unknown debug mode {args.debug_sim}")
