@@ -266,17 +266,17 @@ class Typhoid(ss.Disease):
         npts = self.sim.npts
         self.results += [
             ss.Result(self.name, "prevalence", npts, dtype=float, scale=False, label="Prevalence"),
-            ss.Result(self.name, "new_infections", npts, dtype=int, scale=False, label="New Infections"),
-            ss.Result(self.name, "cum_infections", npts, dtype=int, scale=False, label="Cumulative Infections"),
-            ss.Result(self.name, "new_susceptible", npts, dtype=int, scale=False, label="Newly Susceptible"),
-            ss.Result(self.name, "new_prepatent", npts, dtype=int, scale=False, label="Newly Prepatent"),
-            ss.Result(self.name, "new_acute", npts, dtype=int, scale=False, label="Newly Acute"),
-            ss.Result(self.name, "cum_acute", npts, dtype=int, scale=False, label="Cumulative Acute"),
-            ss.Result(self.name, "new_subclinical", npts, dtype=int, scale=False, label="Newly Subclinical"),
-            ss.Result(self.name, "new_chronic", npts, dtype=int, scale=False, label="Newly Chronic"),
-            ss.Result(self.name, "new_recovered", npts, dtype=int, scale=False, label="Newly Recovered"),
-            ss.Result(self.name, "new_deaths", npts, dtype=int, scale=False, label="Newly Dead"),
-
+            ss.Result(self.name, "new_infections", npts, dtype=int, scale=True, label="New Infections"),
+            ss.Result(self.name, "cum_infections", npts, dtype=int, scale=True, label="Cumulative Infections"),
+            ss.Result(self.name, "new_susceptible", npts, dtype=int, scale=True, label="Newly Susceptible"),
+            ss.Result(self.name, "new_prepatent", npts, dtype=int, scale=True, label="Newly Prepatent"),
+            ss.Result(self.name, "new_acute", npts, dtype=int, scale=True, label="Newly Acute"),
+            ss.Result(self.name, "cum_acute", npts, dtype=int, scale=True, label="Cumulative Acute"),
+            ss.Result(self.name, "new_subclinical", npts, dtype=int, scale=True, label="Newly Subclinical"),
+            ss.Result(self.name, "new_chronic", npts, dtype=int, scale=True, label="Newly Chronic"),
+            ss.Result(self.name, "new_recovered", npts, dtype=int, scale=True, label="Newly Recovered"),
+            ss.Result(self.name, "new_deaths", npts, dtype=int, scale=True, label="Newly Dead"),
+            ss.Result(self.name, "cum_deaths", npts, dtype=int, scale=True, label="Cumulative Dead"),
         ]
         return
 
@@ -987,6 +987,8 @@ class Typhoid(ss.Disease):
         res.new_chronic[ti] = np.count_nonzero(self.ti_chronic == ti)
         res.new_recovered[ti] = np.count_nonzero(self.ti_recovered == ti)
         res.new_deaths[ti] = np.count_nonzero(self.ti_dead == ti)
+        res.cum_deaths[ti] = np.sum(res['new_deaths'][:ti+1])
+
         return
 
 
