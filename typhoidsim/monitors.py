@@ -309,7 +309,6 @@ class histograms_by_age_sex_monitor(Monitor):
                         "age_bin_lb": self.age_bins[ab_idx],    # Lower bound
                         "age_bin_ub": self.age_bins[ab_idx+1],  # Upper bound
                         "age_bin_label": self.age_bin_labels[ab_idx],
-                        "year_bin_center": (self.yearvec[0:-1] + self.yearvec[1:])/2,  # Lower bound
                         "year": self.yearvec}
                 dfs.append(pd.DataFrame(data))
         df = pd.concat(dfs, axis=0)
