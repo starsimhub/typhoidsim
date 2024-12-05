@@ -858,9 +858,6 @@ class Typhoid(ss.Disease):
         # We still ned the number of exposures for the probability of infection function
         self.n_exposures[susc_uids] = self.exposure_amount[susc_uids] / environment.pars.volume  # Units n_exposures t [# of exposures] =  (n_exposures * volume) / volume
         self.cfu_dose[susc_uids] = environment.pars.transmission.rel_trans * environment.sv.cfu_conc[ti - 1] * self.exposure_amount[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
-        # TODO: there is an off-by-1 issue in the environment that I can't figure out yet,
-        #  some initialisation issue that will require the state variable to be npts+1,
-        #  because it needs 'memory' If we use [ti], it doesn't work, the environment remains at 0.
 
         # INFECTION: The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
@@ -882,10 +879,11 @@ class Typhoid(ss.Disease):
         # TODO: shedding would be interpreted as shedding per unit volume
         effective_shedding = ((environment.pars.transmission.shedding_rate / tyd.day2year) * dt)   # transform to yearly rate, then multiply by dt to get the effective shedding on the time interval dt in change/volume
         shedded_cfu = (self.rel_trans[self.infected] * self.infectiousness[self.infected]).sum()   # number of CFUs
-        current_level = environment.sv.cfu_conc[ti - 1] * environment.pars.volume + shedded_cfu * effective_shedding
+        current_level = environment.sv.cfu_conc[ti] * environment.pars.volume + shedded_cfu * effective_shedding
 
         # CFU level increases due to people shedding into the environment
-        environment.sv.cfu_conc[ti - 1] = current_level / environment.pars.volume
+        environment.sv.cfu_conc[ti] = current_level / environment.pars.volume
+        environment.sv.cfu_conc_buffer[(ti+1) % environment.buffer_isteps] = environment.sv.cfu_conc[ti]
         return new_cases
 
     @staticmethod

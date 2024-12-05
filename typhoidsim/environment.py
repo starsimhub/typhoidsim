@@ -34,6 +34,7 @@ class EnvironmentalPool(ss.Demographics):
         # Track a variable that does not track the state of individual agents, ~and it's not a Result
         self.sv = typ.StateVariables(self.name)
 
+        self.buffer_isteps = 2  # length of the concentration buffer in integer number of timesteps
         return
 
     def init_results(self):
@@ -41,7 +42,8 @@ class EnvironmentalPool(ss.Demographics):
         self.results += [
             ss.Result(self.name, 'cfu_conc', npts, dtype=float, scale=True, label='Current CFU concentration'),
             ss.Result(self.name, 'cfu_num', npts, dtype=int, scale=True, label='Current number of CFUs'),
-            ss.Result(self.name, 'rel_trans', npts, dtype=float, scale=True, label='Relative exposure to long-cycle CCTV'),
+            ss.Result(self.name, 'rel_trans', npts, dtype=float, scale=True, label='Relative exposure scaling to long-cycle CCTV'),
+            ss.Result(self.name, 'rel_trans_cfu_num', npts, dtype=float, scale=True, label='Current number of CFUs x Relative exposure scaling'),
         ]
         return
 
@@ -57,21 +59,15 @@ class EnvironmentalPool(ss.Demographics):
         Initialise StateVariable objects
         """
         npts = self.sim.npts
+
         self.sv += [typ.StateVariable(self.name, "cfu_conc",    npts, dtype=float),]
+        self.sv += [typ.StateVariable(self.name, "cfu_conc_buffer",   self.buffer_isteps, dtype=float),]
         return
 
     def init_env_pool(self, sim):
-        ti = 0  # initial time step
-        self.sv.cfu_conc[sim.ti-1] = self.pars.init_cfu
+        self.sv.cfu_conc_buffer[:] = self.pars.init_cfu   # Fill the history
+        self.sv.cfu_conc[sim.ti] = self.pars.init_cfu     # Fill initial conditions
         return
-
-    def get_growth_rate(self):
-        sim = self.sim
-        ti = sim.ti
-        p = self.pars
-        self.sv.temperature[ti] = p.av_temp.evaluate(ti)
-        sqr_growth_rate = p.b * (self.sv.temperature[ti] - p.bs_temp)  # fraction of change in CFUs / per day
-        return sqr_growth_rate**2
 
     def update(self):
         sim = self.sim
@@ -80,11 +76,14 @@ class EnvironmentalPool(ss.Demographics):
         # For external changes that may promote bacterial growth
         change_rate = p.decay_rate
         effective_rate = (change_rate / tyd.day2year)  # transform to yearly rate
-        self.sv.cfu_conc[ti-1] = self.sv.cfu_conc[ti-2] * np.exp(-effective_rate*sim.dt)  # + shedded into environment + decay
+
+        prev_cfu = self.sv.cfu_conc_buffer[ti % self.buffer_isteps]
+        self.sv.cfu_conc[ti] = prev_cfu * np.exp(-effective_rate*sim.dt)  # + shedded into environment + decay
         return
 
     def update_results(self):
-        self.results['cfu_conc'][self.sim.ti] = self.sv.cfu_conc[self.sim.ti-1]
-        self.results['cfu_num'][self.sim.ti]  = self.sv.cfu_conc[self.sim.ti-1] * self.pars.volume
+        self.results['cfu_conc'][self.sim.ti]  = self.sv.cfu_conc[self.sim.ti-1]
+        self.results['cfu_num'][self.sim.ti]   = self.sv.cfu_conc[self.sim.ti-1] * self.pars.volume
         self.results['rel_trans'][self.sim.ti] = self.pars.transmission.rel_trans
+        self.results['rel_trans_cfu_num'][self.sim.ti] = self.results['cfu_num'][self.sim.ti] * self.pars.transmission.rel_trans
         return
