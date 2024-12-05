@@ -170,7 +170,7 @@ class histograms_by_age_sex_monitor(Monitor):
                     self.results += [
                         ss.Result(self.name, f"{sex}_{attrlbl}",
                                   (self.ntpts, self.nags), dtype=res_dtype,
-                                  scale=False, label=f"{sex}_{reslbl}"), ]
+                                  scale=True, label=f"{sex}_{reslbl}"), ]
 
         self.results += [ss.Result(self.name, f"yearvec", (self.ntpts, ),
                                    dtype=float, scale=False, label=f"Calendar years (float representation)"), ]
@@ -289,11 +289,10 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def finalize_results(self):
-        super().finalize_results()
         for stock_name in self.stocks:
             self.results[stock_name][:] = self.aggregate(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
         self.results["yearvec"][:] = self.yearvec
-
+        super().finalize_results()
         return
 
     def to_df(self):
