@@ -28,7 +28,6 @@ class EnvironmentalPool(ss.Demographics):
                 env2ppl_exposure_rate=ss.poisson(lam=2.0),   # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)/day -- lam is equivalent to typhoid_environmental_exposure_rate
 
             ),
-            teer_lam=2.0,     # HACKY parameter, otherwise CAlibration class does not ru where the path to the parameter is longer than 3
         )
         self.update_pars(pars, **kwargs)
 
@@ -51,7 +50,6 @@ class EnvironmentalPool(ss.Demographics):
         super().init_pre(sim)
         self.init_svs()
         self.init_env_pool(sim)  # Initialise the environmental pool of contagion at t-1
-        self.pars.transmission.env2ppl_exposure_rate.lam = self.pars.teer_lam
         return
 
     def init_svs(self):
