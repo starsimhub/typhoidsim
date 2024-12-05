@@ -41,15 +41,16 @@ parser.add_argument("--debug_sim",
                     default="single",
                     choices=["single", "multi"])
 
+debug = False
 
-def get_common_simulation_pars():
+def get_common_simulation_pars(debug=False):
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
-        start    =2017.0,         # Start year -- #TODO: change once everything is readt
-        n_years  =2.0,            # Duration of the simulation in years
-        dt       =1.0/365.0,      # Timestep of 1 day, expressed in years
-        n_agents =100_000,        # Number of agents in the population
-        verbose  =0,              # Print details of the run
+        start=[1990.0, 2017.0][debug],
+        n_years=[40.0, 2.0][debug],         # Duration of the simulation in years
+        dt=1.0/365.0,                       # Timestep of 1 day, expressed in years
+        n_agents=[10_000, 100_000][debug],  # Number of agents in the population
+        verbose=0,  # Print details of the run
     )
     return pars
 
