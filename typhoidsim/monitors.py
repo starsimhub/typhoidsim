@@ -65,7 +65,7 @@ class histograms_by_age_sex_monitor(Monitor):
                  resampling_period=None,
                  name=None):
         super().__init__()
-        self.name = "hist_by_age_sex" if name is None else name
+        self.name = "monitor_by_age_sex" if name is None else name
         self.age_bins = sc.promotetoarray(age_bins)
         self.age_bin_labels = age_bin_labels
         self.age_bin_centers = None
@@ -142,6 +142,7 @@ class histograms_by_age_sex_monitor(Monitor):
             alive_dict = dict(alive=dict(path=("people",)))
             self.to_record.update(alive_dict)
 
+        self.attrname_to_stockname = dict()
         for attrname, specs in self.to_record.items():
             if "path" not in specs:
                 raise ValueError(f"Will not be able to record {attrname} because 'path' is "
@@ -149,25 +150,36 @@ class histograms_by_age_sex_monitor(Monitor):
 
             else:
                 res_dtype = specs["path"] if "dtype" in specs else float
-                attrlbl = attrname.replace("ti", "new")
-                res_lbl = specs["label"] if "label" in specs else attrlbl
+                if attrname.startswith("ti"):
+                    attrlbl = attrname.replace("ti", "new")
+                else:
+                    attrlbl = f"n_{attrname}"
+
+                reslbl = specs["label"] if "label" in specs else attrlbl
+                self.attrname_to_stockname[attrname] = attrlbl
+
                 if self.aggregate_sex:
                     sexes = ["b"]   # aggregate both sexes
                 else:
                     sexes = ["f", "m"]
                 for sex in sexes:
-                    self.stocks += [ss.Result(self.name, f"hist_{sex}_{attrname}",
+                    self.stocks += [ss.Result(self.name, f"{sex}_{attrlbl}",
                                                (self.stock_ntpts, self.nags), dtype=res_dtype,
-                                               scale=False, label=f"{sex}_{res_lbl}"),]
+                                               scale=False, label=f"{sex}_{reslbl}"),]
 
                     self.results += [
-                        ss.Result(self.name, f"hist_{sex}_{attrname}",
+                        ss.Result(self.name, f"{sex}_{attrlbl}",
                                   (self.ntpts, self.nags), dtype=res_dtype,
-                                  scale=False, label=f"{sex}_{res_lbl}"), ]
+                                  scale=False, label=f"{sex}_{reslbl}"), ]
 
         self.results += [ss.Result(self.name, f"yearvec", (self.ntpts, ),
                                    dtype=float, scale=False, label=f"Calendar years (float representation)"), ]
+        # Configure the monitor
+        self.configure_recording_functions()
+        return
 
+    def configure_recording_functions(self):
+        # Select which function should be used
         if self.aggregate_sex:
             self.record = self._record_b
             self._apply = self._apply_aggregated_sexes
@@ -195,13 +207,13 @@ class histograms_by_age_sex_monitor(Monitor):
         self.record_until = stop_year
         return
 
-    def _record_fm(self, f_vals, m_vals, attr_name):
-        self.stocks[f"hist_m_{attr_name}"][self.ti, :] = m_vals
-        self.stocks[f"hist_f_{attr_name}"][self.ti, :] = f_vals
+    def _record_fm(self, f_vals, m_vals, stock_name):
+        self.stocks[f"m_{stock_name}"][self.ti, :] = m_vals
+        self.stocks[f"f_{stock_name}"][self.ti, :] = f_vals
         return
 
-    def _record_b(self, b_vals, attr_name):
-        self.stocks[f"hist_b_{attr_name}"][self.ti, :] = b_vals
+    def _record_b(self, b_vals, stock_name):
+        self.stocks[f"b_{stock_name}"][self.ti, :] = b_vals
         return
 
     def _apply_individual_sexes(self, sim):
@@ -223,7 +235,9 @@ class histograms_by_age_sex_monitor(Monitor):
                      np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
             m_vals = self.scaling * \
                      np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
-            self.record(f_vals, m_vals, attrname)
+
+            stockname = self.attrname_to_stockname[attrname]
+            self.record(f_vals, m_vals, stockname)
         return
 
     def _apply_aggregated_sexes(self, sim):
@@ -239,7 +253,8 @@ class histograms_by_age_sex_monitor(Monitor):
                 b_uids = (vals & living_folks).uids
             b_vals = self.scaling * \
                      np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
-            self.record(b_vals, attrname)
+            stockname = self.attrname_to_stockname[attrname]
+            self.record(b_vals, stockname)
         return
 
     def _default_sampling(self, sim):
@@ -278,6 +293,7 @@ class histograms_by_age_sex_monitor(Monitor):
         for stock_name in self.stocks:
             self.results[stock_name][:] = self.aggregate(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
         self.results["yearvec"][:] = self.yearvec
+
         return
 
     def to_df(self):
@@ -290,9 +306,10 @@ class histograms_by_age_sex_monitor(Monitor):
             for ab_idx in range(res_value.shape[1]):
                 data = {"label": res_name,
                         "x": res_value[:, ab_idx],
-                        "age_bin_ub": self.age_bins[ab_idx],
-                        "age_bin_lb": self.age_bins[ab_idx+1],
+                        "age_bin_lb": self.age_bins[ab_idx],    # Lower bound
+                        "age_bin_ub": self.age_bins[ab_idx+1],  # Upper bound
                         "age_bin_label": self.age_bin_labels[ab_idx],
+                        "year_bin_label": 0,
                         "year": self.yearvec}
                 dfs.append(pd.DataFrame(data))
         df = pd.concat(dfs, axis=0)
@@ -325,7 +342,7 @@ class histograms_by_age_sex_monitor(Monitor):
         yearvec = self.yearvec
 
         if t_index is None:
-            t_index = [0, -1]  # Plot first and last available timepoint
+            t_index = [0, -2]  # Plot first and before-last available timepoint
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
