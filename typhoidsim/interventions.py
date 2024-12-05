@@ -23,7 +23,7 @@ __all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposu
 __all__ += ['behavioral_change']
 # Products
 __all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vaccine',
-            'blocking_vaccine_with_waning', 'typhoid_vaccine']
+            'typhoid_vaccine']
 
 
 # -- Treatments
@@ -614,7 +614,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
         self.prob = sc.promotetoarray(prob)
         self.label = label
         self.vaccinated = ss.BoolArr('vaccinated')
-        self.y_vaccinated = ss.FloatArr('y_vaccinated')
+        self.ty_vaccinated = ss.FloatArr('ty_vaccinated')
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
         self.age_pars = age_pars
         self.vax_pars = waning_pars
@@ -642,36 +642,14 @@ class vaccination_with_waning(ss.RoutineDelivery):
             if len(new_accept_uids):
                 # Update people's state and dates
                 self.vaccinated[new_accept_uids] = True
-                self.y_vaccinated[new_accept_uids] = sim.year
+                self.ty_vaccinated[new_accept_uids] = sim.year
             if len(self.vaccinated.uids):
                 current_year = sim.year * np.ones(len(self.vaccinated.uids))
                 box_durs = self.vax_pars['box_duration'] * np.ones(len(self.vaccinated.uids))
                 decay_constant = self.vax_pars['decay_time_constant'] * np.ones(len(self.vaccinated.uids))
-                efficacy = self.vax_pars['efficacy'] * box_exponential(current_year, self.y_vaccinated[self.vaccinated.uids], box_durs, decay_constant)
+                efficacy = self.vax_pars['efficacy'] * box_exponential(current_year, self.ty_vaccinated[self.vaccinated.uids], box_durs, decay_constant)
                 sim.diseases.typhoid.rel_sus[self.vaccinated.uids] = 1.0 - efficacy
-
         return self.vaccinated.uids
-
-
-class blocking_vaccine_with_waning(ss.Product):
-    """
-    An Acquisition Blocking vaccine that impacts the overall probability of
-    infection after exposure. Also takes in
-    """
-
-    def __init__(self, pars=None, *args, **kwargs):
-        super().__init__()
-        self.default_pars(efficacy=1.0)
-        self.update_pars(pars, **kwargs)
-        return
-
-    def init_pre(self, sim):
-        super().init_pre(sim)
-        self.initialized = True
-        return
-
-    def administer(self, sim, uids):
-        return box_exponential
 
 
 class blocking_vaccine(ss.Product):
