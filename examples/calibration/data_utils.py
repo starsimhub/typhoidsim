@@ -205,6 +205,10 @@ def get_reference_data_prevax(filepath=None):
         map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
             zip(reference_data["age_start"], reference_data["age_end"])))
 
+    reference_data["year_bin_label"] = list(
+        map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
+            zip(reference_data["year_start"], reference_data["year_end"])))
+
     return reference_data
 
 
@@ -286,17 +290,6 @@ def excel_to_longform(filepath):
     return reference_data
 
 
-def add_prevax_dataset(reference_data):
-    """
-    Calculate the prevax dataset. This is equivalent to the
-    data found in:
-    - 'CasesByAge_prevax' -- aggregated by time/year and
-    - 'TotalCases' -- aggegated by time/year and aggregated by age bins
-    """
-
-    pass
-
-
 def aggregate_data_by_time(reference_data, start_year, end_year):
     time_mask = ((reference_data["year_start"] >= start_year) &
                  (reference_data["year_start"] < end_year))
@@ -315,15 +308,6 @@ def aggregate_data_by_time(reference_data, start_year, end_year):
     reference_data = pd.concat([reference_data] + new_rows, ignore_index=True)
     reference_data.reset_index()
     return reference_data
-
-
-def add_postvax_dataset(reference_data):
-    """
-    Calculate the postvax dataset. This is equivalent to the
-    data found in:
-    - CasesByAge_postvax -- aggregated by time/year and
-    """
-    pass
 
 
 def parse_bin_edges(str_bin):
