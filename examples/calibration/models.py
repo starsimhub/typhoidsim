@@ -13,6 +13,16 @@ its default behaviour, mainly for debugging purposes.
 The general usage is
 python models.py --debug_sim <value>
 
+Other options:
+# Run a single simulation with debug parameters
+python models.py --debug_sim single --debug_pars
+
+# Run multiple simulations with debug parameters
+python models.py --debug_sim multi --debug_pars
+
+# Run a single simulation with experiment parameters
+python models.py --debug_sim single
+
 
 Arguments:
 --debug_sim
@@ -22,6 +32,14 @@ Arguments:
        - 'multi' is used for running a multisim, with multiple versions
           of the bseline simulation, each of which has a different parameter
           value for TAI (typhoid acute infectiousness).
+
+--debug_pars
+   The --debug_pars argument defines whether we want to run shorter simulations.
+   You do not provide a value to --debug_pars. If --debug_pars is included when
+   the models.py is run as a script, args.debug_pars will be True.
+   If --debug_pars is not included, args.debug_pars will be False.
+
+
 """
 
 import argparse
@@ -41,7 +59,11 @@ parser.add_argument("--debug_sim",
                     default="single",
                     choices=["single", "multi"])
 
-debug = False
+parser.add_argument("--debug_pars", action="store_true")
+
+args = parser.parse_args()
+debug = args.debug_pars
+
 
 def get_common_simulation_pars(debug=False):
     # HIGH-LEVEL SIM PARAMETERS
@@ -293,7 +315,6 @@ def run_debug_multisim(do_plot=True):
 
 if __name__ == "__main__":
     # What to do if we call this file as a script
-    args = parser.parse_args()
     if args.debug_sim == "single":
         run_debug_single_sim(do_plot=True)
     elif args.debug_sim == "multi":
