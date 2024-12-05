@@ -113,7 +113,7 @@ def make_calib_components_by_age_prevax(reference_data):
     return components
 
 
-def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2018.0, end_year=2020.0):
+def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2017.0, end_year=2020.0):
     """
     Receive a sim object, extract necessary data, and output a dataframe
     that will be used by a CalibComponent.
@@ -122,6 +122,16 @@ def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2018.0,
     but also does some of the steps calculate_likelihood() in AgeDistAnalyzer_Count.py,
     mainly the preprocessing steps needed to get exactly the data/qubaitty used
     to calculate the likelihgood/distance between reference data and simulated data.
+
+    Args:
+         sim (starsim Sim): a Sim object already run. Expects certain monitors to exist, as defined in models.py
+         selected_age_bin (str): a human-readable labelf or the age bin of interest of the form 'age_lb-age_ub'.
+             This age bin indicates the data are grouped by age in the interval [age_lb, age_ub). The
+             age bin label comes from reference data.
+         start_year (float): this function aggregates data over time. This indicates the start year of the interval over which data are aggregated.
+         end_year   (float): This is the end year of the semi-opne interval over which dat are aggregated.
+
+         Data are aggregated over the interval [start_year, end_year)
 
     Returns:
         simulated_data (pandas.Dataframe): with columns:
@@ -133,7 +143,7 @@ def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2018.0,
     """
 
     sim_results = sim.results.flatten()
-    cases_key = "monitor_1_hist_b_ti_acute"        # New cases (acute), summed over the period of the monitor/report
+    cases_key = "monitor_1_b_new_acute"        # New cases (acute), summed over the period of the monitor/report
 
     lbl_to_idx = sim.get_analyzers()[0].age_bin_lbl_to_idx      # Mapping between age bin string labels and index in the monitor results 2D arrays
 
@@ -147,10 +157,12 @@ def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2018.0,
     x = sim_results[cases_key][time_mask, this_idx].sum()  # Sum over time, here we are only processing one age bin
     n = sim_results[cases_key][time_mask, :].sum().sum()   # Sum over time and over age bins
 
-    year_index = np.array([0.0])
+    requested_year_bin = f"{int(start_year)}-{int(end_year)}"
+    year_index = np.array([(start_year + end_year)/2.0])  # The centre of the year bin
     simulated_data = pd.DataFrame(data={"n": n,
                                         "x": x/n,
-                                        "age_bin": selected_age_bin},
+                                        "age_bin": selected_age_bin,
+                                        "year_bin": requested_year_bin},
                                   index=pd.Index(year_index, name="t"))
     return simulated_data
 
@@ -164,12 +176,16 @@ def extract_reference_data_prevax(reference_data, selected_age_bin=None):
     """
 
     age_bin_mask = (reference_data["age_bin_label"] == selected_age_bin)
+    year_bin = reference_data.year_bin_label.unique()[0]
 
     n = reference_data["cases_sum"].astype(float).sum()
     x = reference_data.loc[age_bin_mask, ["cases_sum"]].astype(float).to_numpy()[0][0]
-    year_index = np.array([0.0])
+    start = reference_data.year_start[0]
+    end = reference_data.year_end[0]
+    year_index = np.array([(start + end) / 2.0])   # The centre of the year bin
     expected_data = pd.DataFrame(data={"n": n,
                                        "x": x/n,
-                                       "age_bin": selected_age_bin},
+                                       "age_bin": selected_age_bin,
+                                       "year_bin": year_bin},
                                  index=pd.Index(year_index, name="t"))
     return expected_data
