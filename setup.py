@@ -41,7 +41,7 @@ setup(
         'numpy',
         'scipy',
         'pandas>=2.0.0',
-        'sciris>=3.1.6',
+        'sciris>=3.2.0',
         'starsim==1.0.3',
         'synthpops',
         'matplotlib',
