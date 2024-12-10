@@ -764,8 +764,6 @@ class Typhoid(ss.Disease):
 
             # Relative Transmissibility: Relevant for sources
             rel_trans = self.rel_trans.asnew(self.infectious * self.rel_trans)
-            # Relative Susceptibility: Relevant for targets
-            rel_sus   = self.rel_sus.asnew(self.susceptible * self.rel_sus)
 
             p1p2b0 = [edges.p1, edges.p2, nbetas[0]]
             for src, trg, beta in [p1p2b0]:
@@ -786,7 +784,7 @@ class Typhoid(ss.Disease):
 
                 # TODO: This is is model A, but I think EMOD is model B. Couldn't figure out which one it is though.
                 # See: https://github.com/starsimhub/typhoidsim/issues/90
-                self.cfu_dose[trg] = rel_sus[trg] * self.infectiousness[src] * rel_trans[src] * beta_per_dt  # TODO: to remove? beta_per_dt should be 1 for typhoid model
+                self.cfu_dose[trg] = self.infectiousness[src] * rel_trans[src] * beta_per_dt  # TODO: to remove? beta_per_dt should be 1 for typhoid model
                 self.n_exposures[trg] = exposure_amount
 
                 # INFECTION: Decide who got infected
