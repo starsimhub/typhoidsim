@@ -131,7 +131,7 @@ class Typhoid(ss.Disease):
             ss.FloatArr("cfu_dose", default=0.0, label="Exposure amount (CFUs)"),     # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
             ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),           # average number of CFUs during different stages of the disease (infected phase, within host).
             ss.FloatArr("n_infections", 0.0, label="Number of Infections"),       # number of infections over the lifespan of this agent
-            ss.FloatArr("immunity", default=1.0, label="Immunity Level"),             # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
+            ss.FloatArr("susceptibility", default=1.0, label="Susceptibility Level"), # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
             ss.FloatArr("p_infc", default=0.0, label="Probability of Infection"),     # Track probability of infection
             ss.FloatArr("p_route", default=0.0, label="Probability Route Draw"),      # Probability to determine which route will be the route if infection
             ss.FloatArr("infc_origin", label="Origin of infection"),                  # Track origin of infection
@@ -894,7 +894,7 @@ class Typhoid(ss.Disease):
         """
         # Evoke an immunity-like response
         p_resp = module.drc(module.cfu_dose[uids])
-        p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.immunity[uids] * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
+        p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.susceptibility[uids] * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
         return np.array(p_infc)
 
     @staticmethod
@@ -906,7 +906,7 @@ class Typhoid(ss.Disease):
         prob = 1.0f - pow(1.0f - immunity * infects * ira, number_of_exposures);
         """
         p_resp = np.minimum(module.cfu_dose[uids] / module.pars.tai, 1.0)  # This number is the equivalent of the dose-response-curve for the environment
-        p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.immunity[uids] * p_resp) ** module.n_exposures[uids]  # total number of exposure volume
+        p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.susceptibility[uids] * p_resp) ** module.n_exposures[uids]  # total number of exposure volume
         return np.array(p_infc)
 
     @staticmethod
@@ -941,12 +941,11 @@ class Typhoid(ss.Disease):
 
     def update_immunity(self, uids):
         """
-        Acquired immunity. Note that the more infections, the lower the number
-        immunity associated with immunity -- this number acts as an
-        attenuation factor.
+        Susceptibility die to acquired immunity following infection.
+        The more infections, the lower the number.
         """
         # TPPI: Typhoid Protection Per Infection
-        self.immunity[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
+        self.susceptibility[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
         # NOTE: We could add a mechanisms for immunity waning here
         return
 

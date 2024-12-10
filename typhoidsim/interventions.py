@@ -669,7 +669,7 @@ class blocking_vaccine(ss.Product):
 
     def administer(self, people, uids):
         """ Apply the vaccine to the requested uids. """
-        people.typhoid.immunity[uids] -= self.pars.efficacy * people.typhoid.immunity[uids]
+        people.typhoid.susceptibility[uids] -= self.pars.efficacy * people.typhoid.immunity[uids]
         return
 
 
