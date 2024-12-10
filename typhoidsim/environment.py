@@ -42,8 +42,6 @@ class EnvironmentalPool(ss.Demographics):
         self.results += [
             ss.Result(self.name, 'cfu_conc', npts, dtype=float, scale=False, label='Current CFU concentration'),
             ss.Result(self.name, 'cfu_num', npts, dtype=int, scale=False, label='Current number of CFUs'),
-            ss.Result(self.name, 'rel_trans', npts, dtype=float, scale=False, label='Relative exposure scaling to long-cycle CCTV'),
-            ss.Result(self.name, 'rel_trans_cfu_num', npts, dtype=float, scale=False, label='Current number of CFUs x Relative exposure scaling'),
         ]
         return
 
@@ -84,6 +82,4 @@ class EnvironmentalPool(ss.Demographics):
     def update_results(self):
         self.results['cfu_conc'][self.sim.ti]  = self.sv.cfu_conc[self.sim.ti-1]
         self.results['cfu_num'][self.sim.ti]   = self.sv.cfu_conc[self.sim.ti-1] * self.pars.volume
-        self.results['rel_trans'][self.sim.ti] = self.pars.transmission.rel_trans
-        self.results['rel_trans_cfu_num'][self.sim.ti] = self.results['cfu_num'][self.sim.ti] * self.pars.transmission.rel_trans
         return
