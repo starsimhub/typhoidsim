@@ -128,6 +128,7 @@ class Typhoid(ss.Disease):
             # and depend on infection states
             ss.FloatArr("n_exposures", default=0.0, label="Number of Exposures"),     # average number of exposures from a given source/route over the interval of one timestep (usually 1 day)
             ss.FloatArr("exposure_amount", default=0.0, label="Number of Exposures"), # average (number of exposures * vollume) from a given source/route over the interval of one timestep (usually 1 day)
+            ss.FloatArr("cfu_dose_per_exposure", default=0.0, label="Single exposure amount (CFUs)"),
             ss.FloatArr("cfu_dose", default=0.0, label="Exposure amount (CFUs)"),     # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
             ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),           # average number of CFUs during different stages of the disease (infected phase, within host).
             ss.FloatArr("n_infections", 0.0, label="Number of Infections"),       # number of infections over the lifespan of this agent
@@ -841,10 +842,14 @@ class Typhoid(ss.Disease):
         """
         if not self.pars.has_environment:
             return []
-        trans_pars = self.pars.transmission
         ti = self.sim.ti
         dt = self.sim.dt
+        n_agents = 1.0 / self.sim.pars["n_agents"]
+        exposure_volume = 1.0 / n_agents  # CFUs in the environment need to be proportionally distributed among agents, so we don't have the case where number of CFUs received by agents > CFU's available in the environment
         environment = self.sim.demographics['environmentalpool']
+        env_trans_pars = environment.pars.transmission
+        trans_pars = self.pars.transmission
+
 
         # Determine who gets infected from environment. Multiply by rel_sus, as many interventions will target this parameter
         # This means an agent can become unsusceptible because of an external factor.
@@ -852,11 +857,11 @@ class Typhoid(ss.Disease):
         susc_uids = (susc).uids
 
         # EXPOSURE: Increase cfu doses in susceptible people by exposing them to the environment
+        # NOTE: left exposure amount and n_exposures for interpretability, they should be identical
         self.exposure_amount[susc_uids] = ((environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt)  # expoosure amount expressed in (n_exposures * volume) on the time interval "dt"
-        # We still ned the number of exposures for the probability of infection function
-        self.n_exposures[susc_uids] = self.exposure_amount[susc_uids] / environment.pars.volume  # Units n_exposures t [# of exposures] =  (n_exposures * volume) / volume
-        self.cfu_dose[susc_uids] = environment.pars.transmission.rel_trans * environment.sv.cfu_conc[ti - 1] * self.exposure_amount[susc_uids]  # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
+        self.n_exposures[susc_uids] = self.exposure_amount[susc_uids] / environment.pars.volume  # env volume=1. Units of n_exposures [counts] =  (counts * volume) / volume
 
+        self.cfu_dose_per_exposure[susc_uids] = environment.sv.cfu_conc[ti - 1] * exposure_volume * env_trans_pars.rel_trans   # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
         # INFECTION: The distribution trans_pars.env2ppl_p_inf(p=fun()), where fun() is
         # infection_prob_function(), which calls self.drc(). This assesses
         # the immunity responses of the hosts (drc) due to a certain amount of
