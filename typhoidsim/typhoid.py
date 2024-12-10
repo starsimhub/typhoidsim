@@ -898,8 +898,8 @@ class Typhoid(ss.Disease):
         prob = 1.0f - pow(1.0f - immunity * infects * ira, number_of_exposures);
         """
         # Evoke an immunity-like response
-        p_resp = module.drc(module.cfu_dose[uids])
-        p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.susceptibility[uids] * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time? total?
+        p_resp = module.drc(module.cfu_dose_per_exposure[uids])
+        p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.susceptibility[uids] * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time
         return np.array(p_infc)
 
     @staticmethod
