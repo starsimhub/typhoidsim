@@ -98,12 +98,14 @@ class Typhoid(ss.Disease):
             transmission=ss.Pars(
                 # Behavioural interaction parameters between people and environment
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_env),
-                exposure2contact_rate=ss.poisson(lam=0.18),  # Poisson rate determining the daily number of exposures for the contact route (num exposures)
-                ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),
+                # Behavioural interaction parameters between people and other people in their contact networks
+                exposure2contact_rate=1.0,  # Rate determining the daily number of exposures for the contact route
+                ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),  # The probabilities will be updated for each agent based on the interaction with their contacts
+                # Multiroute transmission
                 p_route=ss.uniform()  # NOTE: currently unused, but stub for transmission route selection. See: https://github.com/starsimhub/typhoidsim/issues/102
             ),
 
-        beta=None, # NOTE: Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
+             beta=None, # NOTE: Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
                    # Its value will be updated to be dt during validation, so the net effect is a beta=1 per time step.
         )
         self.update_pars(pars, **kwargs)
@@ -122,23 +124,25 @@ class Typhoid(ss.Disease):
             ss.BoolArr("subclinical", default=False, label="Subclinical"),
             ss.BoolArr("chronic", default=False, label="Chronic"),
             ss.BoolArr("recovered", default=False, label="Recovered/Been Infected"),
-            ss.BoolArr("infected_ever", default=False, label="Ever X Infected"),
+            ss.BoolArr("infected_ever", default=False, label="Ever Infected"),
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
-            ss.FloatArr("n_exposures", default=0.0, label="Number of Exposures"),     # average number of exposures from a given source/route over the interval of one timestep (usually 1 day)
-            ss.FloatArr("exposure_amount", default=0.0, label="Number of Exposures"), # average (number of exposures * vollume) from a given source/route over the interval of one timestep (usually 1 day)
-            ss.FloatArr("cfu_dose_per_exposure", default=0.0, label="Single exposure amount (CFUs)"),
-            ss.FloatArr("cfu_dose", default=0.0, label="Exposure amount (CFUs)"),     # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
-            ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),           # average number of CFUs during different stages of the disease (infected phase, within host).
-            ss.FloatArr("n_infections", 0.0, label="Number of Infections"),       # number of infections over the lifespan of this agent
-            ss.FloatArr("susceptibility", default=1.0, label="Susceptibility Level"), # Blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
-            ss.FloatArr("p_infc", default=0.0, label="Probability of Infection"),     # Track probability of infection
-            ss.FloatArr("p_route", default=0.0, label="Probability Route Draw"),      # Probability to determine which route will be the route if infection
-            ss.FloatArr("infc_origin", label="Origin of infection"),                  # Track origin of infection
+            ss.FloatArr("n_exposures", default=0.0, label="Number of Exposures"),      # average number of exposures from a given source/route over the interval of one timestep (usually 1 day)
+            ss.FloatArr("exposure_amount", default=0.0, label="Number of Exposures"),  # average (number of exposures * volume) from a given source/route over the interval of one timestep (usually 1 day)
+            ss.FloatArr("cfu_dose_per_exposure", default=0.0, label="Single environmental exposure amount (CFUs)"),
+            ss.FloatArr("cfu_dose", default=0.0, label="Exposure amount (CFUs)"),      # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
+            ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),            # average number of CFUs during different stages of the disease (infected phase, within host).
+            ss.FloatArr("n_infections", 0.0, label="Number of Infections"),        # number of infections over the lifespan of this agent
+            ss.FloatArr("susceptibility", default=1.0, label="Susceptibility Level"),  # blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
+            # Track some probabilities; some are not  used now but will become important in multi-route transmission
+            ss.FloatArr("p_resp", default=0.0, label="Probability of responset to infection"),  # The prbability of having a response to pathogens, usually a term involved in determining p_infc
+            ss.FloatArr("p_infc", default=0.0, label="Probability of Infection"),      # Track probability of infection
+            ss.FloatArr("p_route", default=0.0, label="Probability Route Draw"),       # Probability to determine which route will be the route if infection
+            ss.FloatArr("infc_origin", label="Origin of infection"),                   # Track origin of infection
 
             ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),
-            ss.FloatArr("rel_trans", default=1.0, label="Relative transmission"),
+            ss.FloatArr("rel_trans", default=1.0, label="Relative transmissibility"),
 
             # States that track timing of events
             ss.FloatArr("ti_infected", label="Time of infection"),
@@ -311,14 +315,14 @@ class Typhoid(ss.Disease):
         Validate environment
         """
         demographic_modules = self.sim.demographics
+        environmental_key = "environmentalpool"
         if demographic_modules is not None and len(demographic_modules) > 0:
             try:
-                #TODO: this is a temporary quick way to check that we have the only available environemental module, available in the sim
-                demographic_modules["environmentalpool"]
-                self.pars.has_environment = True
+                if environmental_key in demographic_modules.keys():
+                    self.pars.has_environment = True
             except sc.KeyNotFoundError:
                 self.pars.has_environment = False
-                msg = "'environmentalpool' module not found. Will run simulation without environmental transmission."
+                msg = f"{environmental_key} module not found. Will run simulation without environmental transmission."
                 ss.warn(msg)
         return
 
@@ -731,14 +735,14 @@ class Typhoid(ss.Disease):
     def make_new_cases(self):
         """
         Handle transmission of pathogens and who becomes infected,
-        includes all transmission routes.
+        includes all transmission routes. This method is called by the Sim object.
         """
         self.make_new_cases_sequential()
         return
 
     def make_new_cases_sequential(self):
         """
-        This function exist to allow for testing different mechanisms
+        This function exists to allow for testing different mechanisms
         that handle multiroute transmission.
         """
         self.make_new_cases_contact()
@@ -750,11 +754,30 @@ class Typhoid(ss.Disease):
         Add new cases of module, through transmission, incidence, etc.
         Common-random-number-safe transmission code works by mapping edges onto
         slots.
+
+        The direct or contact transmission route. The probability of infection
+        is calculated for each infector-infectee pair (not summed across all
+        possible exposures an infectee experiences).
+
+        See diagram for Model A in https://github.com/starsimhub/typhoidsim/issues/90
+
+        Implicitly, at each time step, the number of "exposures" for a src-trg
+        pair is equal to 1.
+
+        In starsim we use beta_per_dt, the per time step probability that a
+        contact between two susceptible people results in transmission.
+
+        However, historically in EMOD-world this per-time-step probability
+        is called exposure2contact_rate. For time being, and to faciliate mapping
+        between past EMOD-based simulations, and starsim-based sims, we enforce
+        beta_per_dt=1, and keep exposure2contct_rate. Eventually,
+        we can move onto just using beta_per_dt.
         """
         new_cases = []
         sources = []
         networks = []
         betamap = self._check_betas()
+        dt = self.sim.dt
 
         for i, (nkey, net) in enumerate(self.sim.networks.items()):
             if not len(net):
@@ -776,26 +799,14 @@ class Typhoid(ss.Disease):
 
                 # In typhoid source->target 'physical contact' is guaranteed,
                 # but transmission of pathogens and probability of infection are not.
-                beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.sim.dt)
+                #beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.sim.dt)  # This is equal to 1, but needs to be here for starsim networks
 
-                # EXPOSURE: Exposure encompasses exposure frequency per unit of time
-                # Units are (n_exposures ) / day
-                # This exposure rate means that not every (infected) contact will be succesful in transmiting pathogens
-                exposure_amount = (self.pars.transmission.exposure2contact_rate.rvs(len(trg)) / tyd.day2year) * self.sim.dt    ## units in (n_exposures)
+                # EXPOSURE/TRANSMISSION/INFECTION PROB Exposure encompasses exposure frequency per unit of time
+                self.p_resp[trg] = (self.infectiousness[src] / self.pars.tai) * rel_trans[src] * ((self.pars.transmission.exposure2contact_rate / tyd.day2year) * dt)
 
-                # TODO: This is is model A, but I think EMOD is model B. Couldn't figure out which one it is though.
-                # See: https://github.com/starsimhub/typhoidsim/issues/90
-                self.cfu_dose[trg] = self.infectiousness[src] * rel_trans[src] * beta_per_dt  # TODO: to remove? beta_per_dt should be 1 for typhoid model
-                self.n_exposures[trg] = exposure_amount
-
-                # INFECTION: Decide who got infected
+                # INFECTION OUTCOME: Decide who gets infected/
+                # self.pars.transmission.ppl2ppl_p_inf will calculate p_infc = rel_sus[trg] * susceptibility[trg] * self.p_resp[trg]
                 new_cases_bool = self.pars.transmission.ppl2ppl_p_inf(trg)
-
-                # "Adjust" cfu_dose of agents who got infected. This will guarantee the high dose mu/sigma parameters for prepatent duration
-                # From EMOD: Currently, all infections from the Contact route are assumed to be a
-                # high dose prepatent duration, meaning that the characteristic dose a
-                # target agent receives has to be set to be larger than self.pars.cfu_me_hi
-                self.cfu_dose[trg[new_cases_bool]] = self.pars.cfu_me_hi + 0.1*self.pars.cfu_me_hi
 
                 # Append new cases
                 new_cases.append(trg[new_cases_bool])
@@ -814,6 +825,12 @@ class Typhoid(ss.Disease):
             networks = np.empty(0, dtype=int)
 
         if len(new_cases):
+            # "Adjust" cfu_dose of agents who become infected at this time step.
+            # This will guarantee the high dose mu/sigma parameters for prepatent duration
+            # From EMOD: Currently, all infections from the Contact route are assumed to be a
+            # high dose prepatent duration, meaning that the characteristic dose a
+            # target agent receives has to be set to be a value larger than self.pars.cfu_me_hi
+            self.cfu_dose[new_cases] = self.pars.cfu_me_hi + 0.1 * self.pars.cfu_me_hi
             self.set_prognoses(new_cases, source_uids=None)
             self.progress_to_prepatent(self.sim.ti)
             self.infc_origin[new_cases] = tyd.TransmissionRoute.CONTACT.value
@@ -870,6 +887,8 @@ class Typhoid(ss.Disease):
         got_infected = trans_pars.env2ppl_p_inf(susc_uids)
         new_cases = susc_uids[got_infected]
         if len(new_cases):
+            # Set the level of cfu_dose, as this is used to determine the parameters of the distribution that sets prepatent duration of new cases
+            self.cfu_dose[new_cases] = self.cfu_dose_per_exposure[new_cases]
             self.set_prognoses(new_cases, source_uids=None)
             self.progress_to_prepatent(ti)
             self.infc_origin[new_cases] = tyd.TransmissionRoute.ENVIRONMENT.value
@@ -904,14 +923,7 @@ class Typhoid(ss.Disease):
 
     @staticmethod
     def infection_prob_function_contact(module, sim, uids):
-        """
-        Calculate the probability of infection for contact routes
-        In EMOD (https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/IndividualTyphoid.cpp):
-        ProbabilityNumber infects = fContact / IndividualHumanTyphoidConfig::typhoid_acute_infectiousness;
-        prob = 1.0f - pow(1.0f - immunity * infects * ira, number_of_exposures);
-        """
-        p_resp = np.minimum(module.cfu_dose[uids] / module.pars.tai, 1.0)  # This number is the equivalent of the dose-response-curve for the environment
-        p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.susceptibility[uids] * p_resp) ** module.n_exposures[uids]  # total number of exposure volume
+        p_infc = module.rel_sus[uids] * module.susceptibility[uids] * module.p_resp[uids]
         return np.array(p_infc)
 
     @staticmethod
@@ -956,18 +968,17 @@ class Typhoid(ss.Disease):
 
     def drc(self, cfu_dose):
         """
-        The probability of infection due to environmental exposure is mediated by the dose-response curve (drc),
-        taking in the contagion population as a value of colony-forming units (CFU)
+        The probability of infection due to environmental exposure is mediated by
+        the dose-response curve (drc), taking in the contagion population as a
+        value of colony-forming units (CFU)
         and returning a probability of infection.
 
-        The independent variable `cfu_dose` can be modulated by seasonality
-        factors.
+        Here `cfu_dose` is the CFU dose received from the environment.
 
         The DRC is a beta-binomial curve fitted the historical challenge
         data by QMRA (Enger, 2013), where:
 
         P(response) = 1- [1 + cfu_dose * (2^(1/ α)- 1)/N50] ^(-α)
-        TODO: this particular functional form of drc can exist somewhere else,
         and self.drc() could be a method to be defined by the user.
         """
         p_response = 1.0 - (1.0 + cfu_dose * ((2.0**(1.0/self.pars.drc_alpha) - 1.0)/self.pars.drc_n50))**(-self.pars.drc_alpha)
@@ -1069,28 +1080,28 @@ def _detect_birthday(sim):
     return had_bday
 
 
-def stratify_parameter_by_age(bin_edges, bin_values):
+def stratify_parameter_by_age(age_bin_edges, par_bin_values):
     """
-    Create a function that, given an age, returns the value of a parameter
-    assigned to the age bin that the age falls into.
+    Returns a callable that, given an age, returns the value of a parameter
+    assigned to the age bin the given age falls into.
 
     Args:
-        bin_edges (np.ndarray): The edges of the age bins. Should be in
+        age_bin_edges (np.ndarray): The edges of the age bins. Should be in
             ascending order.
-        bin_values (np.ndarray): The values corresponding to each age bin.
-            Should be the of length bin_edges - 1.
+        par_bin_values (np.ndarray): The parameter values assigned to each age bin.
+            Should be the of length age_bin_edges - 1.
 
     Returns:
         age_bin_function (callable): A function that takes an age
-            and returns the value for the bin that the age falls into.
+            and returns the parameter value for the bin that the age falls into.
 
-    bin_edges = np.array([0, 2, 5, 120])
-    bin_values = np.array([904.4, 240.9, 0.0])
-    age_stratified_parameter = stratify_parameter(bin_edges, bin_values)
+    age_bin_edges = np.array([0, 2, 5, 120])
+    par_bin_values = np.array([904.4, 240.9, 0.0])
+    age_stratified_parameter = stratify_parameter_by_age(age_bin_edges, par_bin_values)
     age_stratified_parameter(25)  # should return 0.0
     """
     def age_stratified_parameter(age):
-        index = tyu.digitize_ages(age, bin_edges)
-        return bin_values[index]
+        bin_index = tyu.digitize_ages(age, age_bin_edges)
+        return par_bin_values[bin_index]
 
     return age_stratified_parameter

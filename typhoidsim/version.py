@@ -4,6 +4,6 @@ Version and license information.
 
 __all__ = ['__version__', '__versiondate__', '__license__']
 
-__version__ = '0.8.0-dev'
-__versiondate__ = '2024-12-11'
+__version__ = '0.9.0-dev'
+__versiondate__ = '2024-12-12'
 __license__ = f'Typhoidsim {__version__} ({__versiondate__}) — © 2024 by IDM'
