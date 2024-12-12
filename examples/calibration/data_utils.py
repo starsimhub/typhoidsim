@@ -299,7 +299,7 @@ def parse_bin_edges(str_bin):
 
 def lockdown_mask(years, target_year=2019.0):
     """
-    Returns a mask that can be used to exclude the months of lockdown.
+    Returns a mask that excludes the months of lockdown (default: year 2019; months: [2, 6])
     Assumes years is the time in calendar years, in float representation.
     """
     year = years.astype(int)
