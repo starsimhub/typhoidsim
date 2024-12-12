@@ -93,9 +93,14 @@ def get_calib_components(calibration_target="step_1"):
     match calibration_target:
         case "step_1":
             reference_data = utils.get_reference_data_prevax()
-            return make_calib_components_by_age_prevax(reference_data)
+            calib_components = make_calib_components_by_age_prevax(reference_data)
+        case "step_2":
+            reference_data = utils.get_reference_data_incidence()
+            calib_components = make_calib_components_by_age_incidence(reference_data)
         case _:
             raise NotImplementedError
+
+    return calib_components
 
 
 def make_calib_components_by_age_prevax(reference_data):
@@ -112,14 +117,45 @@ def make_calib_components_by_age_prevax(reference_data):
     components = []
     num_age_bins = reference_data.age_bin_label.nunique()
     for this_age_bin in sorted(reference_data.age_bin_label.unique()):
-        expected_data = extract_reference_data_prevax(reference_data, selected_age_bin=this_age_bin)
-        extract_data_from_sim_fn = partial(extract_simulated_data_prevax, selected_age_bin=this_age_bin,
+        expected_data = extract_reference_data_prevax(reference_data,
+                                                      selected_age_bin=this_age_bin)
+        extract_data_from_sim_fn = partial(extract_simulated_data_prevax,
+                                           selected_age_bin=this_age_bin,
                                            start_year=2017.0, end_year=2020.0)
         components.append(ty.CalibComponent220(
-                name=f"cases_prevax",
+                name=f"cases_prevax",  # NOTE: can be ranamed to something else
                 expected=expected_data,
                 extract_fn=extract_data_from_sim_fn,
                 conform="prevalent",
+                nll_fn=ty.euclidean,
+                weight=1.0/num_age_bins,  # Not strictly necessary to weight it like this
+            ))
+    return components
+
+
+def make_calib_components_by_age_incidence(reference_data):
+    """
+    Builds a list of calibration components, for calibrating to age-specific incidence
+
+    Data:
+    - Cases_byage_all > Cases_corrected;
+    - Population > Population_surveillance_corrected
+
+    Sindh full time period: January 2019 - December 2023 (excluding lockdown)
+    """
+    components = []
+    num_age_bins = reference_data.age_bin_label.nunique()
+    for this_age_bin in sorted(reference_data.age_bin_label.unique()):
+        expected_data = extract_reference_data_incidence(reference_data,
+                                                         selected_age_bin=this_age_bin)
+        extract_data_from_sim_fn = partial(extract_simulated_data_incidence,
+                                           selected_age_bin=this_age_bin,
+                                           start_year=2017.0, end_year=2024.0)
+        components.append(ty.CalibComponent220(
+                name=f"cases_incidence",  # NOTE: can be renamed to something else
+                expected=expected_data,
+                extract_fn=extract_data_from_sim_fn,
+                conform="incident",
                 nll_fn=ty.euclidean,
                 weight=1.0/num_age_bins,  # Not strictly necessary to weight it like this
             ))
@@ -191,13 +227,46 @@ def extract_reference_data_prevax(reference_data, selected_age_bin=None):
     age_bin_mask = (reference_data["age_bin_label"] == selected_age_bin)
     year_bin = reference_data.year_bin_label.unique()[0]
 
-    n = reference_data["cases_sum"].astype(float).sum()
-    x = reference_data.loc[age_bin_mask, ["cases_sum"]].astype(float).to_numpy()[0][0]
+    n = reference_data["cases_sum_corrected"].astype(float).sum()
+    x = reference_data.loc[age_bin_mask, ["cases_sum_corrected"]].astype(float).to_numpy()[0][0]
     start = reference_data.year_start[0]
     end = reference_data.year_end[0]
-    year_index = np.array([(start + end) / 2.0])   # The centre of the year bin
+    year_index = np.array([(start + end) / 2.0])   # Use the centre of the year bin as the time index
     expected_data = pd.DataFrame(data={"n": n,
                                        "x": x/n,
+                                       "age_bin": selected_age_bin,
+                                       "year_bin": year_bin},
+                                 index=pd.Index(year_index, name="t"))
+    return expected_data
+
+
+def extract_simulated_data_incidene(reference_data, selected_age_bin=None, start_year=2017.0, end_year=2024.0):
+    pass
+
+
+def extract_reference_data_incidence(reference_data, selected_age_bin=None, start_year=2017.0, end_year=2024.0):
+    """
+    This function is similar to get_age_ref_data in AgeDistAnalyzer_Count.py,
+    plus the steps done in calculate_likelihood() to get exactly the data/quantity
+    that is actually used to calculate likelihood/distance/cost during
+    the calibration process.
+    """
+
+    age_bin_mask = (reference_data["age_bin_label"] == selected_age_bin)
+    age_bin_ref_data = reference_data.loc[age_bin_mask, :]
+
+    year_bin_mask = ((age_bin_ref_data.year_start >= start_year) &
+                     (age_bin_ref_data.year_start.year_end < end_year))
+
+    x = age_bin_ref_data.loc[year_bin_mask, ["cases_corrected"]].astype(float).to_numpy()[0][0]
+    n = age_bin_ref_data.loc[year_bin_mask, ["n_people_corrected"]].astype(float)
+    year_bin = age_bin_ref_data.loc[year_bin_mask, ["year_bin_label"]]
+
+    start = age_bin_ref_data.year_start
+    end   = age_bin_ref_data.year_end
+    year_index = np.array([(start + end) / 2.0])   # Use the centre of the year bin as the time index
+    expected_data = pd.DataFrame(data={"n": n,
+                                       "x": x,
                                        "age_bin": selected_age_bin,
                                        "year_bin": year_bin},
                                  index=pd.Index(year_index, name="t"))
