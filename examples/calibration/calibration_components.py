@@ -67,7 +67,6 @@ def update_sim_pars_step_2(sim, calib_pars, **kwargs):
     # NOTE This way of getting to the environment is ugly but cannot do it a
     # different way atm in starsim, there are three demographics modules: births, deaths and environment
     monitor = sim.pars.analyzers
-    breakpoint()
 
     for par_name, par_attrs in calib_pars.items():  # Loop over the calibration parameters
         v = par_attrs["value"]
@@ -213,7 +212,7 @@ def make_calib_components_by_age_incidence(reference_data):
                 expected=expected_data,
                 extract_fn=extract_data_from_sim_fn,
                 conform="incident",
-                nll_fn=ty.euclidean,
+                nll_fn=ty.beta_binomial,
                 weight=1.0/num_age_bins,  # Not strictly necessary to weight it like this
             ))
     return components
