@@ -29,20 +29,53 @@ import typhoidsim as ty
 import models
 import calibration_components as cbcomp
 
-calib_debug = False  # If true, calibration will run in serial
+calib_debug = True  # If true, calibration will run in serial
 
 
 def run_starsim_calibration_step_1(do_plot=True):
     # Make the sim, get the right reference data (in components), get
     # the correct calibration parameters
     sim = models.make_sim(scenario="baseline")
-    components = cbcomp.get_calib_components(calibration_target="cases_prevax")
+    components = cbcomp.get_calib_components(calibration_target="step_1")
     calib_pars = cbcomp.get_calib_pars(calibration_target="step_1")
 
     calib = ty.Calibration220(
             calib_pars=calib_pars,
             sim=sim,
-            build_fn=cbcomp.parse_update_sim_pars,  # Tell the calibration how to update parameters
+            build_fn=cbcomp.update_sim_pars_step_1,  # Tell the calibration how to update parameters
+            components=components,
+            total_trials=2,
+            n_workers=8,
+            die=True,
+            debug=calib_debug
+        )
+
+    # Perform the calibration
+    sc.printgreen('\nPeforming calibration...')
+    calib.calibrate(confirm_fit=False)
+    print(calib.best_pars)
+    # Confirm
+    sc.printcyan('\nConfirming fit...')
+    calib.check_fit(n_runs=2)
+    # Save fig
+    if do_plot:
+        ty.plot_calib(calib)
+        calib.plot_trend()
+    plt.show()
+    return calib
+
+
+def run_starsim_calibration_step_2(do_plot=True):
+    # Make the sim, get the right reference data (in components), get
+    # the correct calibration parameters
+    sim = models.make_sim(scenario="with_vax_interventions")
+    components = cbcomp.get_calib_components(calibration_target="step_2")
+    calib_pars = cbcomp.get_calib_pars(calibration_target="step_2")
+
+    calib = ty.Calibration220(
+            calib_pars=calib_pars,
+            sim=sim,
+            build_fn=cbcomp.update_sim_pars_step_2,  # Tell the calibration how to update parameters
             components=components,
             total_trials=2,
             n_workers=8,
@@ -66,4 +99,4 @@ def run_starsim_calibration_step_1(do_plot=True):
 
 
 if __name__ == '__main__':
-    run_starsim_calibration_step_1(do_plot=True)
+    run_starsim_calibration_step_2(do_plot=True)
