@@ -223,18 +223,38 @@ def get_reference_data_incidence(filepath=None):
 
     reference_data = reference_data.rename(columns={"Cases": "cases",
                                                     "Cases_corrected": "cases_corrected"})
-    # Parse age bins
-    reference_data[["age_start", "age_end"]] = reference_data["AgeBin"].apply(parse_bin_edges)
 
-    # Parse year bins
-    reference_data[["year_start", "year_end"]] = reference_data["YearBin"].apply(parse_bin_edges)
-    reference_data["age_bin_label"] = list(
-        map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
-            zip(reference_data["age_start"], reference_data["age_end"])))
+    # Population data is stored in a different sheet
+    population_data = get_reference_dataset_xls(dataset_name="Population",
+                                                filepath=filepath)
 
-    reference_data["year_bin_label"] = list(
-        map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
-            zip(reference_data["year_start"], reference_data["year_end"])))
+    population_data = population_data.rename(
+        columns={"Population_surveillance": "n_people",
+                 "Population_surveillance_corrected": "n_people_corrected",
+                 "Year": "YearBin"})
+
+    for df in [reference_data, population_data]:
+        # Parse age bins
+        df[["age_start", "age_end"]] = df["AgeBin"].apply(parse_bin_edges)
+
+        # Parse year bins
+        df[["year_start", "year_end"]] = df["YearBin"].apply(parse_bin_edges)
+        df["age_bin_label"] = list(
+            map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
+                zip(df["age_start"], df["age_end"])))
+
+        df["year_bin_label"] = list(
+            map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
+                zip(df["year_start"], df["year_end"])))
+
+        df = df.sort_values(by=["YearBin", "AgeBin"])
+        df.reset_index(inplace=True, drop=True)
+
+    population_data_subset = population_data.reset_index()[
+        ["YearBin", "AgeBin", "n_people", "n_people_corrected"]]
+
+    reference_data = reference_data.merge(population_data_subset,
+                                          on=["YearBin", "AgeBin"], how="left")
 
     return reference_data
 
