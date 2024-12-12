@@ -189,6 +189,8 @@ def get_reference_dataset_xls(dataset_name, filepath):
 
 
 def get_reference_data_prevax(filepath=None):
+    """ Load and sanitise data from sheet "CasesByAge_prevax" """
+
     if filepath is None:
         filepath = "reference_data/SindhCalibration_newage_excludelockdown_2019.xlsx"
     reference_data = get_reference_dataset_xls(dataset_name="CasesByAge_prevax",
@@ -201,6 +203,31 @@ def get_reference_data_prevax(filepath=None):
     # Parse year bins
     reference_data[["year_start", "year_end"]] = reference_data["YearBin"].apply(parse_bin_edges)
 
+    reference_data["age_bin_label"] = list(
+        map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
+            zip(reference_data["age_start"], reference_data["age_end"])))
+
+    reference_data["year_bin_label"] = list(
+        map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
+            zip(reference_data["year_start"], reference_data["year_end"])))
+
+    return reference_data
+
+
+def get_reference_data_incidence(filepath=None):
+    """ Load and sanitise data from sheet "CasesByAgeAll """
+    if filepath is None:
+        filepath = "reference_data/SindhCalibration_newage_excludelockdown_2019.xlsx"
+    reference_data = get_reference_dataset_xls(dataset_name="CasesByAgeAll",
+                                               filepath=filepath)
+
+    reference_data = reference_data.rename(columns={"Cases": "cases",
+                                                    "Cases_corrected": "cases_corrected"})
+    # Parse age bins
+    reference_data[["age_start", "age_end"]] = reference_data["AgeBin"].apply(parse_bin_edges)
+
+    # Parse year bins
+    reference_data[["year_start", "year_end"]] = reference_data["YearBin"].apply(parse_bin_edges)
     reference_data["age_bin_label"] = list(
         map(lambda x: ty.generate_age_bin_labels([x[0], x[1]]),
             zip(reference_data["age_start"], reference_data["age_end"])))
@@ -240,7 +267,12 @@ def parse_bin_edges(str_bin):
     This function returns the bin edges in numeric representation.
     """
     import re
-    values = re.sub(r'[\[\)]', '', str_bin).split(',')
+    try:
+        values = re.sub(r'[\[\)]', '', str_bin).split(',')
+    except TypeError:
+        # It means year bins are 1-year bins and they are formatted in a different way to 2y+ bins (eg, [2017, 2020) ).
+        # Sometimes the values are ints sometimes floats, add 1 (year) to define the right edge of the bin
+        values = [str_bin, str_bin + 1]
     values = [float(v) for v in values]
     return pd.Series(values)
 
