@@ -668,12 +668,12 @@ class CalibComponent220(sc.prettyobj):
             format and with the same columns as `expected`.
         conform (str | callable): specify how to handle timepoints that don't
             align exactly between the expected and the actual/predicted/simulated
-            data so they conform to common time grid. Whether the data represents
+            data so they conform to a common time grid. Whether the data represents
             a 'prevalent' or an 'incident' quantity impacts how this alignment is performed.
 
             If 'prevalent', it means data in expected & actual dataframes represent
             the current state of the system, like the number of currently infected
-            individuals. In this case, the data in 'actual'  will be interpolated
+            individuals. In this case, the data in 'simulated' or 'actual'  will be interpolated
             to match the timepoints in 'expected', allowing for pointwise comparisons
             between the expected and actual data.
 
@@ -704,6 +704,7 @@ class CalibComponent220(sc.prettyobj):
         return
 
     def _validate_conform(self, conform):
+        # Fail early
         if not isinstance(conform, str) and not callable(conform):
             raise Exception(f"The conform argument must be a string or a callable function, not {type(conform)}.")
         elif isinstance(conform, str):
@@ -858,11 +859,11 @@ def linear_accum(expected, actual):
     """
     conformed = pd.DataFrame(index=expected.index)
     common_time_grid = expected.index
-    t_step = np.diff(common_time_grid )
-    assert np.all(t_step == t_step[0])  # Check we have regularly sampled data
+    expected_sampling_period = np.diff(common_time_grid )
+    assert np.all(expected_sampling_period == expected_sampling_period[0])  # Check we have regularly sampled data
 
     # Make cumulative
-    cum_time_grid = np.append(common_time_grid, common_time_grid[-1] + t_step[0])  # Add one more because later we'll diff
+    cum_time_grid = np.append(common_time_grid, common_time_grid[-1] + expected_sampling_period[0])  # Add one more because later we'll diff
 
     if isinstance(actual.index, pd.DatetimeIndex):
         actual_time_grid = np.array([sc.datetoyear(t) for t in actual.index if isinstance(t, datetime.date)])
