@@ -69,9 +69,9 @@ def get_common_simulation_pars(debug=False):
     # HIGH-LEVEL SIM PARAMETERS
     pars = dict(
         start=[1990.0, 2017.0][debug],
-        n_years=[40.0, 2.0][debug],         # Duration of the simulation in years
+        n_years=[40.0, 8.0][debug],         # Duration of the simulation in years
         dt=1.0/365.0,                       # Timestep of 1 day, expressed in years
-        n_agents=[10_000, 100_000][debug],  # Number of agents in the population
+        n_agents=[10_000, 10_000][debug],  # Number of agents in the population
         verbose=0,  # Print details of the run
     )
     return pars
@@ -109,7 +109,7 @@ def baseline_model():
 
     # Crude birth rate in Pakistan 2020 per 1000 people
     #TODO: is there a data source with better estimates for CBR?
-    cbr = 27
+    cbr = 50
     vital_dynamics = [
         ty.Births(birth_rate=cbr, units=1e-3),         # units=1e-3 mean rates are expressed per 1000 people
         ss.Deaths(death_rate=death_rates_df, units=1)  # units=1 mean rates are expressed as proportions/percentages in 1/year
@@ -120,10 +120,10 @@ def baseline_model():
                      'tpri': 0.5,
                      'tsri': 1.0,
                      'tcri': 0.241,
-                     'tppi': 0.05,
+                     'tppi': 0.98,
                      'p_cpg': 0.108,
                      'p_acute': ss.bernoulli(p=0.24),
-                     'init_prev': ss.bernoulli(p=0.05),
+                     'init_prev': ss.bernoulli(p=0.01),
                      "unexp2sus_saturation_age": 20.0,
                      "unexp2sus_slope": 7.0
                      }
@@ -131,9 +131,9 @@ def baseline_model():
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
     # ENVIRONMENT
-    environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars({'rel_trans': 0.025,  # This parameter is equivalent to mEL parameter in Gauld etal 2018
+    environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars({'rel_trans': 1.0,  # This parameter is equivalent to mEL parameter in Gauld etal 2018
                                                                       'shedding_rate': 0.3,
-                                                                      'env2ppl_exposure_rate': ss.poisson(lam=2.0),  # TEER: Typhoid environmental exposure rate
+                                                                      'env2ppl_exposure_rate': ss.poisson(lam=7.0),  # TEER: Typhoid environmental exposure rate
                                                                       })})
 
     # INTERVENTIONS: Vaccination campaigns
