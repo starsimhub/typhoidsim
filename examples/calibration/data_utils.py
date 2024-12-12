@@ -215,7 +215,7 @@ def get_reference_data_prevax(filepath=None):
 
 
 def get_reference_data_incidence(filepath=None):
-    """ Load and sanitise data from sheet "CasesByAgeAll """
+    """ Load, sanitise all data from sheet "CasesByAgeAll" and "Population" """
     if filepath is None:
         filepath = "reference_data/SindhCalibration_newage_excludelockdown_2019.xlsx"
     reference_data = get_reference_dataset_xls(dataset_name="CasesByAgeAll",
