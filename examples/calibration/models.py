@@ -223,7 +223,7 @@ def make_sim(scenario="baseline"):
     match scenario:
         case "baseline":
             model_components = baseline_model()
-        case "with_vaccination_campaign":
+        case "with_vax_interventions":
             baseline_component = baseline_model()
             vaccination_component = vaccination_model()  # Add vaccination campaign
             model_components = dict()
@@ -234,7 +234,7 @@ def make_sim(scenario="baseline"):
                 else:
                     model_components[key] = baseline_component.get(key)
         case _:
-            raise ValueError(f'Unrecognized simulation scenario: {scenario}')
+            raise ValueError(f"Unrecognized simulation scenario: {scenario}")
 
     # PUT EVERYTHING TOGETHER IN A SIMULATION
     sim = ss.Sim(**model_components)
