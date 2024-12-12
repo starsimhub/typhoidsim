@@ -15,7 +15,7 @@ from scipy.special import gammaln
 from . import utils as tyu
 
 
-__all__ = ['Calibration220', 'CalibComponent220', 'compute_gof', 'euclidean',
+__all__ = ['Calibration220', 'CalibComponent220', 'compute_gof', 'euclidean', 'beta_binomial',
            'weighted_euclidean', 'normalized_median_absolute_error']
 
 
