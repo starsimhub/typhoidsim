@@ -131,10 +131,10 @@ def baseline_model():
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
     # ENVIRONMENT
-    environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  # TEER: Typhoid environmental exposure rate
-                                             'volume': 1,       # Set the volume to 1 if we want to reproduce EMOD-like results
-                                             'transmission': ss.Pars({'rel_trans': 0.025,  # This parameter is equivalent to mEL parameter in Gauld etal 2018
-                                                                      'shedding_rate': 0.3})})
+    environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars({'rel_trans': 0.025,  # This parameter is equivalent to mEL parameter in Gauld etal 2018
+                                                                      'shedding_rate': 0.3,
+                                                                      'env2ppl_exposure_rate': ss.poisson(lam=2.0),  # TEER: Typhoid environmental exposure rate
+                                                                      })})
 
     # INTERVENTIONS: Vaccination campaigns
     # Parameters of seasonal trapezoidal pattern
