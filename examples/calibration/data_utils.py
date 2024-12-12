@@ -212,18 +212,6 @@ def get_reference_data_prevax(filepath=None):
     return reference_data
 
 
-def get_reference_dataset_csv(dataset_name, filepath):
-    """
-    Dataset name refers to the sheet name in the original excel file with all
-    the reference data. The sheetname now exists under the column
-    'dataset_name'
-    """
-    csv_file = pd.read_csv(filepath)
-    dataset_mask = (csv_file["dataset_name"] == dataset_name)
-    df = csv_file.loc[dataset_mask, :]
-    return df
-
-
 def aggregate_data_by_time(reference_data, start_year, end_year):
     time_mask = ((reference_data["year_start"] >= start_year) &
                  (reference_data["year_start"] < end_year))
