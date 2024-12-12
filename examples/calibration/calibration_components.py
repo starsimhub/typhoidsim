@@ -61,6 +61,14 @@ def get_calib_pars(calibration_target="step_1"):
                 # typhoid environmental exposure rate
                 teer=dict(low=0.0, high=10.0, guess=1.99),
             )
+        case "step_2":
+            calib_pars = dict(
+                # typhoid acute infectiousness
+                tai=dict(low=1e4, high=1e6, guess=42_808, log=True),
+                # typhoid environmental exposure rate
+                teer=dict(low=0.0, high=10.0, guess=1.99),
+            )
+
         case "debug":
             calib_pars = dict(
                 # typhoid acute infectiousness
@@ -92,9 +100,18 @@ def get_calib_components(calibration_target="step_1"):
     """
     match calibration_target:
         case "step_1":
+            # From the preprint: In step 1, we calibrated the model to the age
+            # distribution of blood culture confirmed typhoid cases prior to vaccine introduction,
+            # focusing on January 2019-December 2020
+            # TODO: the sheet CasesByAge_prevax has data aggregated over the years [2017, 2020). Do we need to create a new sheet?
             reference_data = utils.get_reference_data_prevax()
             calib_components = make_calib_components_by_age_prevax(reference_data)
         case "step_2":
+            # In step 2, we jointly calibrated parameters related to vaccination (including efficacy,
+            # coverage of routine immunization, campaign coverage, and duration of protection from
+            # vaccination for each age group) as well as a reporting rate to the age-specific incidence time
+            # series for each age group (<2, 2-4, 5-9, 10-14, and 15+) for the full reference period (January
+            # 2019-December 2023).
             reference_data = utils.get_reference_data_incidence()
             calib_components = make_calib_components_by_age_incidence(reference_data)
         case _:
@@ -149,10 +166,10 @@ def make_calib_components_by_age_incidence(reference_data):
     for this_age_bin in sorted(reference_data.age_bin_label.unique()):
         expected_data = extract_reference_data_incidence(reference_data,
                                                          selected_age_bin=this_age_bin,
-                                                         start_year=2017.0, end_year=2024.0)
+                                                         start_year=2019.0, end_year=2024.0)
         extract_data_from_sim_fn = partial(extract_simulated_data_incidence,
                                            selected_age_bin=this_age_bin,
-                                           start_year=2017.0, end_year=2024.0)
+                                           start_year=2019.0, end_year=2024.0)
         components.append(ty.CalibComponent220(
                 name=f"cases_incidence",  # NOTE: can be renamed to something else
                 expected=expected_data,
@@ -203,7 +220,11 @@ def extract_simulated_data_prevax(sim, selected_age_bin=None, start_year=2017.0,
 
     yearvec = sim_results["monitor_1_yearvec"][:]  # The time vector of the monitored simulated data, expressed in "float" calendar years, ie 2000.0, 2000.1 ...
     # Apply lockdown mask
-    not_lockdown = utils.lockdown_mask(yearvec)
+    # TODO: confirm this is actually required here at all. The preprint says:
+    #  The months of February 2020-June 2020 are excluded from the timeseries but
+    #  the reference data for prevax is between [2017, 2020), so 2020 is not included.
+    not_lockdown = utils.lockdown_mask(yearvec, target_year=2020.0)
+
     time_mask = ((yearvec >= start_year) & (yearvec < end_year) & not_lockdown)
 
     this_idx = lbl_to_idx[selected_age_bin]
@@ -288,7 +309,7 @@ def extract_simulated_data_incidence(sim, selected_age_bin=None, start_year=2017
     yearvec = sim_results["monitor_1_yearvec"][:]  # The time vector of the monitored simulated data, expressed in "float" calendar years, ie 2000.0, 2000.1 ...
 
     # Apply lockdown mask
-    not_lockdown = utils.lockdown_mask(yearvec)
+    not_lockdown = utils.lockdown_mask(yearvec, target_year=2020.0)
     # Select the correct interval of time
     time_mask = ((yearvec >= start_year) & (yearvec < end_year) & not_lockdown)
 
