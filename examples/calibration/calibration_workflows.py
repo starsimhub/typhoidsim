@@ -36,8 +36,8 @@ def run_starsim_calibration_step_1(do_plot=True):
     # Make the sim, get the right reference data (in components), get
     # the correct calibration parameters
     sim = models.make_sim(scenario="baseline")
-    components = cbcomp.get_calib_components(calibration_targets="cases_prevax")
-    calib_pars = cbcomp.get_calib_pars(calibration_step="step_1")
+    components = cbcomp.get_calib_components(calibration_target="cases_prevax")
+    calib_pars = cbcomp.get_calib_pars(calibration_target="step_1")
 
     calib = ty.Calibration220(
             calib_pars=calib_pars,

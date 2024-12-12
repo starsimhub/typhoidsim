@@ -52,8 +52,8 @@ def parse_update_sim_pars(sim, calib_pars, **kwargs):
     return sim
 
 
-def get_calib_pars(calibration_step="step_1"):
-    match calibration_step:
+def get_calib_pars(calibration_target="step_1"):
+    match calibration_target:
         case "step_1":
             calib_pars = dict(
                 # typhoid acute infectiousness
@@ -71,14 +71,27 @@ def get_calib_pars(calibration_step="step_1"):
                 init_prev=dict(low=0.0005, high=0.001, guess=0.0005)
             )
         case _:
-            raise ValueError(f"Do not have calibration parameters: {calibration_step}. "
+            raise ValueError(f"Do not have calibration parameters: {calibration_target}. "
                              f"Please define them in this function.")
     return calib_pars
 
 
-def get_calib_components(calibration_targets="cases_prevax"):
-    match calibration_targets:
-        case "cases_prevax":
+def get_calib_components(calibration_target="step_1"):
+    """
+    Build calibration components (CalibComponents) required by
+    a starsim 2.2.0 Calibration object.
+
+    Args:
+        calibration_target (str): a human-readable string describing the
+           target/reference data we want to calibrate to.
+
+    Returns:
+        calib_components list[ty.CalibComponents]: a list with the necessary
+            CalibComponents for that calibration_target
+
+    """
+    match calibration_target:
+        case "step_1":
             reference_data = utils.get_reference_data_prevax()
             return make_calib_components_by_age_prevax(reference_data)
         case _:
