@@ -111,7 +111,7 @@ def baseline_model():
     #TODO: is there a data source with better estimates for CBR?
     cbr = 27
     vital_dynamics = [
-        ss.Births(birth_rate=cbr, units=1e-3),         # units=1e-3 mean rates are expressed per 1000 people
+        ty.Births(birth_rate=cbr, units=1e-3),         # units=1e-3 mean rates are expressed per 1000 people
         ss.Deaths(death_rate=death_rates_df, units=1)  # units=1 mean rates are expressed as proportions/percentages in 1/year
     ]
 
