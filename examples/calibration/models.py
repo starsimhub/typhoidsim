@@ -109,7 +109,7 @@ def baseline_model():
 
     # Crude birth rate in Pakistan 2020 per 1000 people
     #TODO: is there a data source with better estimates for CBR?
-    cbr = 50
+    cbr = 27
     vital_dynamics = [
         ty.Births(birth_rate=cbr, units=1e-3),         # units=1e-3 mean rates are expressed per 1000 people
         ss.Deaths(death_rate=death_rates_df, units=1)  # units=1 mean rates are expressed as proportions/percentages in 1/year
@@ -131,7 +131,8 @@ def baseline_model():
     typhoid = ty.Typhoid(pars=typhoids_pars)
 
     # ENVIRONMENT
-    environment = ty.EnvironmentalPool(pars={'transmission': ss.Pars({'rel_trans': 1.0,  # This parameter is equivalent to mEL parameter in Gauld etal 2018
+    environment = ty.EnvironmentalPool(pars={'decay_rate': 0.24,
+                                             'transmission': ss.Pars({'rel_trans': 1.0,  # This parameter is equivalent to mEL parameter in Gauld etal 2018
                                                                       'shedding_rate': 0.3,
                                                                       'env2ppl_exposure_rate': ss.poisson(lam=7.0),  # TEER: Typhoid environmental exposure rate
                                                                       })})
