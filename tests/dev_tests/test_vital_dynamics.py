@@ -22,7 +22,7 @@ ppl = ss.People(10_000)
 
 
 demographics = [
-    ss.Births(birth_rate=1000),
+    ty.Births(birth_rate=1000),
     ss.Deaths(death_rate=15)
 ]
 

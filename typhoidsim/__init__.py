@@ -1,5 +1,6 @@
 from .calibration import *
 from .defaults import *
+from .demographics import *
 from .environment import *
 from .interventions import *
 from .ingest import *
