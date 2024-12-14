@@ -71,7 +71,7 @@ class Typhoid(ss.Disease):
             p_cpg=0.15,    # Base prob of becoming chronic after subclinical or acute given gallstones. Same for female and male, but does not have to be.
             d_chro=ss.bernoulli(p=self.chronic_gall_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection modulated by gallstone prevalence
             p_gall=tyu.load_dataset("gallstone_probs"),    # Probability of having gallstones by age and sex
-            gall_prev=tyu.load_dataset("gallstone_prev"),  # Biological sex gallstone prevalence (expressed in fraction of the population, value between 0 and 1)
+            # gall_prev=tyu.load_dataset("gallstone_prev"),  # Biological sex gallstone prevalence (expressed in fraction of the population, value between 0 and 1)
             p_rec=ss.bernoulli(p=0.0),           # Prob of recovering from chronic state. Default 0 means everyone becomes a chronic carrier (duration of chronic state is inifinite)
             dur_chro_dist=ss.constant(v=102.0),  # Duration of chronic state, in weeks. 102 weeks is slightly over 2 years. In a sim shorter than this duration, it behaves as if chronic carriers never recover,
 
@@ -621,8 +621,7 @@ class Typhoid(ss.Disease):
         mpars = module.pars
         age_ints = tyu.digitize_ages_1yr(sim.people.age[uids])
         p_chro = mpars.p_cpg * \
-                 mpars.p_gall[age_ints, sim.people.female[uids].astype(int)] * \
-                 mpars.gall_prev[age_ints, sim.people.female[uids].astype(int)]
+                 mpars.p_gall[age_ints, sim.people.female[uids].astype(int)]
         return np.array(p_chro)
 
     @staticmethod
