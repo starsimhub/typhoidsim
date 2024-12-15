@@ -6,6 +6,7 @@ import numpy as np
 
 import sciris as sc
 import starsim as ss
+import typhoidsim
 
 import typhoidsim.utils as tyu
 import typhoidsim.defaults as tyd
@@ -51,6 +52,12 @@ class Typhoid(ss.Disease):
 
             cfu_lo_me=5_050_000.0,   # Threshold CFU value to determine whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose'  (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
             cfu_me_hi=55_000_000.0,  # Threshold CFU value to determine whether  to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
+
+            # NOTE: still undecided whether these pars should be here, or as part of interventions/vaccination_with_waning
+            immunity_age_bins = [0.75, 2.0, 5.0, 15.0, 125.0],                # Age at vaccination bins
+            immunity_fixed_dur= [940.4, 240.9, 0.0, 0.0],           # Duration of fixed immunity in days, one value per age bin of interest
+            immunity_decay    = [505.27, 505.27, 505.27, 505.27],   # Decay time constant, in days, one value per age bin of interest
+            immunity_max_acq_response = [1.0, 1.0, 1.0, 1.0],       # Maximum protection at t=0 of receiving a vaccine
 
             # Infected/Diseased stage, (acute and sublinical)
             p_acute=ss.bernoulli(p=0.16),  # Prob of becoming acute
@@ -113,6 +120,17 @@ class Typhoid(ss.Disease):
         # Parametrisation of prepatent duration distribution parameters (ie, mean and std are functions of CFU dose)
         self.partial_prep_dur_mean,  self.partial_prep_dur_std = self.prepare_partial_prep_funs()
 
+        # Parameterisation of immunity waning parameters with respect to age
+        self.pars.immunity_age_bins = sc.promotetoarray(self.pars.immunity_age_bins)
+        self.pars.immunity_fixed_dur = sc.promotetoarray(self.pars.immunity_fixed_dur)
+        self.pars.immunity_decay = sc.promotetoarray( self.pars.immunity_decay)
+        self.pars.immunity_max_acq_response = sc.promotetoarray(self.pars.immunity_max_acq_response)
+
+        self.imm_fixed_dur   =  stratify_parameter_by_age(self.pars.immunity_age_bins, self.pars.immunity_fixed_dur/typhoidsim.days_per_year)
+        self.imm_waning_time =  stratify_parameter_by_age(self.pars.immunity_age_bins, self.pars.immunity_decay/typhoidsim.days_per_year)
+        self.imm_peak        =  stratify_parameter_by_age(self.pars.immunity_age_bins, self.pars.immunity_max_acq_response)
+
+
         # Boolean states
         self.add_states(
             # Infection life cycle states
@@ -135,6 +153,8 @@ class Typhoid(ss.Disease):
             ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),            # average number of CFUs during different stages of the disease (infected phase, within host).
             ss.FloatArr("n_infections", 0.0, label="Number of Infections"),        # number of infections over the lifespan of this agent
             ss.FloatArr("susceptibility", default=1.0, label="Susceptibility Level"),  # blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
+            ss.FloatArr("immunity_acquired", default=0.0, label="Acquired Immunity Level"),  # Acquired/evoked immune protection against infection due to vaccinations, a value between 0 and 1
+
             # Track some probabilities; some are not  used now but will become important in multi-route transmission
             ss.FloatArr("p_resp", default=0.0, label="Probability of responset to infection"),  # The prbability of having a response to pathogens, usually a term involved in determining p_infc
             ss.FloatArr("p_infc", default=0.0, label="Probability of Infection"),      # Track probability of infection
