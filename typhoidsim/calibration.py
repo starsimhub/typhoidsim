@@ -949,7 +949,7 @@ def euclidean(expected, predicted):
     """
     e_x, a_x = expected["x"], predicted["x"]
     ll = np.sqrt(((e_x - a_x)**2).sum())
-    return -ll
+    return ll
 
 
 def weighted_euclidean(expected, predicted):
@@ -966,7 +966,7 @@ def weighted_euclidean(expected, predicted):
     """
     e_x, a_x = expected["x"], predicted["x"]
     ll = np.sqrt(((e_x - a_x)**2 / e_x).sum())
-    return -ll
+    return ll
 
 
 def normalized_median_absolute_error(expected, predicted):
