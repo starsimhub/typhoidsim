@@ -6,10 +6,12 @@ import numpy as np
 
 import sciris as sc
 import starsim as ss
+import typhoidsim
 
 from .patterns import Pattern
 from .defaults import day2year, days_per_year
-from .utils_math import box_exponential
+from . import utils_math as tyum
+
 
 # Interventions
 # Diagnostics
@@ -603,52 +605,101 @@ class vaccination_with_waning(ss.RoutineDelivery):
     Maybe it's the job for a connector?
 
     Args:
-         prob           (float/arr)     : annual probability of eligible population getting vaccinated
-         age_pars       (dict)          : a dictionary with min_age and max_age to determine the age group who is eligible
-         vax_pars    (dict)             : a dictionary with a mix of vaccine and waning parameters: efficacy, box_duration and decay_time_constant
-         label          (str)           : the name of vaccination strategy
-         kwargs         (dict)          : passed to Intervention()
+         prob           (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
+         annual_prob    (bool)      : whether prob represents an annual probbability or a per-time-step proability
+         booster_prob   (float)     : conditional probability of receiving a boster dose given that an individual has received their first dose
+         dose_interval  (float)     : the interval of time in years between an individual receiving their first dose and their booster
+         age_pars       (dict)      : a dictionary with min_age and max_age to determine the age group who is eligible
+         label          (str)       : the name of vaccination strategy
+         kwargs         (dict)      : passed to Intervention()
     """
-    def __init__(self, *args, prob=None, label=None, age_pars=None, waning_pars=None, **kwargs):
+    def __init__(self, *args, booster_prob=0.0, dose_interval=None, label=None, age_pars=None, debug=False, **kwargs):
+        # **kwargs: years=None, start_year=None, end_year=None, prob=None, annual_prob=True,
         super().__init__(*args, **kwargs)
-        self.prob = sc.promotetoarray(prob)
         self.label = label
-        self.vaccinated = ss.BoolArr('vaccinated')
-        self.ty_vaccinated = ss.FloatArr('ty_vaccinated')
+        self.booster_prob = sc.promotetoarray(booster_prob)
+        self.dose_interval = dose_interval  # number of years betweem 1st dose and booster dose
+        self.age_pars = ss.Pars(age_pars)
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
-        self.age_pars = age_pars
-        self.vax_pars = waning_pars
+        self.eligibility = self.age_eligibility
+        self.vaccinated = ss.BoolArr('vaccinated')
+        self.t_vaccinated = ss.FloatArr('t_vaccinated', default=np.nan)  # time (year) of vaccination
+        self.a_vaccinated = ss.FloatArr('a_vaccinated', default=np.nan)  # aged at vaccination
+        self.t_to_booster = ss.FloatArr('t_to_booster', default=np.nan)  # time until needing the booster
+        self.n_doses = ss.FloatArr('n_doses')
+        self.debug = debug
+        if self.debug:
+            self.results = ss.ndict()
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
+        dt = sim.pars.dt
+        self.booster_prob = self.booster_prob * np.ones(shape=len(self.prob))
+        # Test without new people being born
+
+        if self.debug:
+            self.results += ss.Result(self.name, 'immunity', shape=(sim.npts, sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
         return
 
-    def elgibility(self, sim):
-        is_eligible = (sim.people.age >= self.age_pars.min_age) & (sim.people.age < self.age_pars.max_age).uids
+    def age_eligibility(self, sim):
+        is_eligible = (sim.people.age >= self.age_pars.min_age) & (sim.people.age < self.age_pars.max_age)
         return is_eligible
+
+    def update_acquired_immunity(self, sim, uids):
+        """
+        This is the immunity response to a vaccine. The acquired immunity wanes
+        over time.
+        """
+        module = sim.diseases.typhoid
+        t_vaccinated = self.t_vaccinated[uids] # Time, in calendar years, when the individual received the vaccine. t_0 in the waning equation.
+        a_vaccinated = self.a_vaccinated[uids]
+        max_immunity = module.imm_peak(a_vaccinated)
+        fixed_immunity = module.imm_fixed_dur(a_vaccinated)
+        decay = module.imm_waning_time(a_vaccinated)
+        module.immunity_acquired[uids] = np.clip(max_immunity * tyum.box_exponential(sim.year, t_vaccinated, fixed_immunity, decay), a_min=0.0, a_max=1.0)
+        return
 
     def apply(self, sim):
         """
-        Deliver the diagnostics by finding who's eligible, finding who accepts, and applying the product, only once.
+        Deliver the diagnostics by finding who's eligible, and apply the product, only once.
         """
+        vaccinated_uids = self.vaccinated.uids
         if sim.year >= self.start_year and sim.year <= self.end_year:
+            self.t_to_booster[self.t_to_booster > 0.0] -= sim.dt
             ti = sc.findinds(self.timepoints, sim.ti)[0]
             prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
-            is_eligible = self.check_eligibility(sim)  # Check eligibility
-            is_eligible_not_vax = (is_eligible & ~self.vaccinated)
+            is_eligible = self.check_eligibility(sim)  # Check eligibility by age for first dose
+            # Select never vaccinated
+            is_eligible_not_vax = (is_eligible) & ~(self.vaccinated)
             self.coverage_dist.set(p=prob)
             new_accept_uids = self.coverage_dist.filter(is_eligible_not_vax)
             if len(new_accept_uids):
                 # Update people's state and dates
                 self.vaccinated[new_accept_uids] = True
-                self.ty_vaccinated[new_accept_uids] = sim.year
-            if len(self.vaccinated.uids):
-                current_year = sim.year * np.ones(len(self.vaccinated.uids))
-                box_durs = self.vax_pars['box_duration'] * np.ones(len(self.vaccinated.uids))
-                decay_constant = self.vax_pars['decay_time_constant'] * np.ones(len(self.vaccinated.uids))
-                efficacy = self.vax_pars['efficacy'] * box_exponential(current_year, self.ty_vaccinated[self.vaccinated.uids], box_durs, decay_constant)
-                sim.diseases.typhoid.rel_sus[self.vaccinated.uids] = 1.0 - efficacy
+                self.t_vaccinated[new_accept_uids] = sim.year
+                self.a_vaccinated[new_accept_uids] = sim.people.age[new_accept_uids]
+                self.n_doses[new_accept_uids] = 1
+                self.t_to_booster[new_accept_uids] = self.dose_interval   # set the timer to get the booster
+
+            # Select eligible for a booster
+            booster_prob = self.booster_prob[ti]
+            if booster_prob > 0.0:
+                is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster <= 0.0) # For boosters we do not filter by age
+                self.coverage_dist.set(p=booster_prob)
+                new_booster_uids = self.coverage_dist.filter(is_eligible_booster)
+                self.t_vaccinated[new_booster_uids] = sim.year
+                self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
+                self.t_to_booster[new_booster_uids] = np.inf # reset time for those who received the booster
+                self.n_doses[new_booster_uids] += 1
+
+            vaccinated_uids =  self.vaccinated.uids
+        self.update_acquired_immunity(sim, vaccinated_uids)
+        # TODO: confirm with EES team how acquired immunity enters the expression for p_infc
+        sim.diseases.typhoid.rel_sus[vaccinated_uids] = 1.0 - sim.diseases.typhoid.immunity_acquired[vaccinated_uids]
+
+        if self.debug:
+            self.results["immunity"][ti, :] = sim.diseases.typhoid.immunity_acquired[:]
         return self.vaccinated.uids
 
 
@@ -658,7 +709,6 @@ class blocking_vaccine(ss.Product):
     by modifying the 'susceptibility level' state (typhoid.immunity). If the immunity level is 0, then
     the agen can't acquire an infection, if the level is 1.0, it can acquire the infection -- also
     depends on other factors.
-    # TODO: 'immunity' could simply be captured by relative susceptibility
     """
 
     def __init__(self, pars=None, *args, **kwargs):

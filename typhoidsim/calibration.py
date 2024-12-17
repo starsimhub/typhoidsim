@@ -924,7 +924,7 @@ def beta_binomial(expected, predicted):
     """
     e_n, e_x = expected["n"], expected["x"]
     a_n, a_x = predicted["n"], predicted["x"]
-    ll = gammaln(a_n + 1)
+    ll = gammaln(e_n + 1)
     ll += gammaln(a_n + 2)
     ll -= gammaln(e_n + a_n + 2)
     ll += gammaln(e_x + a_x + 1)
@@ -949,7 +949,7 @@ def euclidean(expected, predicted):
     """
     e_x, a_x = expected["x"], predicted["x"]
     ll = np.sqrt(((e_x - a_x)**2).sum())
-    return -ll
+    return ll
 
 
 def weighted_euclidean(expected, predicted):
@@ -966,7 +966,7 @@ def weighted_euclidean(expected, predicted):
     """
     e_x, a_x = expected["x"], predicted["x"]
     ll = np.sqrt(((e_x - a_x)**2 / e_x).sum())
-    return -ll
+    return ll
 
 
 def normalized_median_absolute_error(expected, predicted):
@@ -982,4 +982,4 @@ def normalized_median_absolute_error(expected, predicted):
     """
     e_x, a_x = expected["x"], predicted["x"]
     gof = compute_gof(e_x, a_x, as_scalar='median')  # Normalized median absolute error -- highly robust
-    return -gof
+    return gof
