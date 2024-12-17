@@ -14,8 +14,18 @@ files = [
     'networks.py',
     'patterns.py',
     'utils.py',
+    'typhoid_base.py',
     'typhoid.py',
-    'calibration.py',
+]
+
+exclude = [
+    "docs/*",
+    "tests/*",
+    "__init__.py",
+    "setup.py",
+    'starsim/networks.py',
+    'starsim/distributions.py',
+    'starsim/diseases/syphilis.py',
 ]
 
 M = ssai.Migrate(
@@ -25,6 +35,7 @@ M = ssai.Migrate(
     library = ss, # can also be the path to the starsim folder, which must be the cloned repo (not from pypi)
     v_from = 'v1.0.3', # can be any valid git tag or hash
     v_to = 'v2.2.0', # ditto
+    exclude = exclude,
     model = 'gpt-4o', # see ssai.Models for list of allowed models
     parallel = True,
     die = False,
