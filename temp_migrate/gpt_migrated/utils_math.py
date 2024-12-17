@@ -1,0 +1,187 @@
+
+"""
+Numerical and mathematical utilities for parameterization of otherwise constant parameters.
+"""
+
+import numpy as np
+import sciris as sc
+
+# Specify all externally visible functions this file defines
+__all__ = ['sigmoid', 'gompertz', 'gompertz_dfun', 'double_sigmoid_exp', 'double_sigmoid_tanh',
+           'asym_trapezoidal', 'box_exponential']
+
+
+def sigmoid(x, max_x, slope):
+    """
+    Compute a sigmoid-like function. The range of x is between [0, max_x].
+    The values returned by the function are always between 0-1, as they
+    often represent probabilities.
+
+    Arguments:
+        x (array-like): The array of x values at which the function is evaluated
+        max_x (float): The asymptote of the function as x approaches infinity.
+        slope (float): The slope parameter that controls how 'fast' we reach
+        100% exposure (or 100% susceptible). If slope=0, this function is
+        a linear function, if slope > 0, higher susceptibility is achieved
+        faster. If slope < 0, higher susceptibility is reached slower.
+
+    Returns:
+      (ndarray): An array of y values corresponding to the sigmoid-like function
+       evaluated at the input x values.
+    """
+    vals = 1.0 - (max_x - x) / (x * slope + max_x)
+    vals = np.clip(vals, 0.0, 1.0)
+    vals[x >= max_x] = 1.0
+    return vals
+
+
+def double_sigmoid_exp(x, l1, l2, l3, x_12, x_23, s12, s23):
+    """
+    Calculate a stair-like function with 3 steps using two exponential
+    sigmoid functions.
+
+    Arguments:
+        x (float or numpy.array): Input data.
+        l1, l2, l3 (float): y-levels for each step.
+        x_12, x_23 (float): x-points that indicate halfway between two levels.
+        s12, s23 (float): Steepness of the curve between l1 and l2, and l2 and l3,
+        respectively.
+
+    Returns:
+        float or numpy.array: the function evaluated at x
+    """
+    y = l1 + (l2 / (1.0 + np.exp(-s12 * (x - x_12))) +
+              l3 / (1.0 + np.exp(-s23 * (x - x_23))))
+
+    return y
+
+
+def double_sigmoid_tanh(x, l1, l2, l3, x_12, x_23, s=1.0):
+    """
+    This function simulates a stair-like function with 3 steps
+    (l1, l2, l3), using a single specified steepness value (s) for
+    the hyperbolic tangent.
+
+    Arguments:
+        x (float or numpy.array): Input data.
+        l1, l2, l3 (float): y-levels for each step.
+        x_12, x_23 (float): x-points that indicate halfway between two levels.
+        s (float): Steepness of the curve between two levels.
+
+    Returns:
+        float or numpy.array: y-values.
+    """
+    y = l1 + ((l2 - l1) * ((np.tanh(s * (x-x_12)) + 1)/2) +
+              (l3 - l2) * ((np.tanh(s * (x-x_23)) + 1)/2))
+    return y
+
+
+def gompertz(x, a, b, c):
+    """
+    Compute the Gompertz function for a given set of parameters.
+    This function is used for describing mortality and ageing-like processes.
+
+    Arguments
+        x (array-like): The array of x values at which the function is evaluated
+        a (float): The asymptote of the function as x approaches infinity.
+        b (float): Displacement along the x-axis
+        c (float): The growth rate
+
+    Returns:
+        (ndarray): An array of y values corresponding to the gompertz function
+        evaluated at the input x values.
+    """
+    return a * np.exp(-b * np.exp(-c * x))
+
+
+def gompertz_dfun(x, a, b, c):
+    """
+    Compute the derivative of the Gompertz function with respect to x for a
+    given set of parameters.
+
+    Arguments
+        x (array-like): The array of x values at which the function is evaluated
+        a (float): The asymptote of the Gompertz function as x approaches infinity.
+        b (float): Displacement along the x-axis
+        c (float): The growth rate
+
+    Returns:
+       (ndarray): An array of derivative values corresponding to the input x values.
+    """
+    return a * b * c * np.exp(-(b / np.exp(c * x)) - c * x)
+
+
+def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
+                     ramp_dw_dur=25.0, cutoff_dur=0.0, max_amp=1.0):
+    """
+    Specify an asymmetric trapezoidal 'wave' profile.
+
+    Args:
+        x (array-like): The array of x values at which the function is evaluated, usually time.
+        period (float): The period, in days, over which the seasonal pattern repeats.
+        peak_start_doy (float): The day of the year (doy) at which the environmental exposure reaches its peak/plateau.
+        ramp_up_dur (float): Duration, in days, of the period over which the environmental exposure route increases seasonally.
+        ramp_dw_dur (float): Duration, in days, of the period over which the environmental exposure route descreases seasonally.
+        cutoff_dur (float): Duration, in days, in which environmental exposure halts during the low season
+        max_amp (float): Maximum modulating scaling factor of exposure to the environment
+
+    Returns:
+         (ndarray): An array of values corresponding to the input asym_trapezoidal(x) values.
+    """
+
+    shift_days = ramp_up_dur - peak_start_doy
+    half_day = 0.5
+
+    ramp_up_start_doy = ((peak_start_doy - ramp_up_dur) + shift_days) % period
+    peak_start_doy = (peak_start_doy + shift_days) % period
+    peak_dur = (period - cutoff_dur) - (ramp_dw_dur + ramp_up_dur)
+    peak_end_doy = (peak_start_doy + peak_dur) % period
+    ramp_dw_end_doy = (peak_end_doy + ramp_dw_dur) % period
+
+    time_mod = (x + shift_days) % period
+
+    slope_up = np.where(
+        ((time_mod >= ramp_up_start_doy) & (time_mod < peak_start_doy)),
+        ((time_mod - ramp_up_start_doy) + half_day) * (max_amp / ramp_up_dur),
+        0
+    )
+
+    slope_dw = np.where(
+        ((time_mod >= peak_end_doy) & (time_mod <= ramp_dw_end_doy)),
+        max_amp - ((time_mod - peak_end_doy) * (max_amp / ramp_dw_dur)),
+        0
+    )
+
+    trapezoidal_pulse = np.where(
+        (time_mod < ramp_up_start_doy),
+        0,
+        np.where(
+            ((time_mod >= peak_start_doy-1) & (time_mod <= peak_end_doy)),
+            max_amp,
+            slope_up + slope_dw
+        )
+    )
+    return trapezoidal_pulse
+
+
+def box_exponential(x, start, box_duration, decay_time_constant):
+    """
+    Generate a time signal which is 0 up to a 'start' time; 1 from
+    'start' until 'start + box_duration', and from 'start + box_duration'
+    decays as an exponential function.
+
+    Args:
+        x (numpy.ndarray): The array of points at which we calculate the signal, usually time.
+        start (numpy.ndarray): The start time of the box_duration in the signal.
+        box_duration (numpy.ndarray): The duration for which the signal remains at 1.
+        decay_time_constant (numpy.ndarray): The time constant for the exponential decay.
+
+    Returns:
+        numpy.ndarray: The resulting signal as an array.
+    """
+    x_offset = x - start
+    vals = np.zeros(len(x))
+    vals = np.where((x_offset >= 0.0) & (x_offset < box_duration), 1.0, vals)
+    vals = np.where(x_offset >= box_duration, np.exp(-((x - (start + box_duration)) / decay_time_constant)), vals)
+    vals = np.where(vals < 0, 0.0, vals)
+    return vals

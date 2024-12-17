@@ -1,0 +1,419 @@
+
+"""
+Define "passive" observation methods that do not interfere with the course
+of a disease or with a simulation.
+
+These classes are derived from starsim's Analyzers anyway because they need
+to be executed in a specific part of the simulation workflow.
+
+This module exists to emphasise a functional distinction between classes
+that only subsamples and/or aggregates simulated data (monitors), and
+classes that can optionally take as input empirical data and
+perform additional calculations and be used as "components" or "steps" in
+an optimisation process.
+"""
+
+import numpy as np
+import pandas as pd
+import sciris as sc
+import starsim as ss
+import typhoidsim.defaults as tyd
+import typhoidsim.utils as tyu
+
+__all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor"]
+
+class Monitor(ss.Analyzer):
+    """
+    Base class for passive measurements / observation processes.
+    """
+    def __init__(self, period=None, **kwargs):
+        super().__init__(**kwargs)
+        self.period = period
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        return
+
+    def plot(self):
+        raise NotImplementedError(tyd.sorry_mssg)
+
+    def to_df(self):
+        raise NotImplementedError(tyd.sorry_mssg)
+
+class histograms_by_age_sex_monitor(Monitor):
+    """
+    Records statistics (counts) by age and sex for each timestep.
+    """
+    def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None,
+                 record_until=None, aggregate_sex=False, aggregate_time=None, scaling=1.0,
+                 resampling_period=None, name=None):
+        super().__init__()
+        self.name = "monitor_by_age_sex" if name is None else name
+        self.age_bins = sc.promotetoarray(age_bins)
+        self.age_bin_labels = age_bin_labels
+        self.age_bin_centers = None
+        self.age_bin_lbl_to_idx = None
+        self.to_record = to_record
+        self.record_from = record_from
+        self.record_until = record_until
+        self.scaling = scaling
+        self.aggregate_sex = aggregate_sex
+        self.aggregate_time = aggregate_time
+        self.resampling_period = resampling_period
+        self.ti = 0
+        self.monitor_step = None
+        self.monitor_period = None
+        self.ntpts = None
+        self.nags  = None
+        self.timevec = None
+        self.record = None
+        self.agg_func = None
+        self.sample = None
+        self._apply = None
+        self.stock_ntpts = None
+        self.stocks = ss.Results(self.name)
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.set_observation_interval(sim)
+        aggregation_functions = {
+            "mean": np.mean,
+            "min": np.min,
+            "max": np.max,
+            "median": np.median,
+            "sum": np.sum,
+            "subsample": None
+        }
+        if self.aggregate_time in set(aggregation_functions):
+            self.monitor_step = round(self.resampling_period / sim.t.dt)
+            self.monitor_period = self.resampling_period
+            self.agg_func = aggregation_functions.get(self.aggregate_time)
+        else:
+            self.monitor_step = 1.0
+            self.monitor_period = sim.t.dt
+
+        self.timevec = sc.inclusiverange(self.record_from, self.record_until, self.monitor_period)
+
+        if self.aggregate_time is None or self.aggregate_time == "subsample":
+            self.sample = self._default_sampling
+            self.ntpts = len(self.timevec)
+            self.stock_ntpts = len(self.timevec)
+        else:
+            self.sample = self._aggregate_sampling
+            self.ntpts = len(self.timevec)
+            self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, sim.t.dt))
+
+        self.nags = len(self.age_bins) - 1
+
+        if self.age_bin_labels is None:
+            self.age_bin_labels = tyu.generate_age_bin_labels(self.age_bins)
+
+        self.age_bin_lbl_to_idx = {lbl: idx for idx, lbl in enumerate(self.age_bin_labels)}
+        self.age_bin_centers = (self.age_bins[:-1] + self.age_bins[1:]) / 2.0
+
+        if self.to_record is None:
+            states_of_interest = ["ti_infected", "infected", "ti_prepatent", "prepatent",
+                                  "ti_acute", "acute", "ti_subclinical", "subclinical",
+                                  "ti_chronic", "chronic", "ti_recovered", "recovered"]
+            self.to_record = {state: dict(path=("diseases", "typhoid")) for state in states_of_interest}
+            alive_dict = dict(alive=dict(path=("people",)))
+            self.to_record.update(alive_dict)
+
+        self.attrname_to_stockname = dict()
+        for attrname, specs in self.to_record.items():
+            if "path" not in specs:
+                raise ValueError(f"Will not be able to record {attrname} because 'path' is missing the `to_record` configuration dictionary.")
+            else:
+                res_dtype = specs["path"] if "dtype" in specs else float
+                if attrname.startswith("ti"):
+                    attrlbl = attrname.replace("ti", "new")
+                else:
+                    attrlbl = f"n_{attrname}"
+
+                reslbl = specs["label"] if "label" in specs else attrlbl
+                self.attrname_to_stockname[attrname] = attrlbl
+
+                if self.aggregate_sex:
+                    sexes = ["b"]   # aggregate both sexes
+                else:
+                    sexes = ["f", "m"]
+                for sex in sexes:
+                    self.stocks += [ss.Result(name=f"{sex}_{attrlbl}", shape=(self.stock_ntpts, self.nags), dtype=res_dtype, scale=False, label=f"{sex}_{reslbl}")]
+                    self.results += [ss.Result(name=f"{sex}_{attrlbl}", shape=(self.ntpts, self.nags), dtype=res_dtype, scale=True, label=f"{sex}_{reslbl}")]
+
+        self.results += [ss.Result(name="timevec", shape=(self.ntpts,), dtype=float, scale=False, label="Calendar years (float representation)")]
+        self.configure_recording_functions()
+        return
+
+    def configure_recording_functions(self):
+        if self.aggregate_sex:
+            self.record = self._record_b
+            self._apply = self._apply_aggregated_sexes
+        else:
+            self.record = self._record_fm
+            self._apply = self._apply_individual_sexes
+        return
+
+    def set_observation_interval(self, sim):
+        if self.record_from is None and self.record_until is None:
+            start_year = sim.pars.start
+            stop_year = sim.pars.stop
+        elif self.record_from is not None and self.record_until is None:
+            start_year = self.record_from if not self.record_from < sim.pars.start else sim.pars.start
+            stop_year = sim.pars.stop
+        elif self.record_from is None and self.record_until is not None:
+            start_year = sim.pars.start
+            stop_year = self.record_until if not self.record_until > sim.pars.stop else sim.pars.stop
+        else:
+            start_year = self.record_from
+            stop_year = self.record_until
+        self.record_from = start_year
+        self.record_until = stop_year
+        return
+
+    def _record_fm(self, f_vals, m_vals, stock_name):
+        self.stocks[f"m_{stock_name}"][self.ti, :] = m_vals
+        self.stocks[f"f_{stock_name}"][self.ti, :] = f_vals
+        return
+
+    def _record_b(self, b_vals, stock_name):
+        self.stocks[f"b_{stock_name}"][self.ti, :] = b_vals
+        return
+
+    def _apply_individual_sexes(self, sim):
+        ti = sim.ti
+        living_folks = sim.people.alive
+        living_males = sim.people.male & living_folks
+        living_femal = sim.people.female & living_folks
+
+        for attrname, specs in sorted(self.to_record.items()):
+            attrpath = specs["path"]
+            vals = tyu.get_attr_vals(sim, attrpath, attrname)
+            if attrname.startswith("ti_"):
+                f_uids = ((vals == ti) & living_femal).uids
+                m_uids = ((vals == ti) & living_males).uids
+            else:
+                f_uids = (vals & living_femal).uids
+                m_uids = (vals & living_males).uids
+            f_vals = self.scaling * np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
+            m_vals = self.scaling * np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
+
+            stockname = self.attrname_to_stockname[attrname]
+            self.record(f_vals, m_vals, stockname)
+        return
+
+    def _apply_aggregated_sexes(self, sim):
+        ti = sim.ti
+        living_folks = sim.people.alive
+
+        for attrname, specs in sorted(self.to_record.items()):
+            attrpath = specs["path"]
+            vals = tyu.get_attr_vals(sim, attrpath, attrname)
+            if attrname.startswith("ti_"):
+                b_uids = ((vals == ti) & living_folks).uids
+            else:
+                b_uids = (vals & living_folks).uids
+            b_vals = self.scaling * np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
+            stockname = self.attrname_to_stockname[attrname]
+            self.record(b_vals, stockname)
+        return
+
+    def _default_sampling(self, sim):
+        if sim.ti % self.monitor_step == 0:
+            self._apply(sim)
+            self.ti += 1
+        return
+
+    def _aggregate_sampling(self, sim):
+        self._apply(sim)
+        self.ti += 1
+        return
+
+    def aggregate(self, vals):
+        if self.aggregate_time is None:
+            return vals
+        remainder = self.stock_ntpts % self.monitor_step
+        reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
+        if remainder != 0:
+            downsampled_main = self.agg_func(reshaped_data, axis=1)
+            if downsampled_main.shape[0] == self.ntpts:
+                return downsampled_main
+            downsampled_remainder = self.agg_func(vals[-remainder:], axis=0)
+            return np.vstack([downsampled_main, downsampled_remainder[None, :]])
+        else:
+            return self.agg_func(reshaped_data, axis=1)
+
+    def apply(self, sim):
+        if sim.t.now('year') >= self.record_from and (sim.t.now('year') <= self.record_until):
+            self.sample(sim)
+        return
+
+    def finalize_results(self):
+        for stock_name in self.stocks:
+            self.results[stock_name][:] = self.aggregate(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
+        self.results["timevec"][:] = self.timevec
+        super().finalize_results()
+        return
+
+    def to_df(self):
+        dfs = []
+        for res_name, res_value in self.results.items():
+            if res_name == "timevec":
+                break
+            for ab_idx in range(res_value.shape[1]):
+                data = {"label": res_name,
+                        "x": res_value[:, ab_idx],
+                        "age_bin_lb": self.age_bins[ab_idx],
+                        "age_bin_ub": self.age_bins[ab_idx+1],
+                        "age_bin_label": self.age_bin_labels[ab_idx],
+                        "year": self.timevec}
+                dfs.append(pd.DataFrame(data))
+        df = pd.concat(dfs, axis=0)
+        return df
+
+    def plot(self, key=None, t_index=None, fig=None, style='fancy', fig_kw=None, plot_kw=None):
+        flat = self.results.flatten()
+        flat.pop('timevec')
+        n_cols = np.ceil(np.sqrt(len(flat)))
+        default_figsize = np.array([8, 6])
+        figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1, 1.5)
+        figsize = default_figsize * figsize_factor
+        fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
+        plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
+
+        yearvec = self.timevec
+
+        if t_index is None:
+            t_index = [0, -2]
+        with sc.options.with_style(style):
+            if key is not None:
+                flat = {k: v for k, v in flat.items() if k.startswith(key) and k.name != "timevec"}
+
+            if fig is None:
+                fig, axs = sc.getrowscols(len(flat), make=True, **fig_kw)
+                if isinstance(axs, np.ndarray):
+                    axs = axs.flatten()
+            else:
+                axs = fig.axes
+            if not sc.isiterable(axs):
+                axs = [axs]
+
+            for ax, (key, res) in zip(axs, flat.items()):
+                for tidx in t_index:
+                    ax.bar(self.age_bin_centers, res[tidx, :], **plot_kw, label=f"t={yearvec[tidx]}", alpha=0.2)
+                title = getattr(res, 'label', key)
+                ax.set_title(title)
+                ax.set_xlabel('Age (years)')
+                ax.legend()
+
+        sc.figlayout(fig=fig)
+        return fig
+
+    def plot_waterfall(self, key=None, max_timepoints=16, fig=None, style='fancy', fig_kw=None, plot_kw=None):
+        from scipy.stats import gaussian_kde
+
+        flat = self.results.flatten()
+        flat.pop('timevec')
+
+        n_cols = np.ceil(np.sqrt(len(flat)))
+        default_figsize = np.array([8, 6])
+        figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1, 1.5)
+        figsize = default_figsize * figsize_factor
+        fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
+        plot_kw = sc.mergedicts({'lw': 2, 'y_scaling': 0.9}, plot_kw)
+
+        if self.ntpts < max_timepoints:
+            ntpts = self.ntpts
+        else:
+            ntpts = max_timepoints
+        t_indices = np.linspace(0, ntpts-1, ntpts, dtype=int)
+
+        yearvec = self.timevec
+        y_scaling = plot_kw['y_scaling']
+
+        with sc.options.with_style(style):
+            if key is not None:
+                flat = {k: v for k, v in flat.items() if k.startswith(key) and k.name != "timevec"}
+
+            if fig is None:
+                fig, axs = sc.getrowscols(n=len(flat), nrows=1, make=True, **fig_kw)
+                if isinstance(axs, np.ndarray):
+                    axs = axs.flatten()
+            else:
+                axs = fig.axes
+            if not sc.isiterable(axs):
+                axs = [axs]
+
+            for ax, (key, res) in zip(axs, flat.items()):
+                for idx, ti in enumerate(t_indices):
+                    data_ti = res[ti, :]
+                    try:
+                        resamples = np.random.choice(self.age_bin_centers, size=self.nags * 100,
+                                                     p=data_ti/data_ti.sum())
+                        kde = gaussian_kde(resamples)
+                        kde_data = kde(self.age_bin_centers)
+                        kde_data = kde_data / kde_data.max() + y_scaling * idx
+                        data_ti = data_ti / data_ti.max()
+                        ax.fill_between(self.age_bin_centers, y_scaling * idx, kde_data, color='#2f72de', alpha=0.3)
+                        ax.bar(self.age_bin_centers, data_ti, bottom=y_scaling * idx, color='#2f72de', alpha=0.3, edgecolor="white")
+                        ax.plot(self.age_bin_centers, kde_data, color='black', alpha=0.7)
+                    except:
+                        pass
+
+                ax.set_xlim([self.age_bins[0], self.age_bins[-1]])
+                ax.set_xlabel('Age (years)')
+                ax.set_yticks(y_scaling * np.arange(len(t_indices)))
+                ax.set_yticklabels(yearvec[t_indices])
+                ax.set_ylabel('Year')
+                title = getattr(res, 'label', key)
+                ax.set_title(title)
+        sc.figlayout(fig=fig)
+        return fig
+
+class states_consistency_monitor(Monitor):
+    """ Analyzer to track everything -- use for debug purposes """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.name = 'states_consistency'
+        self.success = True
+        return
+
+    def update_results(self, sim):
+        return self.apply(sim)
+
+    def apply(self, sim):
+        typ = sim.diseases.typhoid
+
+        mut_exc_1 = ~(typ.immune & typ.susceptible & typ.prepatent & typ.acute &
+                      typ.subclinical & typ.chronic & typ.recovered
+                      ).any()
+        mut_exc_2 = ~(typ.asymptomatic & typ.symptomatic).any()
+        mut_exc_3 = ~(typ.susceptible & typ.infected).any()
+        mut_exc_4 = ~(typ.immune & typ.infected).any()
+
+        if not mut_exc_1:
+            raise ValueError('Individual Boolean States should be mutually exclusive but are not.')
+
+        if not mut_exc_2:
+            raise ValueError('States Symptomatic and Asymptomatic should be mutually exclusive but are not.')
+
+        if not mut_exc_3:
+            raise ValueError('States Susceptible and Infected should be mutually exclusive but are not.')
+
+        if not mut_exc_4:
+            raise ValueError('States Immune and Infected should be mutually exclusive but are not.')
+
+        coll_exh = (typ.immune | typ.susceptible | typ.prepatent | typ.acute |
+                    typ.subclinical | typ.chronic | typ.recovered | sim.people.dead
+                    ).all()
+
+        if not coll_exh:
+            raise ValueError('Individual Boolean States should be collectively exhaustive but are not.')
+
+        checkall = np.array([mut_exc_1, mut_exc_2, mut_exc_3, mut_exc_4, coll_exh])
+        if not checkall.all():
+            self.success = False
+        return
