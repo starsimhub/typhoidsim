@@ -688,7 +688,7 @@ class Typhoid(ss.Disease):
         # Durations returned by functions are in units of "number of timesteps"
         # Set duration of prepatent state, by defining when they will
         # progress to the next state (either acute or sublinical)
-        dur_pre = ti + self.get_prepatent_duration_by_exposure(uids)
+        dur_pre = self.get_prepatent_duration_by_exposure(uids)
 
         # Acute and Subclinical stages: Determine who will become acute and who will become subclinical
         acu_scl = p.p_acute.filter(uids, both=True)
