@@ -245,6 +245,7 @@ class Typhoid(ss.Disease):
         if self.pars.init_prev is not None:
             # Initial cases
             initial_cases = self.pars.init_prev.filter()
+            # TODO: need to decide what would be an appropriate dose for these initial case, so we can pick the right mu-sigma pair
             self.set_prognoses(initial_cases)
         return
 
@@ -498,7 +499,7 @@ class Typhoid(ss.Disease):
     def get_prepatent_duration_by_exposure(self, uids):
         """ Get durations in number of timesteps"""
         dt = self.sim.dt
-        dur_prep = self.pars.dur_prep_dist.rvs(uids.size).astype(float)  # in days
+        dur_prep = self.pars.dur_prep_dist.rvs(uids).astype(float)  # in days
         dur_prep = dur_prep * tyd.day2year  # in years
         return sc.randround(dur_prep / dt)  # in number of timesteps
 
@@ -508,7 +509,7 @@ class Typhoid(ss.Disease):
         """
         p = self.pars
         dt = self.sim.dt
-        dur_acu = p.dur_inf_dist.rvs(uids.size) * tyd.days_per_week  # in days
+        dur_acu = p.dur_inf_dist.rvs(uids) * tyd.days_per_week  # in days
         dur_acu = dur_acu * tyd.day2year  # in years
         return sc.randround(dur_acu / dt)  # in number of timesteps
 
@@ -518,7 +519,7 @@ class Typhoid(ss.Disease):
         """
         p = self.pars
         dt = self.sim.dt
-        dur_scl = p.dur_inf_dist.rvs(uids.size) * tyd.days_per_week  # in days
+        dur_scl = p.dur_inf_dist.rvs(uids) * tyd.days_per_week  # in days
         dur_scl = dur_scl * tyd.day2year
         return sc.randround(dur_scl / dt)
 
@@ -536,7 +537,7 @@ class Typhoid(ss.Disease):
     def get_recovered_duration(self, uids):
         p = self.pars
         dt = self.sim.dt
-        dur_rec = p.dur_rec_dist.rvs(uids.size)  # duration in days
+        dur_rec = p.dur_rec_dist.rvs(uids)  # duration in days
         dur_rec = dur_rec * tyd.day2year                  # duration in years
         return sc.randround(dur_rec / dt)        # duration in integer number of timesteps
 
@@ -547,7 +548,7 @@ class Typhoid(ss.Disease):
         """
         p = self.pars
         dt = self.sim.dt
-        dur_chro = p.dur_chro_dist.rvs(uids.size) * tyd.days_per_week  # duration in in days
+        dur_chro = p.dur_chro_dist.rvs(uids) * tyd.days_per_week  # duration in in days
         dur_chro = dur_chro * tyd.day2year        # duration in years
         return sc.randround(dur_chro / dt)        # duration in integer number of timesteps
 
