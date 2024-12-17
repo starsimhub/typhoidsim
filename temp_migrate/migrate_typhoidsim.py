@@ -20,13 +20,13 @@ files = [
 
 M = ssai.Migrate(
     source_dir = '../typhoidsim', # folder with the code to migrate
-    dest_dir = './migrated', # folder to output migrated code into
+    dest_dir = './gpt_migrated5', # folder to output migrated code into
     files = files, # the specific files to migrate
     library = ss, # can also be the path to the starsim folder, which must be the cloned repo (not from pypi)
     v_from = 'v1.0.3', # can be any valid git tag or hash
     v_to = 'v2.2.0', # ditto
     model = 'gpt-4o', # see ssai.Models for list of allowed models
     parallel = True,
-    die = True,
+    die = False,
 )
 M.run()
