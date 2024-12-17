@@ -378,6 +378,7 @@ class Typhoid(ss.Disease):
         never_exposed = (self.unexposed).uids
         self.susceptible[never_exposed] = self.pars.p_unexp2sus.rvs(never_exposed)
         self.unexposed[never_exposed] = ~self.susceptible[never_exposed]
+        self.ti_susceptible[never_exposed] = self.sim.ti  # Save the timing people became susceptible
         return
 
     def update_death(self, uids):
