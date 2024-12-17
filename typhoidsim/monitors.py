@@ -340,7 +340,7 @@ class histograms_by_age_sex_monitor(Monitor):
         yearvec = self.yearvec
 
         if t_index is None:
-            t_index = [0, -2]  # Plot first and before-last available timepoint
+            t_index = np.random.choice(len(yearvec)-2, 5, replace=False)  # Pick five time points to plot
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
@@ -358,8 +358,10 @@ class histograms_by_age_sex_monitor(Monitor):
 
             # Do the plotting
             for ax, (key, res) in zip(axs, flat.items()):
-                for tidx in t_index:
-                    ax.bar(self.age_bin_centers, res[tidx, :], **plot_kw, label=f"t={yearvec[tidx]}", alpha=0.2)
+                for tidx in sorted(t_index):
+                    ax.bar(np.arange(0, len(self.age_bin_centers)), res[tidx, :], **plot_kw, label=f"t={yearvec[tidx]:.4f}", alpha=0.2)
+                    ax.set_xticks(np.arange(0, len(self.age_bin_centers)), self.age_bin_labels)
+
                 title = getattr(res, 'label', key)
                 ax.set_title(title)
                 ax.set_xlabel('Age (years)')
