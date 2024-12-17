@@ -1,5 +1,9 @@
 """
 Script to use Starsim-AI to migrate Typhoidsim from Starsim v1.0.3 to v2.2.0
+
+Run with e.g.:
+
+    python -i migrate_v1-v2.py
 """
 
 import starsim as ss
@@ -29,7 +33,7 @@ exclude = [
 
 M = ssai.Migrate(
     source_dir = '../typhoidsim', # folder with the code to migrate
-    dest_dir = './migrated_new1', # folder to output migrated code into
+    dest_dir = './migrated_new2', # folder to output migrated code into
     files = files, # the specific files to migrate
     library = ss, # can also be the path to the starsim folder, which must be the cloned repo (not from pypi)
     v_from = 'v1.0.3', # can be any valid git tag or hash
