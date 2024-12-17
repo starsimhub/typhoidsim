@@ -480,12 +480,12 @@ class states_consistency_monitor(Monitor):
         typ = sim.diseases.typhoid
 
         # Mutually exclusive estates
-        mut_exc_1 = ~(typ.immune & typ.susceptible & typ.prepatent & typ.acute &
+        mut_exc_1 = ~(typ.unexposed & typ.susceptible & typ.prepatent & typ.acute &
                       typ.subclinical & typ.chronic & typ.recovered
                       ).any()
         mut_exc_2 = ~(typ.asymptomatic & typ.symptomatic).any()
         mut_exc_3 = ~(typ.susceptible & typ.infected).any()
-        mut_exc_4 = ~(typ.immune & typ.infected).any()
+        mut_exc_4 = ~(typ.unexposed & typ.infected).any()
 
         if not mut_exc_1:
             raise ValueError(
@@ -504,7 +504,7 @@ class states_consistency_monitor(Monitor):
                 'States Immune and Infected should be mutually exclusive but are not.')
 
         # Collectively ehaustive
-        coll_exh = (typ.immune | typ.susceptible | typ.prepatent | typ.acute |
+        coll_exh = (typ.unexposed | typ.susceptible | typ.prepatent | typ.acute |
                     typ.subclinical | typ.chronic | typ.recovered | sim.people.dead
                     ).all()
 
