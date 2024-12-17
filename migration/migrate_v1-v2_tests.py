@@ -31,24 +31,20 @@ exclude = [
     'starsim/demographics.py',
     'starsim/distributions.py',
     'starsim/__init__.py',
-    'starsim/interventions.py',
     'starsim/loop.py',
     'starsim/networks.py',
-    'starsim/parameters.py',
-    'starsim/people.py',
     'starsim/products.py',
     'starsim/results.py',
     'starsim/run.py',
     'starsim/samples.py',
     'starsim/settings.py',
-    'starsim/sim.py',
     'starsim/utils.py',
     'starsim/version.py',
 ]
 
 M = ssai.Migrate(
     source_dir = '../typhoidsim', # folder with the code to migrate
-    dest_dir = './migrated_new_tests', # folder to output migrated code into
+    dest_dir = './migrated_new_tests2', # folder to output migrated code into
     files = files, # the specific files to migrate
     library = ss, # can also be the path to the starsim folder, which must be the cloned repo (not from pypi)
     v_from = 'v1.0.3', # can be any valid git tag or hash
