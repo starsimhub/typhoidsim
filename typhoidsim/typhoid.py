@@ -246,7 +246,6 @@ class Typhoid(ss.Disease):
             # Initial cases
             initial_cases = self.pars.init_prev.filter()
             self.set_prognoses(initial_cases)
-        self.progress_to_prepatent(self.sim.ti)   # Set the correct level of infectiousness of initial cases
         return
 
     def prepare_partial_prep_funs(self):
@@ -424,9 +423,12 @@ class Typhoid(ss.Disease):
 
     # Methods that handle transitions between states
     def progress_to_prepatent(self, ti):
-        susc2prep = (self.prepatent & (self.ti_prepatent <= ti)).uids
-        self.unexposed[susc2prep] = False
+        susc2prep = (self.susceptible & (self.ti_prepatent <= ti)).uids
+        self.prepatent[susc2prep] = True
         self.susceptible[susc2prep] = False
+        self.unexposed[susc2prep] = False
+        self.infected[susc2prep] = True
+        self.infected_ever[susc2prep] = True
         # N_i: number of prior infections,
         # used to determine the probability of becoming
         # infected upon exposure (1-P)**N_i,
@@ -678,11 +680,6 @@ class Typhoid(ss.Disease):
         dt = self.sim.dt
 
         # Set value of states associated to being infected, and record events
-        self.susceptible[uids] = False
-        self.unexposed[uids] = False
-        self.infected[uids] = True
-        self.infected_ever[uids] = True
-        self.prepatent[uids] = True
         self.ti_prepatent[uids] = ti
         self.ti_infected[uids] = ti
 
@@ -851,7 +848,6 @@ class Typhoid(ss.Disease):
             # target agent receives has to be set to be a value larger than self.pars.cfu_me_hi
             self.cfu_dose[new_cases] = self.pars.cfu_me_hi + 0.1 * self.pars.cfu_me_hi
             self.set_prognoses(new_cases, source_uids=None)
-            self.progress_to_prepatent(self.sim.ti)
             self.infc_origin[new_cases] = tyd.TransmissionRoute.CONTACT.value
 
         return new_cases, sources, networks
@@ -909,7 +905,6 @@ class Typhoid(ss.Disease):
             # Set the level of cfu_dose, as this is used to determine the parameters of the distribution that sets prepatent duration of new cases
             self.cfu_dose[new_cases] = self.cfu_dose_per_exposure[new_cases]
             self.set_prognoses(new_cases, source_uids=None)
-            self.progress_to_prepatent(ti)
             self.infc_origin[new_cases] = tyd.TransmissionRoute.ENVIRONMENT.value
 
 
