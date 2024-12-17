@@ -7,15 +7,15 @@ import starsim_ai as ssai
 
 # The files to migrate
 files = [
-    'calibration.py',
-    'demographics.py',
     'environment.py',
+    'demographics.py',
     'interventions.py',
     'monitors.py',
     'networks.py',
     'patterns.py',
-    'typhoid.py',
     'utils.py',
+    'typhoid.py',
+    'calibration.py',
 ]
 
 M = ssai.Migrate(
@@ -26,7 +26,7 @@ M = ssai.Migrate(
     v_from = 'v1.0.3', # can be any valid git tag or hash
     v_to = 'v2.2.0', # ditto
     model = 'gpt-4o', # see ssai.Models for list of allowed models
-    parallel = False,
+    parallel = True,
     die = True,
 )
 M.run()
