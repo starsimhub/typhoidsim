@@ -21,7 +21,7 @@ __all__ += ['test_cpu_performance']
 __all__ += ['generate_unique_filename', 'to_df', 'promotetoiterable', 'generate_age_bin_labels']
 
 
-@nb.jit((nb.float64[:], ), cache=True, nopython=True)
+@nb.njit(cache=True)
 def digitize_ages_1yr(ages):
     """
     This function returns the indices of the 1-year age bins in the range
@@ -33,7 +33,7 @@ def digitize_ages_1yr(ages):
     return np.digitize(ages, age_cutoffs) - 1  # "rounds to the integer part of age
 
 
-@nb.jit(cache=True, nopython=True)
+@nb.njit(cache=True)
 def digitize_ages(ages, age_group_lb):
     """
     This function returns the 0-based indices of the age bins passed in age_group_lb
@@ -54,7 +54,7 @@ def get_attr_vals(sim, attr_path, attr_name):
 def get_data_home(data_home=None):
     """
     Return a path to the directory for default datasets.
-    This funciton is needed by `load_dataset()`, and avoids the
+    This function is needed by `load_dataset()`, and avoids the
     problem of using relative paths.
 
     If the ``data_home`` argument is not provided, it will use a directory
@@ -98,7 +98,7 @@ def load_dataset(ds_name, data_home=None, **kwargs):
     gallstone probs by age and gender), rather than having those hardcoded
     in the code.
 
-    The small datasets are expected to be simple tabular data in saved in csv
+    The small datasets are expected to be simple tabular data saved in csv
     files. This function may apply some small amount of preprocessing, but it's
     not intended to be a full ingest and preprocessing pipelines. The csv files
     are expected to be in an already 'ingestable' form and simply loaded with
@@ -147,8 +147,8 @@ def load_dataset(ds_name, data_home=None, **kwargs):
             return complete_df
         case _:
             mssg = (f"Unknown dataset {ds_name}. Known datasets are 'gallstone_probs',"
-                    f"'gallstone_prev', and 'prepatent_dur_dist_pars")
-            ValueError(mssg)
+                    f"'gallstone_prev', and 'prepatent_dur_dist_pars'")
+            raise ValueError(mssg)
     return
 
 
@@ -244,7 +244,7 @@ def generate_age_bin_labels(age_bins, inclusive_range=False):
         offset = 1
     else:
         offset = 0
-    age_bin_labels = [f"{age_bins[i]:.0f}-{age_bins[i + 1]-offset:.0f}" for i in range(len(age_bins)-1)]
+    age_bin_labels = [f"{age_bins[i]:.0f}-{age_bins[i + 1] - offset:.0f}" for i in range(len(age_bins) - 1)]
     if len(age_bin_labels) == 1:
         age_bin_labels = age_bin_labels[0]
     return age_bin_labels

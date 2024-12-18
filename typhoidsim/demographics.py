@@ -10,18 +10,16 @@ import pandas as pd
 ss_float_ = ss.dtypes.float
 ss_int_ = ss.dtypes.int
 
-
 __all__ = ['Births']
-
 
 class Births(ss.Demographics):
     """ Create births based on rates, rather than based on pregnancy """
     def __init__(self, pars=None, metadata=None, **kwargs):
         super().__init__()
-        self.default_pars(
-            birth_rate = 30,
+        self.define_pars(
+            birth_rate = ss.peryear(30),
             rel_birth = 1,
-            units = 1e-3,  # assumes birth rates are per 1000. If using percentages, switch this to 1
+            rate_units = 1e-3,  # assumes birth rates are per 1000. If using percentages, switch this to 1
         )
         self.update_pars(pars, **kwargs)
 
@@ -43,7 +41,7 @@ class Births(ss.Demographics):
         if isinstance(self.pars.birth_rate, pd.DataFrame):
             br_year = self.pars.birth_rate[self.metadata.data_cols['year']]
             br_val = self.pars.birth_rate[self.metadata.data_cols['cbr']]
-            all_birth_rates = np.interp(sim.yearvec, br_year, br_val)
+            all_birth_rates = np.interp(self.yearvec, br_year, br_val)
             self.pars.birth_rate = all_birth_rates
         return
 
@@ -51,16 +49,16 @@ class Births(ss.Demographics):
         """ Standardize/validate birth rates - handled in an external file due to shared functionality """
         birth_rate = ss.standardize_data(data=self.pars.birth_rate, metadata=self.metadata)
         if isinstance(birth_rate, (pd.Series, pd.DataFrame)):
-            return birth_rate.xs(0,level='age')
+            return birth_rate.xs(0, level='age')
         return birth_rate
 
     def init_results(self):
-        npts = self.sim.npts
-        self.results += [
-            ss.Result(self.name, 'new', npts, dtype=int, scale=True, label='New births'),
-            ss.Result(self.name, 'cumulative', npts, dtype=int, scale=True, label='Cumulative births'),
-            ss.Result(self.name, 'cbr', npts, dtype=int, scale=False, label='Crude birth rate'),
-        ]
+        super().init_results()
+        self.define_results(
+            ss.Result('new',        dtype=int,   scale=True,  label='New births'),
+            ss.Result('cumulative', dtype=int,   scale=True,  label='Cumulative births'),
+            ss.Result('cbr',        dtype=float, scale=False, label='Crude birth rate'),
+        )
         return
 
     def get_births(self):
@@ -72,23 +70,22 @@ class Births(ss.Demographics):
 
         if isinstance(p.birth_rate, (pd.Series, pd.DataFrame)):
             available_years = p.birth_rate.index
-            year_ind = sc.findnearest(available_years, sim.year)
+            year_ind = sc.findnearest(available_years, self.t.now('year'))
             nearest_year = available_years[year_ind]
             this_birth_rate = p.birth_rate.loc[nearest_year]
         else:
             this_birth_rate = p.birth_rate
 
-        scaled_birth_prob = this_birth_rate * p.units * p.rel_birth * sim.pars.dt
+        factor = ss.time_ratio(unit1=self.t.unit, dt1=self.t.dt, unit2='year', dt2=1.0)
+        scaled_birth_prob = this_birth_rate * p.rate_units * p.rel_birth * factor
         scaled_birth_prob = np.clip(scaled_birth_prob, a_min=0, a_max=1)
-        n_new = np.random.binomial(n=sim.people.alive.count(), p=scaled_birth_prob)  # Not CRN safe, see issue #404
+        n_new = np.random.binomial(n=sim.people.alive.count(), p=scaled_birth_prob) 
         return n_new
 
-
-    def update(self):
+    def step(self):
         new_uids = self.add_births()
         self.n_births = len(new_uids)
         return new_uids
-
 
     def add_births(self):
         """ Add n_new births to each state in the sim """
@@ -99,12 +96,15 @@ class Births(ss.Demographics):
         return new_uids
 
     def update_results(self):
-        self.results['new'][self.sim.ti] = self.n_births
+        self.results.new[self.ti] = self.n_births
+
+        inv_rate_units = 1.0/self.pars.rate_units
+        births_per_year = self.n_births/self.sim.t.dt_year
+        denom = self.sim.people.alive.sum()
+        self.results.cbr[self.ti] = inv_rate_units * births_per_year / denom
         return
 
     def finalize(self):
         super().finalize()
-        res = self.sim.results
-        self.results.cumulative = np.cumsum(self.results.new)
-        self.results.cbr = 1/self.pars.units*np.divide(self.results.new/self.sim.dt, res.n_alive, where=res.n_alive>0)
+        self.results.cumulative[:] = np.cumsum(self.results.new)
         return

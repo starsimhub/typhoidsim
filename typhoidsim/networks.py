@@ -12,17 +12,17 @@ from . import utils as tyu
 ss_float_ = ss.dtypes.float
 ss_int_ = ss.dtypes.int
 
-__all__ = ["CommunityNet"]
+__all__ = ["CommunityNet", "HouseholdNet"]
 
 
 class CommunityNet(ss.DynamicNetwork):
     """ Create an age-assortative network based on a 2D age-mixing pattern."""
     def __init__(self, pars=None, key_dict=None, **kwargs):
         super().__init__(key_dict=key_dict, **kwargs)
-        self.default_pars(
+        self.define_pars(
             age_mixing=None,
             location='Chile',
-            dur=0  # Duration of zero ensures that new random edges are formed on each time step
+            dur=ss.dur(0, unit='day')  # Duration ensures new random edges each time step
         )
         self.update_pars(pars, **kwargs)
 
@@ -33,7 +33,7 @@ class CommunityNet(ss.DynamicNetwork):
         self.contact_rate_num_by_ag_gr, self.age_mix_matrix_probs = self.get_contact_rates()
         self.num_age_groups = len(self.pars.age_mixing['age_lb'])
 
-        self.add_states(
+        self.define_states(
             ss.Arr('age_group', default=0, dtype=ss_int_, label='Age group')
         )
         # Store the size of each age group
@@ -81,7 +81,7 @@ class CommunityNet(ss.DynamicNetwork):
         return
 
     def get_contacts(self, born, n_contacts):
-        """ Generate contacts based on age mixing"""
+        """ Generate contacts based on age mixing """
         available_uids = born.uids
 
         # Get all possible connections in the networks (upper triangle)
@@ -118,11 +118,11 @@ class CommunityNet(ss.DynamicNetwork):
         p1, p2 = self.get_contacts(born, n_contacts)
 
         beta = np.ones(len(p1), dtype=ss_float_)
-        dur = np.full(len(p1),  self.pars.dur)
+        dur = np.full(len(p1), self.pars.dur.values)
         self.append(p1=p1, p2=p2, beta=beta, dur=dur)
         return
 
-    def update(self):
+    def step(self):
         self.end_pairs()
         self.get_age_groups()
         self.add_pairs()
@@ -140,7 +140,7 @@ class CommunityNet(ss.DynamicNetwork):
             p1a = self.age_group[self.p1]
             p2a = self.age_group[self.p2]
         else:
-            raise ValueError(f"Uknown option to_plot={to_plot}")
+            raise ValueError(f"Unknown option to_plot={to_plot}")
 
         ages = np.vstack([X.ravel(), Y.ravel()])
         values = np.vstack([p1a, p2a])
@@ -162,7 +162,7 @@ class CommunityNet(ss.DynamicNetwork):
             p1a = self.age_group[self.p1]
             p2a = self.age_group[self.p2]
         else:
-            raise ValueError(f"Uknown option to_plot={to_plot}")
+            raise ValueError(f"Unknown option to_plot={to_plot}")
 
         kde = self.estimate_age_mixing_density(to_plot=to_plot) / self.age_group_size.reshape(-1, 1)
 
@@ -205,10 +205,10 @@ class HouseholdNet(ss.DynamicNetwork):
     def __init__(self, pars=None, key_dict=None, **kwargs):
         """ Initialize """
         super().__init__(key_dict=key_dict)
-        self.default_pars(
+        self.define_pars(
             n_contacts=ss.constant(10),
             location=None,
-            dur=20, # average duration of a household in years
+            dur=ss.years(20),  # average duration of a household in years
         )
         self.update_pars(pars, **kwargs)
         self.dist = ss.Dist(distname='HouseholdNet')  # Default RNG
@@ -219,7 +219,7 @@ class HouseholdNet(ss.DynamicNetwork):
         return
 
     @staticmethod
-    @nb.njit(cache=True)
+    @nb.njit(fastmath=True, cache=True)
     def get_source(inds, n_contacts):
         """ Optimized helper function for getting contacts """
         total_number_of_half_edges = np.sum(n_contacts)
@@ -258,7 +258,7 @@ class HouseholdNet(ss.DynamicNetwork):
         self.dist.jump()  # Reset the RNG manually # TODO, think if there's a better way
         return source, target
 
-    def update(self):
+    def step(self):
         self.end_pairs()
         self.add_pairs()
         return
@@ -268,8 +268,7 @@ class HouseholdNet(ss.DynamicNetwork):
         people = self.sim.people
         born = people.alive & (people.age > 0)
         if isinstance(self.pars.n_contacts, ss.Dist):
-            number_of_contacts = self.pars.n_contacts.rvs(
-                born.uids)  # or people.uid?
+            number_of_contacts = self.pars.n_contacts.rvs(born.uids)  # or people.uid?
         else:
             number_of_contacts = np.full(len(people), self.pars.n_contacts)
 
@@ -281,7 +280,7 @@ class HouseholdNet(ss.DynamicNetwork):
         if isinstance(self.pars.dur, ss.Dist):
             dur = self.pars.dur.rvs(p1)
         else:
-            dur = np.full(len(p1), self.pars.dur)
+            dur = np.full(len(p1), self.pars.dur.values)
 
         self.append(p1=p1, p2=p2, beta=beta, dur=dur)
         return
@@ -322,7 +321,7 @@ class HouseholdNet(ss.DynamicNetwork):
                                         name='Household size distribution',
                                         strict=False)
 
-        av_household_size = np.sum(hhs_bins*hhs_bins)
+        av_household_size = np.sum(hhs_bins * hhs_props) # CK: is this correct? Change made by LLM
         n_households = np.round(requested_n_agents / av_household_size)
         n_households_by_size = np.zeros(len(hhs_bins), dtype=ss_int_)
 
@@ -351,7 +350,7 @@ class HouseholdNet(ss.DynamicNetwork):
         if self.pars.location is not None:
             hh_head_age_dist = tyi.get_household_head_age_distribution(self.pars.location)
         else:
-            hh_head_age_dist = np.empty()
+            hh_head_age_dist = np.empty((101, 2))
             hh_head_age_dist[:, 0] = np.arange(0, 101)
             hh_head_age_dist[:, 1] = np.random.dirichlet(np.ones(101), size=1)[0]
 
@@ -385,7 +384,7 @@ def adjust_households(delta_agents, nhh_by_hs, delta_hh_size):
        nhh_by_hs (np.array): adjusted number of household of a given size.
     """
     sign = -np.sign(delta_agents)
-    delta_agents = delta_agents + sign*delta_hh_size
+    delta_agents = delta_agents + sign * delta_hh_size
     nhh_by_hs[delta_hh_size - 1] = nhh_by_hs[delta_hh_size - 1] + sign
     return delta_agents, nhh_by_hs
 
