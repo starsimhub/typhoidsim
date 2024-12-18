@@ -2,14 +2,14 @@
 Define "passive" observation methods that do not interfere with the course
 of a disease or with a simulation.
 
-These classes are derived from starsim's Analyzers anyway because they neeed
+These classes are derived from starsim's Analyzers anyway because they need
 to be executed in a specific part of the simulation workflow.
 
-This module exists to emphasise a functional distinction between classes
+This module exists to emphasize a functional distinction between classes
 that only subsamples and/or aggregates simulated data (monitors), and
 classes that can optionally take as input empirical data and
 perform additional calculations and be used as "components" or "steps" in
-an optimisation process.
+an optimization process.
 """
 
 import numpy as np
@@ -27,9 +27,7 @@ __all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor"]
 
 class Monitor(ss.Analyzer):
     """
-    Base class for passive measurments / observation processes.
-
-    Args:
+    Base class for passive measurements / observation processes.
     """
 
     def __init__(self, period=None, **kwargs):
@@ -104,15 +102,15 @@ class histograms_by_age_sex_monitor(Monitor):
             "subsample": None
         }
         if self.aggregate_time in set(aggregation_functions):
-            self.monitor_step = round(self.resampling_period/sim.dt)
+            self.monitor_step = round(self.resampling_period / self.t.dt) # CK: TODO: use time units
             self.monitor_period = self.resampling_period
             self.agg_func = aggregation_functions.get(self.aggregate_time)
         else:
             self.monitor_step = 1.0
-            self.monitor_period = sim.dt
+            self.monitor_period = self.t.dt  # CK: TODO: use time units
 
         # Output year vector
-        self.yearvec = sc.inclusiverange(self.record_from, self.record_until, self.monitor_period)
+        self.yearvec = sc.inclusiverange(self.record_from, self.record_until, self.monitor_period) # CK: TODO: use time units
 
         if self.aggregate_time is None or self.aggregate_time == "subsample":
             self.sample = self._default_sampling
@@ -121,7 +119,7 @@ class histograms_by_age_sex_monitor(Monitor):
         else:
             self.sample = self._aggregate_sampling
             self.ntpts = len(self.yearvec) # number of time points in the final result arrays
-            self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, sim.dt))  # number of time points for the internal stock arrays
+            self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, self.t.dt))  # number of time points for the internal stock arrays  # CK: TODO: use time units
 
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
@@ -163,17 +161,21 @@ class histograms_by_age_sex_monitor(Monitor):
                 else:
                     sexes = ["f", "m"]
                 for sex in sexes:
-                    self.stocks += [ss.Result(self.name, f"{sex}_{attrlbl}",
-                                               (self.stock_ntpts, self.nags), dtype=res_dtype,
-                                               scale=False, label=f"{sex}_{reslbl}"),]
+                    self.stocks += [ss.Result(f"{sex}_{attrlbl}",
+                                              dtype=res_dtype,
+                                              shape=(self.stock_ntpts, self.nags),
+                                              scale=False, label=f"{sex}_{reslbl}"), ]
 
                     self.results += [
-                        ss.Result(self.name, f"{sex}_{attrlbl}",
-                                  (self.ntpts, self.nags), dtype=res_dtype,
+                        ss.Result(f"{sex}_{attrlbl}",
+                                  dtype=res_dtype,
+                                  shape=(self.ntpts, self.nags),
                                   scale=True, label=f"{sex}_{reslbl}"), ]
 
-        self.results += [ss.Result(self.name, f"yearvec", (self.ntpts, ),
-                                   dtype=float, scale=False, label=f"Calendar years (float representation)"), ]
+        self.results += [ss.Result(f"yearvec",
+                                   dtype=float,
+                                   shape=(self.ntpts,),
+                                   scale=False, label=f"Calendar years (float representation)"), ]
         # Configure the monitor
         self.configure_recording_functions()
         return
@@ -188,17 +190,17 @@ class histograms_by_age_sex_monitor(Monitor):
             self._apply = self._apply_individual_sexes
         return
 
-    def set_observation_interval(self, sim):
+    def set_observation_interval(self, sim): # CK: TODO: use time units
         """ Set the correction endpoints of the observation period recorded by this monitor"""
         if self.record_from is None and self.record_until is None:
             start_year = sim.pars.start
-            stop_year = sim.pars.end
+            stop_year = sim.pars.stop
         elif self.record_from is not None and self.record_until is None:
             start_year = self.record_from if not self.record_from < sim.pars.start else sim.pars.start
-            stop_year = sim.pars.end
+            stop_year = sim.pars.stop
         elif self.record_from is None and self.record_until is not None:
             start_year = sim.pars.start
-            stop_year = self.record_until if not self.record_until > sim.pars.end else sim.pars.end
+            stop_year = self.record_until if not self.record_until > sim.pars.stop else sim.pars.stop
         else:
             start_year = self.record_from
             stop_year = self.record_until
@@ -283,9 +285,9 @@ class histograms_by_age_sex_monitor(Monitor):
         else:
             return self.agg_func(reshaped_data, axis=1)
 
-    def apply(self, sim):
-        if sim.year >= self.record_from and (sim.year <= self.record_until):
-            self.sample(sim)
+    def step(self):
+        if self.t.now('year') >= self.record_from and (self.t.now('year') <= self.record_until):
+            self.sample(self.sim)
         return
 
     def finalize_results(self):
@@ -370,7 +372,7 @@ class histograms_by_age_sex_monitor(Monitor):
         sc.figlayout(fig=fig)
         return fig
 
-    def plot_waterfall(self, key=None, max_timepoints=16,  fig=None, style='fancy', fig_kw=None, plot_kw=None):
+    def plot_waterfall(self, key=None, max_timepoints=16, fig=None, style='fancy', fig_kw=None, plot_kw=None):
         """
         Plot a waterfall plot showing the evolution of the distribution of
         a given metric (ie, number of new acute cases) with respect to age.
@@ -464,7 +466,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
 
 class states_consistency_monitor(Monitor):
-    """ Analyzer to track everything -- use for debug pruposes """
+    """ Analyzer to track everything -- use for debug purposes """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -472,14 +474,14 @@ class states_consistency_monitor(Monitor):
         self.success = True
         return
 
-    def update_results(self, sim):
-        return self.apply(sim)
+    def update_results(self):
+        return self.step()
 
-    def apply(self, sim):
+    def step(self):
         """
         Checks states that should be mutually exlusive and collectively exhaustive
         """
-        typ = sim.diseases.typhoid
+        typ = self.sim.diseases.typhoid
 
         # Mutually exclusive estates
         mut_exc_1 = ~(typ.unexposed & typ.susceptible & typ.prepatent & typ.acute &
@@ -505,9 +507,9 @@ class states_consistency_monitor(Monitor):
             raise ValueError(
                 'States Immune and Infected should be mutually exclusive but are not.')
 
-        # Collectively ehaustive
+        # Collectively exhaustive
         coll_exh = (typ.unexposed | typ.susceptible | typ.prepatent | typ.acute |
-                    typ.subclinical | typ.chronic | typ.recovered | sim.people.dead
+                    typ.subclinical | typ.chronic | typ.recovered | self.sim.people.dead
                     ).all()
 
         if not coll_exh:

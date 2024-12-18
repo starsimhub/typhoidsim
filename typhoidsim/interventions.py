@@ -57,42 +57,42 @@ class acute_treatment(ss.Intervention):
     """
 
     def __init__(self, product=None, prob=1.0, eligibility=None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(**kwargs) # CK: TODO: move to update_pars()?
         self.prob = sc.promotetoarray(prob)
         self.eligibility = eligibility
         self._parse_product(product)
         self.coverage_dist = ss.bernoulli(p=self.prob)
-        self.treated = ss.BoolArr('treated')
-        self.results = ss.ndict()
+        self.treated = ss.State('treated')
         return
 
-    def init_pre(self, sim):
-        super().init_pre(sim)
-        self.results += ss.Result(self.name, 'n_treated', sim.npts, dtype=int)  # count how many were treated today, includes new and old patients
-        self.initialized = True
+    def init_results(self):
+        super().init_results()
+        self.define_results(
+            ss.Result('n_treated', dtype=int, label='Number treated')
+        )
         return
 
-    def apply(self, sim):
-        new_candidates = self.get_eligible(sim)
+    def step(self):
+        new_candidates = self.get_eligible()
         receive_uids = self.coverage_dist.filter(new_candidates)
         newly_treated = len(receive_uids)
         if newly_treated:
-            self.product.administer(sim.people, receive_uids)
+            self.product.administer(self.sim.people, receive_uids)
             self.treated[receive_uids] = True
             # How may accepted and started treatment today
-        self.results['n_treated'][sim.ti] = newly_treated
+        self.results['n_treated'][self.ti] = newly_treated
         return
 
-    def get_eligible(self, sim):
+    def get_eligible(self):
         """
         Get candidates for treatment on this timestep. This includes new patients
         and old patients.
         """
         # TODO: use self.eligibility
         # Only agents experience the acute stage of infection
-        acute_uids = (sim.people.typhoid.acute).uids
+        acute_uids = self.sim.people.typhoid.acute.uids
         # Those who would seek treatment today
-        seeks_treatment = (sim.people.typhoid.ti_seek_trtmnt == sim.ti).uids
+        seeks_treatment = (self.sim.people.typhoid.ti_seek_trtmnt == self.sim.ti).uids
         new_candidates = acute_uids.intersect(seeks_treatment)
         return new_candidates
 
@@ -119,32 +119,33 @@ class infection_clearence(ss.Intervention):
         super().__init__(**kwargs)
         self.eligibility = eligibility
         self._parse_product(product)
-        self.treated = ss.BoolArr('treated')
+        self.treated = ss.State('treated')
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.results += ss.Result(self.name, 'n_treated',
-                                  sim.npts, dtype=int, label="Were treated")       # count how many were treated today, includes new and old patients
-        self.results += ss.Result(self.name, 'n_started_tr',
-                                  sim.npts, dtype=int, label="Started treatment")  # count how many started treatment today, includes only new patients
+        self.define_results(
+            ss.Result('n_treated', dtype=int, label='Number treated'),
+            ss.Result('n_started_tr', dtype=int, label='Started treatment')
+        )
         self.initialized = True
         return
 
-    def apply(self, sim):
-        new_patients, under_treatment = self.get_eligible(sim)
+    def step(self):
+        sim = self.sim
+        new_patients, under_treatment = self.get_eligible()
         newly_treated = len(new_patients)
         all_treated = newly_treated + len(under_treatment)
 
         if len(new_patients):
-            self.product.administer(sim, new_patients)
+            self.product.administer(new_patients)
             self.treated[new_patients] = True
 
         if len(under_treatment):
-            self.product.administer(sim, under_treatment)
+            self.product.administer(under_treatment)
 
-        self.results['n_started_tr'][sim.ti] = newly_treated
-        self.results['n_treated'][sim.ti] = all_treated
+        self.results['n_started_tr'][self.ti] = newly_treated
+        self.results['n_treated'][self.ti] = all_treated
 
         # Check if infectiousness was cleared in this timestep
         treated = ss.uids.cat(new_patients, under_treatment)
@@ -175,20 +176,21 @@ class infection_clearence(ss.Intervention):
 
             # Set recovered state and when this agent becomes susceptible
             sim.people.typhoid.statesdict["recovered"][cleared_uids] = True
-            sim.people.typhoid.statesdict["ti_recovered"][cleared_uids] = sim.ti
+            sim.people.typhoid.statesdict["ti_recovered"][cleared_uids] = sim.ti # CK: TODO: should this be sim.ti or self.ti?
             sim.people.typhoid.statesdict["ti_susceptible"][cleared_uids] = sim.ti + 1
             # Count again
             sim.people.typhoid.update_results()
 
         return
 
-    def get_eligible(self, sim):
+    def get_eligible(self):
         """
         Get candidates for treatment on this timestep. This includes new patients
         and old patients.
         """
         # TODO: use self.eligibility
         # Only agents experience the acute stage of infection
+        sim = self.sim
         infected_uids = (sim.people.typhoid.infected).uids
 
         # Those who are under treatment
@@ -216,31 +218,34 @@ class base_test(ss.Intervention):
 
     def __init__(self, prob_t=1.0, prob_tp=1.0, eligibility=None, eligibility_kwargs=None, **kwargs):
         super().__init__(**kwargs)
-        self.prob_t = sc.promotetoarray(prob_t)    # probability of being tested
-        self.prob_tp = sc.promotetoarray(prob_tp)  # given that a person if being tested, probabilty of testing postivie (capture uncertantiy of test product/method)
+        self.prob_t = sc.toarray(prob_t)    # probability of being tested
+        self.prob_tp = sc.toarray(prob_tp)  # given that a person if being tested, probabilty of testing postivie (capture uncertantiy of test product/method)
         self.eligibility = eligibility
         self.eligibility_kwargs = eligibility_kwargs
         self.coverage_dist = ss.bernoulli(p=self.prob_t)
         self.test_dist = ss.bernoulli(p=self.prob_tp)
-        self.tested = ss.BoolArr('tested', default=False)
-        self.positive = ss.BoolArr('positive', default=False)
+        self.tested = ss.State('tested', default=False)
+        self.positive = ss.State('positive', default=False)
         self.ti_tested = ss.FloatArr('ti_tested')
         self.ti_positive = ss.FloatArr('ti_positive')
         return
 
-    def init_pre(self, sim):
-        super().init_pre(sim)
-        self.results += ss.Result(self.name, 'new_positive', sim.npts, dtype=int, label="New Positive")  # count how many tested positive today, includes new and old patients
-        self.results += ss.Result(self.name, 'new_tested', sim.npts, dtype=int, label="New Tested")  # count how many were tested today, includes only new patients
-        self.results += ss.Result(self.name, 'positivity', sim.npts, dtype=float, label="Positivity")    #
+    def init_results(self):
+        super().init_results()
+        self.define_results(
+            ss.Result('new_positive', dtype=int, label='New Positive'),
+            ss.Result('new_tested', dtype=int, label='New Tested'),
+            ss.Result('positivity', dtype=float, scale=False, label='Positivity')
+        )
 
         if self.eligibility is None:
             self.eligibility = self.check_eligibility
         return
 
-    def apply(self, sim):
-        self.check_still_positive(sim)
-        eligible_uids = self._eligibility(sim)
+    def step(self):
+        sim = self.sim
+        self.check_still_positive()
+        eligible_uids = self._eligibility()
         self.coverage_dist.set(p=self.prob_t)
         self.test_dist.set(p=self.prob_tp)
         tested_uids = self.coverage_dist.filter(eligible_uids)
@@ -251,29 +256,29 @@ class base_test(ss.Intervention):
         tested_pos_uids = self.test_dist.filter(are_pos_uids)
         self.tested[tested_uids] = True
         self.positive[tested_pos_uids] = True
-        self.ti_tested[tested_uids] = sim.ti
+        self.ti_tested[tested_uids] = sim.ti # CK: TODO: or self.ti?
         self.ti_positive[tested_pos_uids] = sim.ti
         self.results['new_tested'][sim.ti] = len(tested_uids)
         self.results['new_positive'][sim.ti] = len(tested_pos_uids)
         self.results['positivity'][sim.ti] = sc.safedivide(self.results['new_positive'][sim.ti], self.results['new_tested'][sim.ti])
         return tested_uids
 
-    def check_still_positive(self, sim):
+    def check_still_positive(self):
         # Reset if no longer infected
-        infected_uids = (~sim.people.typhoid.infected).uids
+        infected_uids = (~self.sim.people.typhoid.infected).uids
         self.positive[infected_uids] = False
         return
 
-    def check_eligibility(self, sim):
+    def check_eligibility(self):
         """ Default eligibility, do not test the same person more than once"""
-        chronic_uids = (sim.people.typhoid.chronic & ~self.tested).uids
+        chronic_uids = (self.sim.people.typhoid.chronic & ~self.tested).uids
         return chronic_uids
 
-    def _eligibility(self, sim):
+    def _eligibility(self):
         if callable(self.eligibility) and self.eligibility_kwargs is not None:
-            return self.eligibility(sim, **self.eligibility_kwargs)
+            return self.eligibility(**self.eligibility_kwargs)
         elif callable(self.eligibility) and self.eligibility_kwargs is None:
-            return self.eligibility(sim)
+            return self.eligibility()
         else:  # Assume self.eligibility is an array of uids
             return self.eligibility
 
@@ -305,75 +310,77 @@ class WASH(ss.Intervention):
         return
 
     def init_pre(self, sim):
-        # starsim base time units are in years, but the base unit of typhpoid is days
+        super().init_pre(sim)
+        # starsim base time units are in years, but the base unit of typhpoid is days # CK: TODO: fix
         if self.start is None:
             self.start = sim.pars['start']
         if self.dur is None:
             self.dur = sim.pars['end'] - sim.pars['start']
+        return
 
+    def init_results(self):
+        super().init_results()
         # This is the "time" vector or variable that will be evaluated.
         # time is the compact support to evaluate the pattern over.
         # time = 0, represents time relative to the start of the temporal pattern.
         # so a sin() pattern would always return a value of 0.0 on its start
-        self.time = sc.inclusiverange(0, self.dur, sim.dt)
-        self.results += ss.Result(self.name, 'efficacy', sim.npts,
-                                  dtype=float)
-        self.results += ss.Result(self.name, 'effective_value', sim.npts,
-                                  dtype=float)  # The effective value of the parameter that this intervention modulates.
+        self.time = sc.inclusiverange(0, self.dur, self.t.dt) # CK: TODO: replace with self.t
+        self.define_results(
+            ss.Result('efficacy', dtype=float, scale=False),
+            ss.Result('effective_value', dtype=float, scale=False, label='Effective Value')
+        )
 
         if self.efficacy_pattern is None:
             raise ValueError('No efficacy value or pattern specified')
         if sc.isnumber(self.efficacy_pattern):
             self.efficacy_pattern = Pattern("efficacy", pars={'efficacy': self.efficacy_pattern})
-
         return
 
-    def _get_target_baseline(self, sim):
-        attr = sim
+    def _get_target_baseline(self):
+        attr = self.sim
         for attr_name in self.target_attr_path[:-1]:
             attr = getattr(attr, attr_name)
         target_attr = self.target_attr_path[-1]
         val = getattr(attr, target_attr)
         return val
 
-    def _get_target_val_arr(self, sim, idx):
+    def _get_target_val_arr(self, idx):
         """Get target value of an attribute that is an interable"""
-        attr = sim
+        attr = self.sim
         for attr_name in self.target_attr_path[:-1]:
             attr = getattr(attr, attr_name)
         target_attr = self.target_attr_path[-1]
         val = getattr(attr, target_attr[idx])
         return val
 
-    def _set_target_val_par(self, sim, val):
-        attr = sim
+    def _set_target_val_par(self, val):
+        attr = self.sim
         for attr_name in self.target_attr_path[:-1]:
             attr = getattr(attr, attr_name)
         target_attr = self.target_attr_path[-1]
         setattr(attr, target_attr, val)
         return
 
-    def _set_target_val_arr(self, sim, idx, val):
-        attr = sim
+    def _set_target_val_arr(self, idx, val):
+        attr = self.sim
         for attr_name in self.target_attr_path[:-1]:
             attr = getattr(attr, attr_name)
         target_attr = self.target_attr_path[-1]
         target_attr[idx] = val
         return
 
-    def apply(self, sim):
-        self.results['effective_value'][sim.ti] = self.target_baseline
-        if sim.year >= self.start and len(self.time):
+    def step(self):
+        self.results['effective_value'][self.sim.ti] = self.target_baseline
+        if self.sim.year >= self.start and len(self.time):
             self.efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            self._set_target_val_par(sim, (1.0 - self.efficacy) * self.target_baseline)
-            self._update_results(sim)
-            self.ti += 1
+            self._set_target_val_par(self.sim, (1.0 - self.efficacy) * self.target_baseline)
         return
 
-    def _update_results(self, sim):
-        self.results['efficacy'][sim.ti] = self.efficacy
-        self.results['effective_value'][sim.ti] = (1.0 - self.efficacy) * self.target_baseline
+    def update_results(self):
+        super().update_results()
+        self.results['efficacy'][self.ti] = self.efficacy
+        self.results['effective_value'][self.ti] = (1.0 - self.efficacy) * self.target_baseline
         return
 
 
@@ -389,15 +396,7 @@ class shedding_reduction(WASH):
     def init_pre(self, sim):
         super().init_pre(sim)
         self.target_attr_path = ['demographics', 'environmentalpool', 'pars', 'transmission', 'shedding_rate']
-        self.target_baseline = super()._get_target_baseline(sim)
-        return
-
-    def apply(self, sim):
-        super().apply(sim)
-        return
-
-    def update_results(self):
-        super().update_results()
+        self.target_baseline = super()._get_target_baseline()
         return
 
 
@@ -411,18 +410,10 @@ class environmental_exposure_reduction(WASH):
     simulation, we have to apply the reduction at a single point in time, because
     this intervention modifies the model/module parameteter.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        return
-
     def init_pre(self, sim):
         super().init_pre(sim)
         self.target_attr_path = ['diseases', 'typhoid', 'pars', 'transmission', 'exposure2env_rate', 'lam']
         self.target_baseline = super()._get_target_baseline(sim)
-        return
-
-    def apply(self, sim):
-        super().apply(sim)
         return
 
 
@@ -431,52 +422,43 @@ class environmental_trapezoidal_modulation(WASH):
     Results in a reduction of the relative exposure to the environment
     due crop irrigation, health inspections of food vendors.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        return
-
     def init_pre(self, sim):
         super().init_pre(sim)
         self.target_attr_path = ['demographics', 'environmentalpool', 'pars', 'transmission', 'rel_trans']
-        self.target_baseline = super()._get_target_baseline(sim)
+        self.target_baseline = super()._get_target_baseline()
         return
 
-    def apply(self, sim):
+    def step(self):
         self.efficacy = 0.0
         self.results['effective_value'][sim.ti] = self.target_baseline
-        if sim.year >= self.start and len(self.time):
-            time_days = sim.year * days_per_year
+        sim_year = sim.t.now('year')
+        if sim_year >= self.start and len(self.time):
+            time_days = sim_year * days_per_year # CK: TODO: rewrite
             self.efficacy = self.efficacy_pattern(time_days)
-            self.ti += 1
-        self._set_target_val_par(sim, self.efficacy * self.target_baseline)
-        self._update_results(sim)
+        self._set_target_val_par(self.efficacy * self.target_baseline)
         return
 
-    def _update_results(self, sim):
-        self.results['efficacy'][sim.ti] = self.efficacy
-        self.results['effective_value'][sim.ti] = self.efficacy * self.target_baseline
+    def update_results(self):
+        super().update_results()
+        self.results['efficacy'][self.ti] = self.efficacy
+        self.results['effective_value'][self.ti] = self.efficacy * self.target_baseline
         return
 
 
 class environmental_cleanup(WASH):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        return
-
     def init_pre(self, sim):
         super().init_pre(sim)
         self.target_attr_path = ['demographics', 'environmentalpool', 'sv', 'cfu_conc']
         return
 
-    def apply(self, sim):
-        if sim.year >= self.start and len(self.time):
+    def step(self):
+        if self.t.now('year') >= self.start and len(self.time):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            val = super()._get_target_val_arr(sim, sim.ti-1)
+            val = super()._get_target_val_arr(self.ti-1)
             r_val = (1.0 - efficacy) * val
-            super()._set_target_val_arr(sim, sim.ti-1, r_val)
+            super()._set_target_val_arr(self.ti-1, r_val)
             self.results['efficacy'][self.ti] = efficacy
-            self.ti += 1
         return
 
 
