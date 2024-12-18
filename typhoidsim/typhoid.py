@@ -186,7 +186,7 @@ class Typhoid(ss.Disease):
         self.validate_environment()
         return
 
-    def validate_beta(self): CK: TODO: remove
+    def validate_beta(self): # CK: TODO: remove
         """
         Perform any parameter validation
         """
