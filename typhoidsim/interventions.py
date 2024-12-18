@@ -389,14 +389,10 @@ class shedding_reduction(WASH):
     Simulates sanitation interventions such as latrines and sewage disposal.
     Efficacy for this intervention is a multiplier on the daily shedding amounts.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        return
-
     def init_pre(self, sim):
         super().init_pre(sim)
         self.target_attr_path = ['demographics', 'environmentalpool', 'pars', 'transmission', 'shedding_rate']
-        self.target_baseline = super()._get_target_baseline()
+        self.target_baseline = self._get_target_baseline()
         return
 
 
@@ -425,7 +421,7 @@ class environmental_trapezoidal_modulation(WASH):
     def init_pre(self, sim):
         super().init_pre(sim)
         self.target_attr_path = ['demographics', 'environmentalpool', 'pars', 'transmission', 'rel_trans']
-        self.target_baseline = super()._get_target_baseline()
+        self.target_baseline = self._get_target_baseline()
         return
 
     def step(self):
@@ -455,9 +451,9 @@ class environmental_cleanup(WASH):
         if self.t.now('year') >= self.start and len(self.time):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            val = super()._get_target_val_arr(self.ti-1)
+            val = self._get_target_val_arr(self.ti-1)
             r_val = (1.0 - efficacy) * val
-            super()._set_target_val_arr(self.ti-1, r_val)
+            self._set_target_val_arr(self.ti-1, r_val)
             self.results['efficacy'][self.ti] = efficacy
         return
 
@@ -472,24 +468,18 @@ class behavioral_change(WASH):
     agent's relative susceptibility and transmissibility.
 
     """
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        return
-
     def init_pre(self, sim):
         super().init_pre(sim)
         self.target_attr_path = ['diseases', 'typhoid', 'rel_sus']
         return
 
-    def apply(self, sim):
-        if sim.year >= self.start and len(self.time):
+    def step(self):
+        if self.sim.year >= self.start and len(self.time):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            val = super()._get_target_baseline(sim)
-            super()._set_target_val_par(sim, (1.0 - efficacy)*val)
+            val = self._get_target_baseline()
+            self._set_target_val_par((1.0 - efficacy)*val)
             self.results['efficacy'][self.ti] = efficacy
-            self.ti += 1
         return
 
 
@@ -504,12 +494,11 @@ class environmental_seasonality(ss.Intervention):
         self.dur = dur
         self.pattern = seasonal_pattern  # pattern of seasonal cfu
         self.end_day = None
-        self.time = None
-        self.ti = 0
-        self.results = ss.ndict()
+        self.time = None # CK: TODO: refactor
         return
 
-    def init_pre(self, sim):
+    def init_pre(self, sim):  # CK: TODO: refactor
+        super().init_pre(sim)
         # starsim base time units are in years, but the base unit of typhpoid is days
         if self.start is None:
             self.start = sim.pars['start']
@@ -517,22 +506,25 @@ class environmental_seasonality(ss.Intervention):
             self.dur = sim.pars['end'] - sim.pars['start']
 
         # This is the "time" variable that will be evaluated
-        self.time = sc.inclusiverange(0, self.dur, sim.dt)
-        self.results += ss.Result(self.name, 'seasonal_cfu',
-                                  len(self.time), dtype=float, label="Seasonal CFUs")  # additional cfu in the environment due to seasonality
-        self.initialized = True
-
+        self.time = sc.inclusiverange(0, self.dur, self.t.dt)
         return
 
-    def apply(self, sim):
-        if sim.year >= self.start and len(self.time):
+    def init_results(self):
+        super().init_results()
+        self.define_results(
+            ss.Result('seasonal_cfu', shape=len(self.time), dtype=float, label='Seasonal CFUs') # additional cfu in the environment due to seasonality
+        )
+        return
+
+    def step(self):
+        sim = self.sim
+        if sim.t.now('year') >= self.start and len(self.time): # CK: TODO: refactor
             seasonal_cfu = self.pattern(self.time[0])
             self.time = self.time[1:]
             val = (sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1] *
                    sim.demographics['environmentalpool'].pars.volume)
             sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1] = (val + seasonal_cfu) / sim.demographics['environmentalpool'].pars.volume
             self.results['seasonal_cfu'][self.ti] = seasonal_cfu
-            self.ti += 1
         return
 
 
@@ -543,9 +535,9 @@ class infectiousness_redux(ss.Product):
     and results in a reduction or blocking in shedding.
     """
 
-    def __init__(self, pars=None, *args, **kwargs):
+    def __init__(self, pars=None, **kwargs):
         super().__init__()
-        self.default_pars(multiplier=0.5)
+        self.define_pars(multiplier=0.5)
         self.update_pars(pars, **kwargs)
         return
 
@@ -560,21 +552,17 @@ class infectiousness_clearence(ss.Product):
     and results in a reduction or blocking in shedding.
     """
 
-    def __init__(self, pars=None, *args, **kwargs):
+    def __init__(self, pars=None, **kwargs):
         super().__init__()
-        self.default_pars(clearence_rate=0.2)  # in fraction of infectiousness CFUs per day that are cleared
+        self.define_pars(clearance_rate=ss.perday(0.2))  # in fraction of infectiousness CFUs per day that are cleared
         self.update_pars(pars, **kwargs)
         return
 
-    def init_pre(self, sim):
-        super().init_pre(sim)
-        self.initialized = True
-        return
-
-    def administer(self, sim, uids):
+    def administer(self, uids):
+        sim = self.sim
         # estimate how many CFUs are cleared in one timestep
-        clearence = sim.people.typhoid.infectiousness[uids] * (self.pars.clearence_rate / day2year) * sim.dt
-        sim.people.typhoid.infectiousness[uids] -= clearence
+        clearance = sim.people.typhoid.infectiousness[uids] * self.pars.clearance_rate
+        sim.people.typhoid.infectiousness[uids] -= clearance
         return
 
 
@@ -597,31 +585,29 @@ class vaccination_with_waning(ss.RoutineDelivery):
     """
     def __init__(self, *args, booster_prob=0.0, dose_interval=None, label=None, age_pars=None, debug=False, **kwargs):
         # **kwargs: years=None, start_year=None, end_year=None, prob=None, annual_prob=True,
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs) # CK: TODO: refactor with define_pars
         self.label = label
-        self.booster_prob = sc.promotetoarray(booster_prob)
-        self.dose_interval = dose_interval  # number of years betweem 1st dose and booster dose
+        self.booster_prob = sc.toarray(booster_prob)
+        self.dose_interval = ss.years(dose_interval)  # number of years betweem 1st dose and booster dose
         self.age_pars = ss.Pars(age_pars)
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
         self.eligibility = self.age_eligibility
-        self.vaccinated = ss.BoolArr('vaccinated')
+        self.vaccinated = ss.State('vaccinated')
         self.t_vaccinated = ss.FloatArr('t_vaccinated', default=np.nan)  # time (year) of vaccination
         self.a_vaccinated = ss.FloatArr('a_vaccinated', default=np.nan)  # aged at vaccination
         self.t_to_booster = ss.FloatArr('t_to_booster', default=np.nan)  # time until needing the booster
         self.n_doses = ss.FloatArr('n_doses')
         self.debug = debug
-        if self.debug:
-            self.results = ss.ndict()
         return
 
-    def init_pre(self, sim):
-        super().init_pre(sim)
-        dt = sim.pars.dt
-        self.booster_prob = self.booster_prob * np.ones(shape=len(self.prob))
+    def init_results(self):
+        super().init_results()
+        self.booster_prob = self.booster_prob * np.ones(shape=len(self.prob)) # CK: TODO: move this?
         # Test without new people being born
-
         if self.debug:
-            self.results += ss.Result(self.name, 'immunity', shape=(sim.npts, sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
+            self.define_results(
+                ss.Result('immunity', shape=(sim.npts, sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
+            )
         return
 
     def age_eligibility(self, sim):
@@ -642,16 +628,18 @@ class vaccination_with_waning(ss.RoutineDelivery):
         module.immunity_acquired[uids] = np.clip(max_immunity * tyum.box_exponential(sim.year, t_vaccinated, fixed_immunity, decay), a_min=0.0, a_max=1.0)
         return
 
-    def apply(self, sim):
+    def step(self):
         """
         Deliver the diagnostics by finding who's eligible, and apply the product, only once.
         """
+        sim = self.sim
+        sim_year = sim.t.now('year')
         vaccinated_uids = self.vaccinated.uids
-        if sim.year >= self.start_year and sim.year <= self.end_year:
-            self.t_to_booster[self.t_to_booster > 0.0] -= sim.dt
+        if sim_year >= self.start_year and sim.year <= self.end_year:
+            self.t_to_booster[self.t_to_booster > 0.0] -= self.dt
             ti = sc.findinds(self.timepoints, sim.ti)[0]
             prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
-            is_eligible = self.check_eligibility(sim)  # Check eligibility by age for first dose
+            is_eligible = self.check_eligibility()  # Check eligibility by age for first dose
             # Select never vaccinated
             is_eligible_not_vax = (is_eligible) & ~(self.vaccinated)
             self.coverage_dist.set(p=prob)
@@ -659,7 +647,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
             if len(new_accept_uids):
                 # Update people's state and dates
                 self.vaccinated[new_accept_uids] = True
-                self.t_vaccinated[new_accept_uids] = sim.year
+                self.t_vaccinated[new_accept_uids] = sim_year
                 self.a_vaccinated[new_accept_uids] = sim.people.age[new_accept_uids]
                 self.n_doses[new_accept_uids] = 1
                 self.t_to_booster[new_accept_uids] = self.dose_interval   # set the timer to get the booster
@@ -670,7 +658,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
                 is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster <= 0.0) # For boosters we do not filter by age
                 self.coverage_dist.set(p=booster_prob)
                 new_booster_uids = self.coverage_dist.filter(is_eligible_booster)
-                self.t_vaccinated[new_booster_uids] = sim.year
+                self.t_vaccinated[new_booster_uids] = sim_year
                 self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
                 self.t_to_booster[new_booster_uids] = np.inf # reset time for those who received the booster
                 self.n_doses[new_booster_uids] += 1
@@ -695,7 +683,7 @@ class blocking_vaccine(ss.Product):
 
     def __init__(self, pars=None, *args, **kwargs):
         super().__init__()
-        self.default_pars(efficacy=1.0)
+        self.define_pars(efficacy=1.0)
         self.update_pars(pars, **kwargs)
         return
 
@@ -722,7 +710,7 @@ class typhoid_vaccine(ss.Vx):
 
     def __init__(self, pars=None, *args, **kwargs):
         super().__init__()
-        self.default_pars(
+        self.define_pars(
             efficacy=0.9,
             leaky=True
         )
