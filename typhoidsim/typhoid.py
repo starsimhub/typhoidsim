@@ -29,7 +29,7 @@ class Typhoid(ss.Disease):
     def __init__(self, pars=None, *args, **kwargs):
         """Initialize with parameters"""
         super().__init__()
-        self.default_pars(
+        self.define_pars(
             # Initial conditions and transmissibility beta
             init_prev=ss.bernoulli(p=0.005),
 
@@ -46,9 +46,9 @@ class Typhoid(ss.Disease):
 
             # Prepatent stage, the parameters of the distribution of durations is CFU-dose dependent
             prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),   # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
-            prep_dur_fun=tyum.double_sigmoid_tanh,                        # Function to represent the 3 levels of each prepatent duration distribution parameter as s continous function
+            prep_dur_fun=tyum.double_sigmoid_tanh,                        # Function to represent the 3 levels of each prepatent duration distribution parameter as a continuous function
             dur_prep_dist=ss.lognorm_ex(mean=self.prepatent_mean_dur_function,
-                                        stdev=self.prepatent_std_dur_function),
+                                        std=self.prepatent_std_dur_function),
 
             cfu_lo_me=5_050_000.0,   # Threshold CFU value to determine whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose'  (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
             cfu_me_hi=55_000_000.0,  # Threshold CFU value to determine whether  to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
@@ -59,9 +59,9 @@ class Typhoid(ss.Disease):
             immunity_decay    = [505.27, 505.27, 505.27, 505.27],   # Decay time constant, in days, one value per age bin of interest
             immunity_max_acq_response = [1.0, 1.0, 1.0, 1.0],       # Maximum protection at t=0 of receiving a vaccine
 
-            # Infected/Diseased stage, (acute and sublinical)
+            # Infected/Diseased stage, (acute and subclinical)
             p_acute=ss.bernoulli(p=0.16),  # Prob of becoming acute
-            # Age-dependent acute and subclincial duration distribution parameters
+            # Age-dependent acute and subclinical duration distribution parameters
             inf_dur_th_age=30.0,     # Duration of clinically diagnosable cases (acute/subclinical) age threshold.
             # For people aged less than threshold
             inf_dur_mean_le=1.172,   # Acute/subclinical duration mean if age < age_threshold, in weeks.
@@ -70,8 +70,8 @@ class Typhoid(ss.Disease):
             inf_dur_mean_geq=1.172,  # Acute/subclinical duration mean if age >= age_threshold, in weeks.
             inf_dur_std_geq=0.788,   # Acute/subclinical duration std if age  >= age_threshold, in weeks.
             dur_inf_dist=ss.lognorm_ex(mean=self.inf_dur_mean,
-                                       stdev=self.inf_dur_std),     #  acute or subclinical duration, depends on age, expressed in weeks.
-            dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, stdev=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
+                                       std=self.inf_dur_std),     #  acute or subclinical duration, depends on age, expressed in weeks.
+            dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, std=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
 
             # Long-term stages
             # Chronic
@@ -79,7 +79,7 @@ class Typhoid(ss.Disease):
             d_chro=ss.bernoulli(p=self.chronic_gall_prob_function),    # Prob of becoming chronic carrier from acute or clinical infection modulated by gallstone prevalence
             p_gall=tyu.load_dataset("gallstone_probs"),    # Probability of having gallstones by age and sex
             # gall_prev=tyu.load_dataset("gallstone_prev"),  # Biological sex gallstone prevalence (expressed in fraction of the population, value between 0 and 1)
-            p_rec=ss.bernoulli(p=0.0),           # Prob of recovering from chronic state. Default 0 means everyone becomes a chronic carrier (duration of chronic state is inifinite)
+            p_rec=ss.bernoulli(p=0.0),           # Prob of recovering from chronic state. Default 0 means everyone becomes a chronic carrier (duration of chronic state is infinite)
             dur_chro_dist=ss.constant(v=102.0),  # Duration of chronic state, in weeks. 102 weeks is slightly over 2 years. In a sim shorter than this duration, it behaves as if chronic carriers never recover,
 
             # Recovered
@@ -101,7 +101,7 @@ class Typhoid(ss.Disease):
 
             # ENVIRONMENT PARAMETERS
             has_environment=None,
-            # Tranmission parameters
+            # Transmission parameters
             transmission=ss.Pars(
                 # Behavioural interaction parameters between people and environment
                 env2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_env),
@@ -112,18 +112,18 @@ class Typhoid(ss.Disease):
                 p_route=ss.uniform()  # NOTE: currently unused, but stub for transmission route selection. See: https://github.com/starsimhub/typhoidsim/issues/102
             ),
 
-             beta=None, # NOTE: Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
+            beta=None, # NOTE: Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
                    # Its value will be updated to be dt during validation, so the net effect is a beta=1 per time step.
         )
         self.update_pars(pars, **kwargs)
 
         # Parametrisation of prepatent duration distribution parameters (ie, mean and std are functions of CFU dose)
-        self.partial_prep_dur_mean,  self.partial_prep_dur_std = self.prepare_partial_prep_funs()
+        self.partial_prep_dur_mean, self.partial_prep_dur_std = self.prepare_partial_prep_funs()
 
         # Parameterisation of immunity waning parameters with respect to age
         self.pars.immunity_age_bins = sc.promotetoarray(self.pars.immunity_age_bins)
         self.pars.immunity_fixed_dur = sc.promotetoarray(self.pars.immunity_fixed_dur)
-        self.pars.immunity_decay = sc.promotetoarray( self.pars.immunity_decay)
+        self.pars.immunity_decay = sc.promotetoarray(self.pars.immunity_decay)
         self.pars.immunity_max_acq_response = sc.promotetoarray(self.pars.immunity_max_acq_response)
 
         self.imm_fixed_dur   =  stratify_parameter_by_age(self.pars.immunity_age_bins, self.pars.immunity_fixed_dur/typhoidsim.days_per_year)
@@ -132,17 +132,17 @@ class Typhoid(ss.Disease):
 
 
         # Boolean states
-        self.add_states(
+        self.define_states(
             # Infection life cycle states
-            ss.BoolArr("susceptible", default=False, label="Susceptible"),
-            ss.BoolArr("infected", default=False, label="Infectious"),
-            ss.BoolArr("unexposed", default=True, label="Unexposed"),  # People are born into this state, naive and never exposed
-            ss.BoolArr("prepatent", default=False, label="Prepatent"),  # Also known as exposed state (incubation stage)
-            ss.BoolArr("acute", default=False, label="Acute"),
-            ss.BoolArr("subclinical", default=False, label="Subclinical"),
-            ss.BoolArr("chronic", default=False, label="Chronic"),
-            ss.BoolArr("recovered", default=False, label="Recovered/Been Infected"),
-            ss.BoolArr("infected_ever", default=False, label="Ever Infected"),
+            ss.State("susceptible", default=False, label="Susceptible"),
+            ss.State("infected", default=False, label="Infectious"),
+            ss.State("unexposed", default=True, label="Unexposed"),  # People are born into this state, naive and never exposed
+            ss.State("prepatent", default=False, label="Prepatent"),  # Also known as exposed state (incubation stage)
+            ss.State("acute", default=False, label="Acute"),
+            ss.State("subclinical", default=False, label="Subclinical"),
+            ss.State("chronic", default=False, label="Chronic"),
+            ss.State("recovered", default=False, label="Recovered/Been Infected"),
+            ss.State("infected_ever", default=False, label="Ever Infected"),
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
@@ -156,7 +156,7 @@ class Typhoid(ss.Disease):
             ss.FloatArr("immunity_acquired", default=0.0, label="Acquired Immunity Level"),  # Acquired/evoked immune protection against infection due to vaccinations, a value between 0 and 1
 
             # Track some probabilities; some are not  used now but will become important in multi-route transmission
-            ss.FloatArr("p_resp", default=0.0, label="Probability of responset to infection"),  # The prbability of having a response to pathogens, usually a term involved in determining p_infc
+            ss.FloatArr("p_resp", default=0.0, label="Probability of response to infection"),  # The probability of having a response to pathogens, usually a term involved in determining p_infc
             ss.FloatArr("p_infc", default=0.0, label="Probability of Infection"),      # Track probability of infection
             ss.FloatArr("p_route", default=0.0, label="Probability Route Draw"),       # Probability to determine which route will be the route if infection
             ss.FloatArr("infc_origin", label="Origin of infection"),                   # Track origin of infection
@@ -177,10 +177,6 @@ class Typhoid(ss.Disease):
 
         )
 
-        # Define random number generators for make_new_cases
-        self.rng_target = ss.rand_raw(name='target')
-        self.rng_source = ss.rand_raw(name='source')
-
         return
 
     def init_pre(self, sim):
@@ -190,7 +186,7 @@ class Typhoid(ss.Disease):
         self.validate_environment()
         return
 
-    def validate_beta(self):
+    def validate_beta(self): CK: TODO: remove
         """
         Perform any parameter validation
         """
@@ -206,7 +202,7 @@ class Typhoid(ss.Disease):
                 # expect this parameter to exist. To cancel out the effect we set
                 # beta to be the time step, such that when beta_per_dt is calculated
                 # the effective value is 1.0
-                self.pars.beta = 1./self.sim.dt
+                self.pars.beta = 1./self.t.dt
 
             # If beta is a scalar, apply this bi-directionally to all networks
             if sc.isnumber(self.pars.beta):
@@ -221,7 +217,7 @@ class Typhoid(ss.Disease):
                         self.pars.beta[k] = [β, β]
         return
 
-    def init_post(self):
+    def old_init_post(self): # CK: TODO: remove
         """
         Set initial values for all agent states, and seed new cases if initial
         prevalence is provided.
@@ -229,6 +225,7 @@ class Typhoid(ss.Disease):
         This function could involve passing in a full set of initial conditions,
         or using init_prev (initial prevalence), or other.
         """
+        super().init_post() # CK: check
         # NOTE: Typhoid assumes that all individuals are born into an
         # a class where they cannot get infected (called unexposed here) and then
         # move to the susceptible class at probabilities for each age.
@@ -288,21 +285,20 @@ class Typhoid(ss.Disease):
         Initialise Result objects
         """
         super().init_results()
-        npts = self.sim.npts
-        self.results += [
-            ss.Result(self.name, "prevalence", npts, dtype=float, scale=False, label="Prevalence"),
-            ss.Result(self.name, "new_infections", npts, dtype=int, scale=True, label="New Infections"),
-            ss.Result(self.name, "cum_infections", npts, dtype=int, scale=True, label="Cumulative Infections"),
-            ss.Result(self.name, "new_susceptible", npts, dtype=int, scale=True, label="New Susceptible"),
-            ss.Result(self.name, "new_prepatent", npts, dtype=int, scale=True, label="New Prepatent"),
-            ss.Result(self.name, "new_acute", npts, dtype=int, scale=True, label="New Acute"),
-            ss.Result(self.name, "cum_acute", npts, dtype=int, scale=True, label="Cumulative Acute"),
-            ss.Result(self.name, "new_subclinical", npts, dtype=int, scale=True, label="New Subclinical"),
-            ss.Result(self.name, "new_chronic", npts, dtype=int, scale=True, label="New Chronic"),
-            ss.Result(self.name, "new_recovered", npts, dtype=int, scale=True, label="New Recovered"),
-            ss.Result(self.name, "new_deaths", npts, dtype=int, scale=True, label="New Dead"),
-            ss.Result(self.name, "cum_deaths", npts, dtype=int, scale=True, label="Cumulative Dead"),
-        ]
+        self.define_results(
+            ss.Result("prevalence", dtype=float, scale=False, label="Prevalence"),
+            ss.Result("new_infections", dtype=int, scale=True, label="New Infections"),
+            ss.Result("cum_infections", dtype=int, scale=True, label="Cumulative Infections"),
+            ss.Result("new_susceptible", dtype=int, scale=True, label="New Susceptible"),
+            ss.Result("new_prepatent", dtype=int, scale=True, label="New Prepatent"),
+            ss.Result("new_acute", dtype=int, scale=True, label="New Acute"),
+            ss.Result("cum_acute", dtype=int, scale=True, label="Cumulative Acute"),
+            ss.Result("new_subclinical", dtype=int, scale=True, label="New Subclinical"),
+            ss.Result("new_chronic", dtype=int, scale=True, label="New Chronic"),
+            ss.Result("new_recovered", dtype=int, scale=True, label="New Recovered"),
+            ss.Result("new_deaths", dtype=int, scale=True, label="New Dead"),
+            ss.Result("cum_deaths", dtype=int, scale=True, label="Cumulative Dead"),
+        )
         return
 
     def _check_betas(self):
@@ -359,8 +355,8 @@ class Typhoid(ss.Disease):
         born into the unexposed state and are moved immediately to the susceptible
         state.
 
-        However, there are a couple of predefined age-specific susceptibilty
-        probabilty functions implemented:
+        However, there are a couple of predefined age-specific susceptibility
+        probability functions implemented:
          - unexp2sus_youth_prob_function_gauld2018()
          - unexp2sus_childhood_prob_function_gauld2018()
 
@@ -378,10 +374,10 @@ class Typhoid(ss.Disease):
         never_exposed = (self.unexposed).uids
         self.susceptible[never_exposed] = self.pars.p_unexp2sus.rvs(never_exposed)
         self.unexposed[never_exposed] = ~self.susceptible[never_exposed]
-        self.ti_susceptible[never_exposed] = self.sim.ti  # Save the timing people became susceptible
+        self.ti_susceptible[never_exposed] = self.ti  # Save the timing people became susceptible
         return
 
-    def update_death(self, uids):
+    def step_die(self, uids):
         """Reset states for dead agents"""
         for state in [
             "susceptible",
@@ -397,14 +393,13 @@ class Typhoid(ss.Disease):
         return
 
     # Update progression of disease, handle transitions
-    def update_pre(self):
+    def step_state(self):
         """
         Update the progression of the disease -- handles disease state transitions.
         In a typical simulation flow this method is called before propagating
         the infection/disease is propagated via make_new_cases()
         """
-
-        ti = self.sim.ti  # current timestep
+        ti = self.ti  # current timestep
 
         # If the population does not age, then over a long simulation, eventually all people aged 0-20 will transition to the susceptible state.
         self.make_susceptible()
@@ -415,7 +410,7 @@ class Typhoid(ss.Disease):
 
         # The infection life cycle or natural history flow
         # handles transitions between any two infection states or stages
-        self.progress_to_prepatent(ti)  # Incubation period
+        self.progress_to_prepatent(ti)  # Incubation period # CK: TODO: use self.ti instead for all
         self.progress_to_diseased(ti)   # Both acute and subclinical
         self.progress_to_chronic(ti)
         self.progress_to_recovered(ti)
@@ -499,7 +494,8 @@ class Typhoid(ss.Disease):
     # Methods that handle durations/duration pars that are dependent on other variables/states
     def get_prepatent_duration_by_exposure(self, uids):
         """ Get durations in number of timesteps"""
-        dt = self.sim.dt
+        print('WARNING: TODO reminder: replace all /dt with time units')
+        dt = self.t.dt
         dur_prep = self.pars.dur_prep_dist.rvs(uids).astype(float)  # in days
         dur_prep = dur_prep * tyd.day2year  # in years
         return sc.randround(dur_prep / dt)  # in number of timesteps
@@ -509,7 +505,7 @@ class Typhoid(ss.Disease):
         Duration of the acute stage
         """
         p = self.pars
-        dt = self.sim.dt
+        dt = self.t.dt
         dur_acu = p.dur_inf_dist.rvs(uids) * tyd.days_per_week  # in days
         dur_acu = dur_acu * tyd.day2year  # in years
         return sc.randround(dur_acu / dt)  # in number of timesteps
@@ -519,7 +515,7 @@ class Typhoid(ss.Disease):
         Determine duration of the sublinical stage
         """
         p = self.pars
-        dt = self.sim.dt
+        dt = self.t.dt
         dur_scl = p.dur_inf_dist.rvs(uids) * tyd.days_per_week  # in days
         dur_scl = dur_scl * tyd.day2year
         return sc.randround(dur_scl / dt)
@@ -530,14 +526,14 @@ class Typhoid(ss.Disease):
         seeking treatment
         """
         p = self.pars
-        dt = self.sim.dt
+        dt = self.simt.dt
         dur_wait = p.dur_wait2treatment.rvs(uids).astype(float)
         dur_wait = dur_wait * tyd.day2year
         return sc.randround(dur_wait / dt)
 
     def get_recovered_duration(self, uids):
         p = self.pars
-        dt = self.sim.dt
+        dt = self.t.dt
         dur_rec = p.dur_rec_dist.rvs(uids)  # duration in days
         dur_rec = dur_rec * tyd.day2year                  # duration in years
         return sc.randround(dur_rec / dt)        # duration in integer number of timesteps
@@ -548,7 +544,7 @@ class Typhoid(ss.Disease):
         See: https://github.com/starsimhub/typhoidsim/issues/66
         """
         p = self.pars
-        dt = self.sim.dt
+        dt = self.t.dt
         dur_chro = p.dur_chro_dist.rvs(uids) * tyd.days_per_week  # duration in in days
         dur_chro = dur_chro * tyd.day2year        # duration in years
         return sc.randround(dur_chro / dt)        # duration in integer number of timesteps
@@ -560,8 +556,8 @@ class Typhoid(ss.Disease):
         they have been exposed to. Assumes the parameter will be used by a
         lognormal_ex distribution.
         """
-        # NOTE: this check is necesary other wise lognorm_ex fails at initialisation
-        # when the module has not been initialised and uids are None
+        # NOTE: this check is necessary otherwise lognorm_ex fails at initialization
+        # when the module has not been initialized and uids are None
         if uids is None:
             mu = []
         else:
@@ -598,8 +594,8 @@ class Typhoid(ss.Disease):
         unexposed to susceptible. From Gauld et al 2018, Fig. 2B.
 
         Args:
-            module: a startsim (disease) Module
-            sim: the starsim Sim object (fully initialised)
+            module: a starsim (disease) Module
+            sim: the starsim Sim object (fully initialized)
             uids: the uids of the eligible people
 
             # Parameters for age-based transition from unexposed to susceptible (Gauld et al. 2018)
@@ -629,8 +625,8 @@ class Typhoid(ss.Disease):
         sat_age = module.pars.unexp2sus_saturation_age
         slope = module.pars.unexp2sus_slope
         p2 = tyum.sigmoid(sim.people.age[uids], sat_age, slope)
-        p1 = tyum.sigmoid(sim.people.age[uids] - sim.dt, sat_age, slope)
-        if sim.ti == 0:
+        p1 = tyum.sigmoid(sim.people.age[uids] - sim.t.dt, sat_age, slope)
+        if self.ti == 0:
             p_sus = p2
         else:
             p_sus = ((p2 - p1) / (1.0 - p1))
@@ -666,7 +662,7 @@ class Typhoid(ss.Disease):
         """Determine who will become a chronic carrier"""
         return self.pars.d_chro.filter(uids)
 
-    def set_prognoses(self, uids, source_uids=None):
+    def set_prognoses(self, uids, sources=None):
         """
         Here we define the whole natural history for every agent that has been infected.
         Specifically, we define *how long* each agent will stay in each stage
@@ -678,8 +674,8 @@ class Typhoid(ss.Disease):
         interventions, or other diseases.
         """
         p = self.pars
-        ti = self.sim.ti
-        dt = self.sim.dt
+        ti = self.ti
+        dt = self.t.dt
 
         # Set value of states associated to being infected, and record events
         self.ti_prepatent[uids] = ti
@@ -750,7 +746,7 @@ class Typhoid(ss.Disease):
 
     #  Transmission-realated methods - interaction between agents and "else" (other agents)
     #  or the environment
-    def make_new_cases(self):
+    def infect(self):
         """
         Handle transmission of pathogens and who becomes infected,
         includes all transmission routes. This method is called by the Sim object.
@@ -794,8 +790,8 @@ class Typhoid(ss.Disease):
         new_cases = []
         sources = []
         networks = []
-        betamap = self._check_betas()
-        dt = self.sim.dt
+        betamap = self.validate_beta()
+        dt = self.t.dt
 
         for i, (nkey, net) in enumerate(self.sim.networks.items()):
             if not len(net):
@@ -817,7 +813,7 @@ class Typhoid(ss.Disease):
 
                 # In typhoid source->target 'physical contact' is guaranteed,
                 # but transmission of pathogens and probability of infection are not.
-                #beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.sim.dt)  # This is equal to 1, but needs to be here for starsim networks
+                #beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.t.dt)  # This is equal to 1, but needs to be here for starsim networks
 
                 # EXPOSURE/TRANSMISSION/INFECTION PROB Exposure encompasses exposure frequency per unit of time
                 self.p_resp[trg] = (self.infectiousness[src] / self.pars.tai) * rel_trans[src] * ((self.pars.transmission.exposure2contact_rate / tyd.day2year) * dt)
@@ -849,7 +845,7 @@ class Typhoid(ss.Disease):
             # high dose prepatent duration, meaning that the characteristic dose a
             # target agent receives has to be set to be a value larger than self.pars.cfu_me_hi
             self.cfu_dose[new_cases] = self.pars.cfu_me_hi + 0.1 * self.pars.cfu_me_hi
-            self.set_prognoses(new_cases, source_uids=None)
+            self.set_prognoses(new_cases, sources=None)
             self.infc_origin[new_cases] = tyd.TransmissionRoute.CONTACT.value
 
         return new_cases, sources, networks
@@ -876,8 +872,8 @@ class Typhoid(ss.Disease):
         """
         if not self.pars.has_environment:
             return []
-        ti = self.sim.ti
-        dt = self.sim.dt
+        ti = self.ti
+        dt = self.t.dt
         n_agents = self.sim.pars["n_agents"]
         exposure_volume = 1.0 / n_agents  # CFUs in the environment need to be proportionally distributed among agents, so we don't have the case where number of CFUs received by agents > CFU's available in the environment
         environment = self.sim.demographics['environmentalpool']
@@ -892,7 +888,7 @@ class Typhoid(ss.Disease):
 
         # EXPOSURE: Increase cfu doses in susceptible people by exposing them to the environment
         # NOTE: left exposure amount and n_exposures for interpretability, they should be identical
-        self.exposure_amount[susc_uids] = ((environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt)  # expoosure amount expressed in (n_exposures * volume) on the time interval "dt"
+        self.exposure_amount[susc_uids] = ((environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt)  # exposure amount expressed in (n_exposures * volume) on the time interval "dt"
         self.n_exposures[susc_uids] = self.exposure_amount[susc_uids] / environment.pars.volume  # env volume=1. Units of n_exposures [counts] =  (counts * volume) / volume
 
         self.cfu_dose_per_exposure[susc_uids] = environment.sv.cfu_conc[ti - 1] * exposure_volume * env_trans_pars.rel_trans   # Units exposure_amount [# of pathogens] =  cfu_conc [pathogens/volume] * (n_exposures * volume) --> total pathogens
@@ -908,7 +904,6 @@ class Typhoid(ss.Disease):
             self.cfu_dose[new_cases] = self.cfu_dose_per_exposure[new_cases]
             self.set_prognoses(new_cases, source_uids=None)
             self.infc_origin[new_cases] = tyd.TransmissionRoute.ENVIRONMENT.value
-
 
         # SHEDDING: Transmission people->environment:
         #     Infectious individuals shed contagion into the contagion pool.
@@ -1003,7 +998,7 @@ class Typhoid(ss.Disease):
     def update_results(self):
         super().update_results()
         res = self.results
-        ti = self.sim.ti
+        ti = self.ti
         n = np.count_nonzero(self.sim.people.alive)
         res.prevalence[ti] = res.n_infected[ti] / n
         res.new_infections[ti] = np.count_nonzero(self.ti_infected == ti)
@@ -1023,7 +1018,7 @@ class Typhoid(ss.Disease):
 
 def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
     """
-    Estimate the age-dependent probability of transistioning from
+    Estimate the age-dependent probability of transitioning from
     unexposed to susceptible. From Gauld et al 2018, Fig. 2B.
 
     Age-specific immunity. Individuals that are created through births in the model
@@ -1045,8 +1040,8 @@ def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
      by the calibrated values below
 
     Args:
-        module: a startsim (disease) Module
-        sim: the starsim Sim object (fully initialised)
+        module: a starsim (disease) Module
+        sim: the starsim Sim object (fully initialized)
         uids: the uids of the eligible people
 
     Returns:
@@ -1073,11 +1068,11 @@ def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
 def _detect_age_anniversary(sim, age_anniversary):
     """
     Detect people who crossed a specific age_anniversary, does not
-    have to be birthday necesarrily.
+    have to be birthday necessarily.
 
     Returns Boolean array
     """
-    reached_anniv = (((sim.people.age - sim.dt) < age_anniversary) &
+    reached_anniv = (((sim.people.age - sim.t.dt) < age_anniversary) &
                       (sim.people.age >= age_anniversary))
     return reached_anniv
 
@@ -1090,7 +1085,7 @@ def _detect_birthday(sim):
 
     Returns Boolean array
     """
-    prev_int_age = sim.people.age - sim.dt
+    prev_int_age = sim.people.age - sim.t.dt
     current_int_age = sim.people.age
     had_bday = (current_int_age.astype(int) - prev_int_age.astype(int)) == 1
     return had_bday
