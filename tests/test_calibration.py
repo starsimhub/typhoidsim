@@ -26,7 +26,7 @@ def instantiate_sim():
     sim = ss.Sim(
         n_agents=n_agents,
         start=2000.0,
-        n_years=5,
+        dur=5,
         dt=1.0,
         diseases=typhoid,
     )

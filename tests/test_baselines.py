@@ -17,7 +17,7 @@ sc.options(interactive=False)  # Assume not running interactively
 pars = sc.objdict(
     n_agents=10e3,             # Number of agents
     start=2000,                # Starting year
-    n_years=2,                # Number of years to simulate
+    dur=2,                # Number of years to simulate
     dt=1.0/ty.days_per_year,   # Timestep of 1 day, expressed in years
     verbose=0,                 # Don't print details of the run
     rand_seed=2,               # Set a non-default seed
@@ -140,7 +140,7 @@ def test_benchmark(do_save=False, repeats=1, verbose=True):
     },
         'parameters': {
             'n_agents': sim.pars.n_agents,
-            'n_years': sim.pars.n_years,
+            'dur': sim.pars.dur,
             'dt': sim.pars.dt,
         },
         'cpu_performance': ratio,

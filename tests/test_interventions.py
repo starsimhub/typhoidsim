@@ -18,7 +18,7 @@ def run_sim_vaccine(efficacy, leaky=True, do_plot=False):
     # Define high-level simulation parameters
     pars = dict(
         start=2000,  # Starting year
-        n_years=1.0,  # Duration of the simulation in years
+        dur=1.0,  # Duration of the simulation in years
         dt=1.0/365.0,  # Timestep of 1 day, expressed in years
         verbose=0,  # Do not print details of the run
     )
@@ -98,7 +98,7 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
     # Define high-level simulation parameters
     pars = dict(
         start=2000,  # Starting year
-        n_years=2.0/365.0,  # Duration of the simulation in years
+        dur=2.0/365.0,  # Duration of the simulation in years
         dt=1.0/365.0,  # Timestep of 1 day, expressed in years
         verbose=0,  # Do not print details of the run
     )

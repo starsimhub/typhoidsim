@@ -11,7 +11,7 @@ import typhoidsim as ty
 pars = sc.objdict(
     n_agents=10e3,             # Number of agents
     start=2000,                # Starting year
-    n_years=2,                 # Number of years to simulate
+    dur=2,                     # Number of years to simulate
     dt=1.0/ty.days_per_year,   # Timestep of 1 day, expressed in years
     verbose=0,                 # Don't print details of the run
     rand_seed=2,               # Set a non-default seed
