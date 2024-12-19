@@ -16,7 +16,7 @@ from . import utils as tyu
 
 
 __all__ = ['Calibration220', 'CalibComponent220', 'compute_gof', 'euclidean', 'beta_binomial',
-           'weighted_euclidean', 'normalized_median_absolute_error']
+           'weighted_euclidean', 'normalized_median_absolute_error', 'nll_beta', 'nll_gamma']
 
 
 def compute_gof(expected, predicted, normalize=True, use_frac=False, use_squared=False,
@@ -733,8 +733,15 @@ class CalibComponent220(sc.prettyobj):
         """ Compute and return the negative log likelihood """
         predicted = self.extract_fn(sim)                          # Extract simulated data
         self.predicted = self.conform(self.expected, predicted)   # Conform/interpolate to common time grid based on timepoints available in expected data
-        self.nll = self.nll_fn(self.expected, predicted)          # Negative log likelihood
-        return self.weight * np.sum(self.nll)                     # Sum across timepoints
+        if not self.expected.index.equals(self.predicted.index):
+            raise IndexError("Time indices of 'expected' and 'conformed predicted' are not equal. Check your extraction functions or your data.")
+
+        # Check that predicted is not full of NaNs -- could be if denominator is 0
+        if (self.predicted["x"].isna().all()) or (self.expected["x"] - self.predicted["x"]).isna().all():
+            return np.inf
+
+        self.nll = self.nll_fn(self.expected, self.predicted)     # Negative log likelihood
+        return self.weight * np.sum(self.nll)
 
     def __call__(self, sim):
         return self.eval(sim)
@@ -825,7 +832,7 @@ def linear_interp(expected, actual):
         actual (pd.Dataframe): dataframe containing the 'current' or 'actual' data we have (usually from simulated sources) data
              The index should be the time in either floating point 'calendar years' or datetime.
     Returns:
-        conformed (pd.Dataframe): dataframe containing the actual or current data
+        conformed (pd.Dataframe): dataframe containing the actual (aka simulated/predictec) data
             that have been interpolated to match a common timeframe with the data in `expected`.
             The interpolation ensures that the two datasets (expected and actual)
             can be compared directly (one-to-one) or used together in further
@@ -833,8 +840,10 @@ def linear_interp(expected, actual):
     """
     conformed = pd.DataFrame(index=expected.index)
     common_time_grid = expected.index
-    for col in ["x", "n"]:
+    interp_cols = ["x", "n"]
+    for col in interp_cols:
         conformed[col] = np.interp(x=common_time_grid, xp=actual.index, fp=actual[col])
+    conformed = _handle_categorical_columns(actual, conformed, interp_cols)
     return conformed
 
 
@@ -859,7 +868,7 @@ def linear_accum(expected, actual):
     """
     conformed = pd.DataFrame(index=expected.index)
     common_time_grid = expected.index
-    expected_sampling_period = np.diff(common_time_grid )
+    expected_sampling_period = np.diff(common_time_grid)
     assert np.all(expected_sampling_period == expected_sampling_period[0])  # Check we have regularly sampled data
 
     # Make cumulative
@@ -869,10 +878,30 @@ def linear_accum(expected, actual):
         actual_time_grid = np.array([sc.datetoyear(t) for t in actual.index if isinstance(t, datetime.date)])
     else:
         actual_time_grid = actual.index
-
-    for col in ["x", "n"]:
+    interp_cols = ["x", "n"]
+    for col in interp_cols:
         sdi = np.interp(x=cum_time_grid, xp=actual_time_grid, fp=actual[col].cumsum())
         conformed[col] = pd.Series(np.diff(sdi), index=common_time_grid)
+    conformed = _handle_categorical_columns(actual, conformed, interp_cols)
+    return conformed
+
+
+def _handle_categorical_columns(actual, conformed, interp_cols):
+    """
+    A convinience function to map other columns, like categorical columns, from
+    the index in the actual dataframe, to the index of the
+    actual conformed dataframe.
+    """
+    other_cols = list(set(actual.columns) - set(interp_cols))
+    # Handle other columsn, inlcuding those with categorical data
+    actual_index_array = actual.index.to_numpy()
+    conformed_index_array = conformed.index.to_numpy()
+    for col in other_cols:
+        abs_diff_matrix = np.abs(conformed_index_array[:, None] - actual_index_array)
+        min_diff_indices = np.argmin(abs_diff_matrix, axis=1)
+        temp = actual.loc[actual_index_array[min_diff_indices], [col]].reset_index(drop=True)
+        temp.index = conformed.index
+        conformed[col] = temp[col]
     return conformed
 
 
