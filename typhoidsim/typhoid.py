@@ -878,7 +878,7 @@ class Typhoid(ss.Disease):
             return []
         ti = self.sim.ti
         dt = self.sim.dt
-        n_agents = self.sim.pars["n_agents"]
+        n_agents = np.count_nonzero(self.sim.people.alive) # current N, number of agents currently alive
         exposure_volume = 1.0 / n_agents  # CFUs in the environment need to be proportionally distributed among agents, so we don't have the case where number of CFUs received by agents > CFU's available in the environment
         environment = self.sim.demographics['environmentalpool']
         env_trans_pars = environment.pars.transmission
