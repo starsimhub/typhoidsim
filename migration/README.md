@@ -1,0 +1,3 @@
+# Migration
+
+This folder contains the Starsim-AI script that was used to "automatically" port Typhoidsim from Starsim v1.0.3 to Starsim v2.2.0. In practice, Starsim-AI was quite effective at identifying _where_ changes needed to be made, but some manual attention was still required to check that the proposed change was correct. The pre-migration versions of the migrated files are in the `pre_migration` folder.
