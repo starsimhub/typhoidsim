@@ -1,5 +1,5 @@
 """
-Test that the number of infections tracked in results and as internal state adds up
+Test that the number of infections tracked in results and as internal state add up
 """
 
 import sciris as sc
@@ -21,7 +21,12 @@ pars = sc.objdict(
 def make_sim(run=False):
     """
     """
-    diseases = [ty.Typhoid()]
+    # If p_death > 0, cum_infections[ti_end] not necessarily equal to sim.diseases.typhoid.n_infections.sum().
+    #     if p_death > 0, then sim.diseases.typhoid.n_infections.sum() <= cum_infections[ti_end]
+    # Results account for people who died on a given timestep before agents are removed but at the end of a simulation
+    # sim.diseases.typhoid.n_infections.sum() will have the "total" number of infections experienced by agents currently alive,
+    # while cum_infections will have the totsl number of infections experienced by all agents who ever lived throughout the simulation
+    diseases = [ty.Typhoid(pars={"p_death": ss.bernoulli(p=0.00)})]
     networks = [ ss.RandomNet({'n_contacts': 5})]
     sim = ss.Sim(pars=pars, networks=networks, diseases=diseases)
 

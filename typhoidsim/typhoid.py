@@ -87,7 +87,7 @@ class Typhoid(ss.Disease):
             # TODO: do we need a parameter that embodies the probability of clinical immunity after acute infection?
 
             # Death
-            p_death=ss.bernoulli(p=0.00),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
+            p_death=ss.bernoulli(p=0.01),   # Probability of dying from acute, context dependent, and by default set to something zero or something very small
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Infectiousness parameters
@@ -396,6 +396,7 @@ class Typhoid(ss.Disease):
             "recovered",
         ]:
             self.statesdict[state][uids] = False
+            self.statesdict[f"ti_{state}"][uids] = np.nan
         self.statesdict["unexposed"][uids] = False
         return
 
