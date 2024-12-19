@@ -68,10 +68,11 @@ class EnvironmentalPool(ss.Demographics):
         ti = self.ti
         p = self.pars
         # For external changes that may promote bacterial growth
-        effective_rate = p.decay_rate.values  # Use the rate directly transformed to the timestep
+        change_rate = p.decay_rate
+        effective_rate = (change_rate / tyd.day2year) # TODO SOON: p.decay_rate.values  # Use the rate directly transformed to the timestep
 
         prev_cfu = self.sv.cfu_conc_buffer[ti % self.buffer_isteps]
-        self.sv.cfu_conc[ti] = prev_cfu * np.exp(-effective_rate)  # + shedded into environment + decay
+        self.sv.cfu_conc[ti] = prev_cfu * np.exp(-effective_rate*sim.t.dt) # TODO SOON: prev_cfu * np.exp(-effective_rate)  # + shedded into environment + decay
         return
 
     def update_results(self):

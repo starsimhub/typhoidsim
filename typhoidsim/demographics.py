@@ -76,7 +76,7 @@ class Births(ss.Demographics): # TODO SOON: replace with built-in one
         else:
             this_birth_rate = p.birth_rate
 
-        factor = ss.time_ratio(unit1=self.t.unit, dt1=self.t.dt, unit2='year', dt2=1.0)
+        scaled_birth_prob = this_birth_rate * p.units * p.rel_birth * sim.pars.dt
         scaled_birth_prob = this_birth_rate * p.rate_units * p.rel_birth * factor
         scaled_birth_prob = np.clip(scaled_birth_prob, a_min=0, a_max=1)
         n_new = np.random.binomial(n=sim.people.alive.count(), p=scaled_birth_prob) 
@@ -96,15 +96,12 @@ class Births(ss.Demographics): # TODO SOON: replace with built-in one
         return new_uids
 
     def update_results(self):
-        self.results.new[self.ti] = self.n_births
-
-        inv_rate_units = 1.0/self.pars.rate_units
-        births_per_year = self.n_births/self.sim.t.dt_year
-        denom = self.sim.people.alive.sum()
-        self.results.cbr[self.ti] = inv_rate_units * births_per_year / denom
+        self.results['new'][self.sim.ti] = self.n_births
         return
 
     def finalize(self):
         super().finalize()
-        self.results.cumulative[:] = np.cumsum(self.results.new)
+        res = self.sim.results
+        self.results.cumulative = np.cumsum(self.results.new)
+        self.results.cbr = 1/self.pars.units*np.divide(self.results.new/self.sim.dt, res.n_alive, where=res.n_alive>0)
         return
