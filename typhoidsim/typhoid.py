@@ -177,6 +177,8 @@ class Typhoid(ss.Disease):
 
         )
 
+        self.n_initial_cases = None
+
         return
 
     def init_pre(self, sim):
@@ -237,13 +239,14 @@ class Typhoid(ss.Disease):
         self.make_susceptible()
 
         if self.pars.init_prev is None:
+            self.n_initial_cases = 0.0
             return
 
         if self.pars.init_prev is not None:
-            # Initial cases
-            initial_cases = self.pars.init_prev.filter()
-            # TODO: need to decide what would be an appropriate dose for these initial case, so we can pick the right mu-sigma pair
+            initial_cases = self.pars.init_prev.filter((self.susceptible).uids)
             self.set_prognoses(initial_cases)
+            self.progress_to_prepatent(self.sim.ti)  # Incubation period
+            self.n_initial_cases = len(initial_cases)
         return
 
     def prepare_partial_prep_funs(self):
@@ -389,6 +392,7 @@ class Typhoid(ss.Disease):
             "recovered",
         ]:
             self.statesdict[state][uids] = False
+            self.statesdict[f"ti_{state}"][uids] = np.nan
         self.statesdict["unexposed"][uids] = False
         return
 
@@ -410,7 +414,6 @@ class Typhoid(ss.Disease):
 
         # The infection life cycle or natural history flow
         # handles transitions between any two infection states or stages
-        self.progress_to_prepatent(ti)  # Incubation period # CK: TODO: use self.ti instead for all
         self.progress_to_diseased(ti)   # Both acute and subclinical
         self.progress_to_chronic(ti)
         self.progress_to_recovered(ti)
@@ -420,7 +423,7 @@ class Typhoid(ss.Disease):
 
     # Methods that handle transitions between states
     def progress_to_prepatent(self, ti):
-        susc2prep = (self.susceptible & (self.ti_prepatent <= ti)).uids
+        susc2prep = (self.prepatent & (self.ti_prepatent == ti)).uids
         self.prepatent[susc2prep] = True
         self.susceptible[susc2prep] = False
         self.unexposed[susc2prep] = False
@@ -433,7 +436,7 @@ class Typhoid(ss.Disease):
         # in hyper-endemic settings,
         # but we may want to incorporate a mechanism
         # to wane naturally acquired immunity.
-        self.n_infections[susc2prep] += 1.0
+        self.n_infections[susc2prep] = self.n_infections[susc2prep] + 1.0
         self.infectiousness[susc2prep] = self.pars.tai * self.pars.tpri
 
     def progress_to_diseased(self, ti):
@@ -680,6 +683,7 @@ class Typhoid(ss.Disease):
         # Set value of states associated to being infected, and record events
         self.ti_prepatent[uids] = ti
         self.ti_infected[uids] = ti
+        self.prepatent[uids] = True
 
         # Durations returned by functions are in units of "number of timesteps"
         # Set duration of prepatent state, by defining when they will
@@ -846,6 +850,7 @@ class Typhoid(ss.Disease):
             # target agent receives has to be set to be a value larger than self.pars.cfu_me_hi
             self.cfu_dose[new_cases] = self.pars.cfu_me_hi + 0.1 * self.pars.cfu_me_hi
             self.set_prognoses(new_cases, sources=None)
+            self.progress_to_prepatent(self.sim.ti)  # Incubation period
             self.infc_origin[new_cases] = tyd.TransmissionRoute.CONTACT.value
 
         return new_cases, sources, networks
@@ -874,7 +879,7 @@ class Typhoid(ss.Disease):
             return []
         ti = self.ti
         dt = self.t.dt
-        n_agents = self.sim.pars["n_agents"]
+        n_agents = np.count_nonzero(self.sim.people.alive) # current N, number of agents currently alive
         exposure_volume = 1.0 / n_agents  # CFUs in the environment need to be proportionally distributed among agents, so we don't have the case where number of CFUs received by agents > CFU's available in the environment
         environment = self.sim.demographics['environmentalpool']
         env_trans_pars = environment.pars.transmission
@@ -903,6 +908,7 @@ class Typhoid(ss.Disease):
             # Set the level of cfu_dose, as this is used to determine the parameters of the distribution that sets prepatent duration of new cases
             self.cfu_dose[new_cases] = self.cfu_dose_per_exposure[new_cases]
             self.set_prognoses(new_cases, source_uids=None)
+            self.progress_to_prepatent(self.sim.ti)  # Incubation period
             self.infc_origin[new_cases] = tyd.TransmissionRoute.ENVIRONMENT.value
 
         # SHEDDING: Transmission people->environment:
@@ -1001,8 +1007,8 @@ class Typhoid(ss.Disease):
         ti = self.ti
         n = np.count_nonzero(self.sim.people.alive)
         res.prevalence[ti] = res.n_infected[ti] / n
-        res.new_infections[ti] = np.count_nonzero(self.ti_infected == ti)
-        res.cum_infections[ti] = np.sum(res['new_infections'][:ti+1])
+        res.new_infections[ti] = np.count_nonzero(self.ti_prepatent == ti) + (np.array(self.n_initial_cases) if ti == 0 else np.array([0.0])) # Count initial cases that occur at ti=0 too
+        res.cum_infections[ti] = np.sum(res['new_infections'][:ti+1] ) #
         res.new_susceptible[ti] = np.count_nonzero(self.ti_susceptible == ti)
         res.new_prepatent[ti] = np.count_nonzero(self.ti_prepatent == ti)
         res.new_acute[ti] = np.count_nonzero(self.ti_acute == ti)
