@@ -31,7 +31,7 @@ def run_sim_vaccine(efficacy, leaky=True, do_plot=False):
 
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, networks=random_p2p)
 
-    sim.initialize(verbose=False)
+    sim.init(verbose=False)
     sim.diseases.typhoid.update_pre()
 
     # work out who to vaccinate
@@ -109,7 +109,7 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
     # create and apply the test intervention
     tst = ty.base_test(prob_t=prob_test, prob_tp=prob_test_positive, eligibility=ty.eligibility_by_age)
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst)
-    sim.initialize(verbose=False)
+    sim.init(verbose=False)
     sim.run()
     # check the number of infected cases
     sim_prev = sum(sim.people.typhoid.infected)/sum(sim.people.alive)
