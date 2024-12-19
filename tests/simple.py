@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 pars = dict(
     n_agents = 10e3,
     start = 2000,
-    dur = 2,
+    dur = 0.5,
     unit = 'year',
     dt = 1/365,
 )

@@ -749,7 +749,7 @@ class Typhoid(ss.Disease):
 
     #  Transmission-realated methods - interaction between agents and "else" (other agents)
     #  or the environment
-    def infect(self):
+    def step(self):
         """
         Handle transmission of pathogens and who becomes infected,
         includes all transmission routes. This method is called by the Sim object.
@@ -793,7 +793,7 @@ class Typhoid(ss.Disease):
         new_cases = []
         sources = []
         networks = []
-        betamap = self.validate_beta()
+        betamap = self._check_betas()
         dt = self.t.dt
 
         for i, (nkey, net) in enumerate(self.sim.networks.items()):
@@ -851,6 +851,8 @@ class Typhoid(ss.Disease):
             self.set_prognoses(new_cases, sources=None)
             self.progress_to_prepatent(self.sim.ti)  # Incubation period
             self.infc_origin[new_cases] = tyd.TransmissionRoute.CONTACT.value
+
+        print('HI I AM CONTACT', self.sim.ti, len(new_cases))
 
         return new_cases, sources, networks
 
