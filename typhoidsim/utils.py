@@ -6,9 +6,7 @@ import re
 import numpy as np
 import numba as nb
 import pandas as pd
-
 import sciris as sc
-import starsim as ss
 
 from . import defaults as tyd
 from . import settings as tys
@@ -21,7 +19,7 @@ __all__ += ['test_cpu_performance']
 __all__ += ['generate_unique_filename', 'to_df', 'promotetoiterable', 'generate_age_bin_labels']
 
 
-@nb.njit((nb.float64[:], ), cache=True)
+@nb.njit(cache=True)
 def digitize_ages_1yr(ages):
     """
     This function returns the indices of the 1-year age bins in the range

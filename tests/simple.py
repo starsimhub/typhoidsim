@@ -11,7 +11,7 @@ pars = dict(
     dt = 1/365,
 )
 
-typh = ty.Typhoid()
+typh = ty.Typhoid(unit='year', dt=1/365)
 
 sim = ss.Sim(
     pars = pars,
