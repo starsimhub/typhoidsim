@@ -497,7 +497,6 @@ class Typhoid(ss.Disease):
     # Methods that handle durations/duration pars that are dependent on other variables/states
     def get_prepatent_duration_by_exposure(self, uids):
         """ Get durations in number of timesteps"""
-        print('WARNING: TODO reminder: replace all /dt with time units')
         dt = self.t.dt
         dur_prep = self.pars.dur_prep_dist.rvs(uids).astype(float)  # in days
         dur_prep = dur_prep * tyd.day2year  # in years
@@ -851,8 +850,6 @@ class Typhoid(ss.Disease):
             self.set_prognoses(new_cases, sources=None)
             self.progress_to_prepatent(self.sim.ti)  # Incubation period
             self.infc_origin[new_cases] = tyd.TransmissionRoute.CONTACT.value
-
-        print('HI I AM CONTACT', self.sim.ti, len(new_cases))
 
         return new_cases, sources, networks
 
