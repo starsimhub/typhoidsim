@@ -554,7 +554,7 @@ class infectiousness_clearence(ss.Product):
 
     def __init__(self, pars=None, **kwargs):
         super().__init__()
-        self.define_pars(clearance_rate=ss.perday(0.2))  # in fraction of infectiousness CFUs per day that are cleared
+        self.define_pars(clearance_rate=0.2) # TODO SOON: ss.perday(0.2)  # in fraction of infectiousness CFUs per day that are cleared
         self.update_pars(pars, **kwargs)
         return
 
@@ -588,7 +588,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
         super().__init__(*args, **kwargs) # CK: TODO: refactor with define_pars
         self.label = label
         self.booster_prob = sc.toarray(booster_prob)
-        self.dose_interval = ss.years(dose_interval)  # number of years betweem 1st dose and booster dose
+        self.dose_interval = dose_interval  # TODO SOON: ss.years(dose_interval) # number of years betweem 1st dose and booster dose
         self.age_pars = ss.Pars(age_pars)
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
         self.eligibility = self.age_eligibility

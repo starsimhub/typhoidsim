@@ -22,7 +22,7 @@ class CommunityNet(ss.DynamicNetwork):
         self.define_pars(
             age_mixing=None,
             location='Chile',
-            dur=ss.dur(0, unit='day')  # Duration ensures new random edges each time step
+            dur=0, # TODO SOON: ss.dur(0, unit='day')  # Duration ensures new random edges each time step
         )
         self.update_pars(pars, **kwargs)
 
@@ -208,7 +208,7 @@ class HouseholdNet(ss.DynamicNetwork):
         self.define_pars(
             n_contacts=ss.constant(10),
             location=None,
-            dur=ss.years(20),  # average duration of a household in years
+            dur=20, # TODO SOON: ss.years(20) # average duration of a household in years
         )
         self.update_pars(pars, **kwargs)
         self.dist = ss.Dist(distname='HouseholdNet')  # Default RNG

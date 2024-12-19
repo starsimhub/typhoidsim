@@ -12,12 +12,12 @@ ss_int_ = ss.dtypes.int
 
 __all__ = ['Births']
 
-class Births(ss.Demographics):
+class Births(ss.Demographics): # TODO SOON: replace with built-in one
     """ Create births based on rates, rather than based on pregnancy """
     def __init__(self, pars=None, metadata=None, **kwargs):
         super().__init__()
         self.define_pars(
-            birth_rate = ss.peryear(30),
+            birth_rate = 30,
             rel_birth = 1,
             rate_units = 1e-3,  # assumes birth rates are per 1000. If using percentages, switch this to 1
         )

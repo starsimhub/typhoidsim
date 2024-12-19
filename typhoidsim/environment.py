@@ -19,13 +19,13 @@ class EnvironmentalPool(ss.Demographics):
         super().__init__()
         self.define_pars(
             init_cfu=0,            # Initial level of CFUs in the environment.
-            decay_rate=ss.perday(0.3),  # Decay rate of environmental in fraction of CFUs that decay per day
+            decay_rate=0.3, # TODO SOON: ss.perday(0.3)  # Decay rate of environmental in fraction of CFUs that decay per day
             volume=1,              # Assumed volume of the environmental pool. Units: to be defined: See https://www.pnas.org/doi/full/10.1073/pnas.1719579115
             acceptable_level=600,  # CFU/volume, usually expressed in CFU/ml (not used at the moment) #TODO: to be used with an environmental monitor intervention
             transmission=ss.Pars(
                 rel_trans=1e-3,     # Long-cycle exposure (to the environment) multiplier, targeted by interventions, mEL in Gauld et al 2018
-                shedding_rate=ss.perday(1.0),  # Rate at which infectious people shed colony-forming units to the environment (per day)
-                env2ppl_exposure_rate=ss.poisson(lam=ss.perday(2.0)),  # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)/day -- lam is equivalent to typhoid_environmental_exposure_rate
+                shedding_rate=1.0, # TODO SOON: ss.perday(1.0)  # Rate at which infectious people shed colony-forming units to the environment (per day)
+                env2ppl_exposure_rate=ss.poisson(lam=2.0), # TODO SOON: ss.perday(2.0)  # Poisson rate determining the daily amount of exposures for environment route (num exposures * volume)/day -- lam is equivalent to typhoid_environmental_exposure_rate
             ),
         )
         self.update_pars(pars, **kwargs)
