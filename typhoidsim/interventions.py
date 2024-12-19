@@ -3,13 +3,11 @@ Define Typhoid-specific treatments and diagnostics (interventions). It includes
 the intervention (eg, campaign that finds eligible people) and also products.
 """
 import numpy as np
-
 import sciris as sc
 import starsim as ss
-import typhoidsim
 
 from .patterns import Pattern
-from .defaults import day2year, days_per_year
+from .defaults import days_per_year
 from . import utils_math as tyum
 
 
@@ -221,7 +219,7 @@ class base_test(ss.Intervention):
         self.prob_t = sc.toarray(prob_t)    # probability of being tested
         self.prob_tp = sc.toarray(prob_tp)  # given that a person if being tested, probabilty of testing postivie (capture uncertantiy of test product/method)
         self.eligibility = eligibility
-        self.eligibility_kwargs = eligibility_kwargs
+        self.eligibility_kwargs = sc.mergedicts(eligibility_kwargs) # Convert None to {}
         self.coverage_dist = ss.bernoulli(p=self.prob_t)
         self.test_dist = ss.bernoulli(p=self.prob_tp)
         self.tested = ss.State('tested', default=False)
@@ -275,10 +273,8 @@ class base_test(ss.Intervention):
         return chronic_uids
 
     def _eligibility(self):
-        if callable(self.eligibility) and self.eligibility_kwargs is not None:
-            return self.eligibility(**self.eligibility_kwargs)
-        elif callable(self.eligibility) and self.eligibility_kwargs is None:
-            return self.eligibility()
+        if callable(self.eligibility):
+            return self.eligibility(self.sim, **self.eligibility_kwargs)
         else:  # Assume self.eligibility is an array of uids
             return self.eligibility
 
@@ -426,8 +422,8 @@ class environmental_trapezoidal_modulation(WASH):
 
     def step(self):
         self.efficacy = 0.0
-        self.results['effective_value'][sim.ti] = self.target_baseline
-        sim_year = sim.t.now('year')
+        self.results['effective_value'][self.sim.ti] = self.target_baseline
+        sim_year = self.sim.t.now('year')
         if sim_year >= self.start and len(self.time):
             time_days = sim_year * days_per_year # CK: TODO: rewrite
             self.efficacy = self.efficacy_pattern(time_days)
@@ -606,7 +602,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
         # Test without new people being born
         if self.debug:
             self.define_results(
-                ss.Result('immunity', shape=(sim.npts, sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
+                ss.Result('immunity', shape=(self.sim.npts, self.sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
             )
         return
 

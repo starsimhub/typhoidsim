@@ -81,7 +81,7 @@ def test_calibration(do_plot=False):
         extract_fn=lambda sim: pd.DataFrame({
             'n': sim.results.n_alive,
             'x': sim.results.typhoid.n_infected,
-        }, index=pd.Index(sim.results.yearvec, name='t')),
+        }, index=pd.Index(sim.results.timevec, name='t')),
 
         conform='prevalent',
         nll_fn='beta',
