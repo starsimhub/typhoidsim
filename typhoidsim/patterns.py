@@ -1,5 +1,5 @@
 """
-Classes that supporte introducing 'pre-defined'
+Classes that support introducing 'pre-defined'
 spatiotemporal profiles as parameters. These patterns
 can be based on a callable or on data.
 

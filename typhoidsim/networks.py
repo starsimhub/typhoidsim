@@ -219,7 +219,7 @@ class HouseholdNet(ss.DynamicNetwork):
         return
 
     @staticmethod
-    @nb.njit(fastmath=True, cache=True)
+    @nb.njit(cache=True)
     def get_source(inds, n_contacts):
         """ Optimized helper function for getting contacts """
         total_number_of_half_edges = np.sum(n_contacts)
@@ -280,7 +280,7 @@ class HouseholdNet(ss.DynamicNetwork):
         if isinstance(self.pars.dur, ss.Dist):
             dur = self.pars.dur.rvs(p1)
         else:
-            dur = np.full(len(p1), self.pars.dur.values)
+            dur = np.full(len(p1), self.pars.dur)
 
         self.append(p1=p1, p2=p2, beta=beta, dur=dur)
         return

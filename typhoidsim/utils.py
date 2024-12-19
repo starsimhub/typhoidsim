@@ -21,7 +21,7 @@ __all__ += ['test_cpu_performance']
 __all__ += ['generate_unique_filename', 'to_df', 'promotetoiterable', 'generate_age_bin_labels']
 
 
-@nb.njit(cache=True)
+@nb.njit((nb.float64[:], ), cache=True)
 def digitize_ages_1yr(ages):
     """
     This function returns the indices of the 1-year age bins in the range
