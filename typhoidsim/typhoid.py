@@ -219,7 +219,7 @@ class Typhoid(ss.Disease):
                         self.pars.beta[k] = [β, β]
         return
 
-    def old_init_post(self): # CK: TODO: remove
+    def init_post(self): # CK: TODO: remove
         """
         Set initial values for all agent states, and seed new cases if initial
         prevalence is provided.
@@ -529,7 +529,7 @@ class Typhoid(ss.Disease):
         seeking treatment
         """
         p = self.pars
-        dt = self.simt.dt
+        dt = self.t.dt
         dur_wait = p.dur_wait2treatment.rvs(uids).astype(float)
         dur_wait = dur_wait * tyd.day2year
         return sc.randround(dur_wait / dt)
@@ -629,7 +629,7 @@ class Typhoid(ss.Disease):
         slope = module.pars.unexp2sus_slope
         p2 = tyum.sigmoid(sim.people.age[uids], sat_age, slope)
         p1 = tyum.sigmoid(sim.people.age[uids] - sim.t.dt, sat_age, slope)
-        if self.ti == 0:
+        if module.ti == 0:
             p_sus = p2
         else:
             p_sus = ((p2 - p1) / (1.0 - p1))
@@ -678,7 +678,6 @@ class Typhoid(ss.Disease):
         """
         p = self.pars
         ti = self.ti
-        dt = self.t.dt
 
         # Set value of states associated to being infected, and record events
         self.ti_prepatent[uids] = ti
