@@ -4,6 +4,8 @@ Script to use Starsim-AI to migrate Typhoidsim from Starsim v1.0.3 to v2.2.0
 Run with e.g.:
 
     python -i migrate_v1-v2.py
+
+Note: at the time of migration, Starsim-AI was in private beta.
 """
 
 import starsim as ss
