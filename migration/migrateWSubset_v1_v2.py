@@ -22,7 +22,6 @@ files = [
     'patterns.py',
     'utils.py',
 ]
-files = ['typhoid.py']
 
 exclude = [
     "docs/*",
