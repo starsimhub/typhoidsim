@@ -38,11 +38,11 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'numpy',
+        'numpy==1.26',
         'scipy',
         'pandas>=2.0.0',
         'sciris>=3.2.0',
-        'starsim==2.2.0',
+        # 'starsim==2.2.0',
         'synthpops',
         'matplotlib',
         'numba',
