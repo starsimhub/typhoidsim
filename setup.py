@@ -42,7 +42,7 @@ setup(
         'scipy',
         'pandas',
         'sciris',
-        'starsim',
+        'starsim>=2.2.0',
         'synthpops',
         'matplotlib',
         'numba',
