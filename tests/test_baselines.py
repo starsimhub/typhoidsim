@@ -30,8 +30,10 @@ def make_sim(run=False):
     via pytest), also plot the sim by default.
     """
     diseases = [ty.Typhoid()]
-    networks = [ ss.RandomNet({'n_contacts': 5})]
-    sim = ss.Sim(pars=pars, networks=networks, diseases=diseases)
+    networks = [ss.RandomNet({'n_contacts': 1})]
+    demographics = [ty.EnvironmentalPool()]
+
+    sim = ss.Sim(pars=pars, networks=networks, demographics=demographics, diseases=diseases)
 
     # Optionally run and plot
     if run:
