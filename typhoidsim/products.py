@@ -30,7 +30,7 @@ class typhoid_test(ss.Product):
         infected_uids = (people.typhoid.infected).uids
         are_pos_uids = ss.uids(np.intersect1d(infected_uids, uids))
         # Decide whether the test actually comes back positive
-        tested_pos_uids = self.sensitivity.filter(are_pos_uids)
+        tested_pos_uids = self.pars.sensitivity.filter(are_pos_uids)
         return tested_pos_uids
 
 

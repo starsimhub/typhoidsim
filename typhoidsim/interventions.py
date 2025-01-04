@@ -9,11 +9,12 @@ import starsim as ss
 from .patterns import Pattern
 from .defaults import days_per_year
 from . import utils_math as tyum
+from .products import typhoid_test
 
 
 # Interventions
 # Diagnostics
-__all__  = ['base_test']
+__all__  = ['routine_acute_screening']
 # Treatments applied to people
 __all__ += ['acute_treatment', 'infection_clearence', 'vaccination_with_waning']
 # Interventions applied to the environment or environmental transmission
@@ -21,9 +22,6 @@ __all__ += ['shedding_reduction', 'environmental_cleanup', 'environmental_exposu
             'environmental_seasonality', 'environmental_trapezoidal_modulation']
 # Interventions that are not treatments but change some of the agents properties
 __all__ += ['behavioral_change']
-# Products
-__all__ += ['infectiousness_redux', 'infectiousness_clearence', 'blocking_vaccine',
-            'typhoid_vaccine']
 
 
 # -- Treatments
@@ -202,81 +200,149 @@ class infection_clearence(ss.Intervention):
 
 
 # -- Diagnostics
-class base_test(ss.Intervention):
+# PSL: this copy is here because the starsim version assumes every product has a hierarchy
+# which then prevents us from using BaseTest, BaseScreeening and routine_screeening clases
+class BaseTest(ss.Intervention):
     """
-    By default, find who is a chronic typhoid carrier.
+    Base class for screening and triage.
 
     Args:
-         prob_t         (float)     : probability of eligible people (chronic) being selected to receive a test
-         prob_tp        (float)     : probability of tested people who are infected receiving a positive diagnosis (true positive)
+         product        (Product)       : the diagnostic to use
+         prob           (float/arr)     : annual probability of eligible people receiving the diagnostic
          eligibility    (inds/callable) : indices OR callable that returns inds
+         kwargs         (dict)          : passed to Intervention()
+    """
+
+    def __init__(self, product=None, prob=None, eligibility=None, **kwargs):
+        super().__init__(**kwargs)
+        self.prob = sc.promotetoarray(prob)
+        self.eligibility = eligibility
+        self._parse_product(product)
+        self.screened = ss.BoolArr('screened')
+        self.screens = ss.FloatArr('screens', default=0)
+        self.ti_screened = ss.FloatArr('ti_screened')
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        try:
+            self.outcomes = {k: np.array([], dtype=int) for k in self.product.hierarchy}
+        except AttributeError:
+            # PSL: Not every product will have a hierarchy -- also I don't know what a product hierarchy is
+            self.outcomes = ss.uids()
+        return
+
+    def deliver(self):
+        """
+        Deliver the diagnostics by finding who's eligible, finding who accepts, and applying the product.
+        """
+        sim = self.sim
+        ti = sc.findinds(self.timepoints, sim.ti)[0]
+        prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
+        eligible_uids = self.check_eligibility()  # Check eligibility
+        self.coverage_dist.set(p=prob)
+        accept_uids = self.coverage_dist.filter(eligible_uids)
+        if len(accept_uids):
+            self.outcomes = self.product.administer(accept_uids)  # Actually administer the diagnostic
+        return accept_uids
+
+    def check_eligibility(self):
+        raise NotImplementedError
+
+
+class base_screening(BaseTest):
+    """
+    By default, the eligible people to be screened are people in the acute stage.
+
+    Args:
          eligibility_kwargs (dict)  : keyword arguments passed to eligibilty() if eligibility is a function/callable with the signature eligibility(sim, **eligibility_kwargs)
          kwargs         (dict)      : passed to Intervention()
     """
-
-    def __init__(self, prob_t=1.0, prob_tp=1.0, eligibility=None, eligibility_kwargs=None, **kwargs):
+    # BaseTest kwargs: product=None, prob=None, eligibility=None,
+    def __init__(self, eligibility_kwargs=None, **kwargs):
         super().__init__(**kwargs)
-        self.prob_t = sc.toarray(prob_t)    # probability of being tested
-        self.prob_tp = sc.toarray(prob_tp)  # given that a person if being tested, probabilty of testing postivie (capture uncertantiy of test product/method)
-        self.eligibility = eligibility
-        self.eligibility_kwargs = sc.mergedicts(eligibility_kwargs) # Convert None to {}
-        self.coverage_dist = ss.bernoulli(p=self.prob_t)
-        self.test_dist = ss.bernoulli(p=self.prob_tp)
-        self.tested = ss.State('tested', default=False)
-        self.positive = ss.State('positive', default=False)
-        self.ti_tested = ss.FloatArr('ti_tested')
+        self.eligibility_kwargs = sc.mergedicts(eligibility_kwargs)  # Converts None to {}
+        self.coverage_dist = ss.bernoulli(p=self.prob)
         self.ti_positive = ss.FloatArr('ti_positive')
+        self.validate_eligibility()
         return
+
+    def validate_eligibility(self):
+        import functools
+        if self.eligibility is None and self.eligibility_kwargs is None:
+            self.eligibility = self.default_eligibility
+
+        if callable(self.eligibility):
+            self.eligibility = functools.partial(self.eligibility, **self.eligibility_kwargs)
+        return
+
+    @staticmethod
+    def default_eligibility(self, sim, **kwargs):
+        # By default only test acute and people can be tested more than once
+        acute_uids = (sim.people.typhoid.acute).uids
+        return acute_uids
 
     def init_results(self):
         super().init_results()
         self.define_results(
             ss.Result('new_positive', dtype=int, label='New Positive'),
-            ss.Result('new_tested', dtype=int, label='New Tested'),
+            ss.Result('new_screened', dtype=int, label='New Screeened'),
             ss.Result('positivity', dtype=float, scale=False, label='Positivity')
         )
-
-        if self.eligibility is None:
-            self.eligibility = self.check_eligibility
         return
 
-    def step(self):
+    def deliver(self):
+        """
+        Deliver the diagnostics by finding who's eligible, finding who accepts, and applying the product.
+        """
         sim = self.sim
-        self.check_still_positive()
-        eligible_uids = self._eligibility()
-        self.coverage_dist.set(p=self.prob_t)
-        self.test_dist.set(p=self.prob_tp)
+        ti = sc.findinds(self.timepoints, sim.ti)[0]
+        prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
+
+        # SELECT ELIGIBLE PEOPLE
+        eligible_uids = self.check_eligibility()  # Check eligibility
+        self.coverage_dist.set(p=prob)
         tested_uids = self.coverage_dist.filter(eligible_uids)
-        # Of those who where tested and are infected
-        infected_uids = (sim.people.typhoid.infected).uids
-        are_pos_uids = ss.uids(np.intersect1d(infected_uids, tested_uids))
-        # Decide whether the test actually comes back positive
-        tested_pos_uids = self.test_dist.filter(are_pos_uids)
-        self.tested[tested_uids] = True
-        self.positive[tested_pos_uids] = True
-        self.ti_tested[tested_uids] = sim.ti # CK: TODO: or self.ti?
-        self.ti_positive[tested_pos_uids] = sim.ti
-        self.results['new_tested'][sim.ti] = len(tested_uids)
-        self.results['new_positive'][sim.ti] = len(tested_pos_uids)
-        self.results['positivity'][sim.ti] = sc.safedivide(self.results['new_positive'][sim.ti], self.results['new_tested'][sim.ti])
+
+        # ADMINISTER PRODUCT
+        if len(tested_uids):
+            self.outcomes = self.product.administer(sim.people, tested_uids)  # Actually administer the diagnostic, and get the uids of those who tested positive
         return tested_uids
 
-    def check_still_positive(self):
-        # Reset if no longer infected
-        infected_uids = (~self.sim.people.typhoid.infected).uids
-        self.positive[infected_uids] = False
-        return
+    def step(self):
+        """ Where everything happens at each time step"""
+        sim = self.sim
+        accept_uids = ss.uids()
+
+        if sim.ti in self.timepoints:
+            accept_uids = self.deliver()
+            self.screened[accept_uids] = True
+            self.screens[accept_uids] += 1
+            self.ti_screened[accept_uids] = sim.ti
+            self.ti_positive[self.outcomes] = sim.ti
+            self.results['new_screened'][sim.ti] = len(accept_uids)
+            self.results['new_positive'][sim.ti] = len(self.outcomes)
+            self.results['positivity'][sim.ti] = sc.safedivide(self.results['new_positive'][sim.ti], self.results['new_screened'][sim.ti])
+        return accept_uids
 
     def check_eligibility(self):
-        """ Default eligibility, do not test the same person more than once"""
-        chronic_uids = (self.sim.people.typhoid.chronic & ~self.tested).uids
-        return chronic_uids
-
-    def _eligibility(self):
         if callable(self.eligibility):
-            return self.eligibility(self.sim, **self.eligibility_kwargs)
+            return self.eligibility(self.sim)
         else:  # Assume self.eligibility is an array of uids
             return self.eligibility
+
+
+class routine_acute_screening(base_screening, ss.RoutineDelivery):
+    """
+    Routine screening - an instance of base screening combined with routine delivery.
+    See base classes for a description of input arguments.
+
+    **Examples**::
+        screen1 = ty.routine_screening(product=my_prod, prob=0.02) # Screen 2% of the eligible (acute) population every year
+        screen2 = ty.routine_screening(product=my_prod, prob=0.02, start_year=2020) # Screen 2% every year starting in 2020
+        screen3 = ty.routine_screening(product=my_prod, prob=np.linspace(0.005,0.025,5), years=np.arange(2020,2025)) # Scale up screening over 5 years starting in 2020
+    """
+    pass
 
 
 # -- Environmental interventions
@@ -524,44 +590,6 @@ class environmental_seasonality(ss.Intervention):
         return
 
 
-# -- Products
-class infectiousness_redux(ss.Product):
-    """
-    Reduction in infectiousness. This product is applied to acute cases only
-    and results in a reduction or blocking in shedding.
-    """
-
-    def __init__(self, pars=None, **kwargs):
-        super().__init__()
-        self.define_pars(multiplier=0.5)
-        self.update_pars(pars, **kwargs)
-        return
-
-    def administer(self, people, uids):
-        people.typhoid.infectiousness[uids] *= self.pars.multiplier
-        return
-
-
-class infectiousness_clearence(ss.Product):
-    """
-    Reduction in infectiousness. This product is applied to acute cases only
-    and results in a reduction or blocking in shedding.
-    """
-
-    def __init__(self, pars=None, **kwargs):
-        super().__init__()
-        self.define_pars(clearance_rate=0.2) # TODO SOON: ss.perday(0.2)  # in fraction of infectiousness CFUs per day that are cleared
-        self.update_pars(pars, **kwargs)
-        return
-
-    def administer(self, uids):
-        sim = self.sim
-        # estimate how many CFUs are cleared in one timestep
-        clearance = sim.people.typhoid.infectiousness[uids] * self.pars.clearance_rate
-        sim.people.typhoid.infectiousness[uids] -= clearance
-        return
-
-
 class vaccination_with_waning(ss.RoutineDelivery):
     """
     An intervention that handles a vaccination with waning.
@@ -667,55 +695,3 @@ class vaccination_with_waning(ss.RoutineDelivery):
         if self.debug:
             self.results["immunity"][ti, :] = sim.diseases.typhoid.immunity_acquired[:]
         return self.vaccinated.uids
-
-
-class blocking_vaccine(ss.Product):
-    """
-    An Acquisition Blocking vaccine that impacts the overall probability of infection after exposure,
-    by modifying the 'susceptibility level' state (typhoid.immunity). If the immunity level is 0, then
-    the agen can't acquire an infection, if the level is 1.0, it can acquire the infection -- also
-    depends on other factors.
-    """
-
-    def __init__(self, pars=None, *args, **kwargs):
-        super().__init__()
-        self.define_pars(efficacy=1.0)
-        self.update_pars(pars, **kwargs)
-        return
-
-    def administer(self, people, uids):
-        """ Apply the vaccine to the requested uids. """
-        people.typhoid.susceptibility[uids] -= self.pars.efficacy * people.typhoid.susceptibility[uids]
-        return
-
-
-class typhoid_vaccine(ss.Vx):
-    """
-    Create a vaccine product that affects the probability of infection.
-
-    The vaccine can be either "leaky", in which everyone who receives the vaccine
-    receives the same amount of protection (specified by the efficacy parameter)
-    each time they are exposed to an infection. The alternative (leaky=False) is
-    that the efficacy is the probability that the vaccine "takes", in which case
-    that person is 100% protected (and the remaining people are 0% protected).
-
-    Args:
-        efficacy (float): efficacy of the vaccine (0<=efficacy<=1)
-        leaky (bool): see above
-    """
-
-    def __init__(self, pars=None, *args, **kwargs):
-        super().__init__()
-        self.define_pars(
-            efficacy=0.9,
-            leaky=True
-        )
-        self.update_pars(pars, **kwargs)
-        return
-
-    def administer(self, people, uids):
-        if self.pars.leaky:
-            people.typhoid.rel_sus[uids] *= 1 - self.pars.efficacy
-        else:
-            people.typhoid.rel_sus[uids] *= np.random.binomial(1, 1 - self.pars.efficacy, len(uids))
-        return
