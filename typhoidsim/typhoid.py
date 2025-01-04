@@ -905,7 +905,7 @@ class Typhoid(ss.Disease):
         if len(new_cases):
             # Set the level of cfu_dose, as this is used to determine the parameters of the distribution that sets prepatent duration of new cases
             self.cfu_dose[new_cases] = self.cfu_dose_per_exposure[new_cases]
-            self.set_prognoses(new_cases, source_uids=None)
+            self.set_prognoses(new_cases, sources=None)
             self.progress_to_prepatent(self.sim.ti)  # Incubation period
             self.infc_origin[new_cases] = tyd.TransmissionRoute.ENVIRONMENT.value
 
