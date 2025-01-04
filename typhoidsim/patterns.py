@@ -198,7 +198,7 @@ class Pattern:
         plt.ylabel(f"{self.equation}")
         return
 
-
+# TODO: probably deprecate (remove)
 class StateVariable(ss.Result):
     """
     This class is identical to Results, but named to something more generic,
@@ -216,6 +216,7 @@ class StateVariable(ss.Result):
     pass
 
 
+# TODO: probably deprecate (remove)
 class StateVariables(ss.ndict):
 
     def __init__(self, module, strict=True, *args, **kwargs):
