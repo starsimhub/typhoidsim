@@ -31,7 +31,7 @@ class EnvironmentalPool(ss.Demographics):
         self.update_pars(pars, **kwargs)
 
         # Track a variable that does not track the state of individual agents, ~and it's not a Result
-        self.sv = typ.StateVariables(self.name)
+        self.sv = ss.Results(self.name) #typ.StateVariables(self.name)
 
         self.buffer_isteps = 2  # length of the concentration buffer in integer number of timesteps
         return
@@ -54,13 +54,30 @@ class EnvironmentalPool(ss.Demographics):
         """
         Initialise StateVariable objects
         """
-        self.sv += [typ.StateVariable(self.name, "cfu_conc", self.t.npts, dtype=float),]
-        self.sv += [typ.StateVariable(self.name, "cfu_conc_buffer", self.buffer_isteps, dtype=float),]
+        self.define_state_variables(ss.Result("cfu_conc", self.t.npts, dtype=float),
+                                    ss.Result("cfu_conc_buffer", self.buffer_isteps, dtype=float))
         return
 
     def init_env_pool(self, sim):
         self.sv.cfu_conc_buffer[:] = self.pars.init_cfu   # Fill the history
         self.sv.cfu_conc[sim.ti] = self.pars.init_cfu     # Fill initial conditions
+        return
+
+    def define_state_variables(self, *args, check=True):
+        """ Add results to the module """
+        for arg in args:
+            if isinstance(arg, (list, tuple)):
+                state_variable = ss.Result(*arg)
+            elif isinstance(arg, dict):
+                state_variable = ss.Result(**arg)
+            else:
+                state_variable = arg
+
+            # Update with module information
+            state_variable.update(module=self.name, shape=self.t.npts, timevec=self.t.timevec)
+
+            # Add the result to the dict of results; does automatic checking
+            self.sv += state_variable
         return
 
     def step(self):
