@@ -42,10 +42,22 @@ def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, 
         if yearvec is None:
             yearvec = flat.pop('yearvec')
 
-        time_masks = [
-            yearvec >= display_from if display_from is not None else True,
-            yearvec <= display_until if display_until is not None else True]
-        mask = np.logical_and(*time_masks) if time_masks else Ellipsis
+        mask = Ellipsis
+        mask_from = None
+        mask_until = None
+
+        if display_from:
+            mask_from = yearvec >= display_from if display_from is not None else None
+
+        if display_until:
+            mask_until = yearvec <= display_until if display_until is not None else None
+
+        if mask_from and mask_until:
+            mask = np.logical_and(mask_from, mask_until)
+        elif mask_from and not mask_until:
+            mask = mask_from
+        elif not mask_from and mask_until:
+            mask = mask_until
 
         if key is not None:
             flat = {k: v for k, v in flat.items() if k.startswith(key)}

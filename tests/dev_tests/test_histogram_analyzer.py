@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # Define high-level simulation parameters
 pars = dict(
     start=2010,    # Starting year
-    n_years=1.0,   # Duration of the simulation in years
+    dur=1.0,   # Duration of the simulation in years
     dt=1.0/365.0,  # Timestep of 1 day, expressed in years
     verbose=1,     # Do not print details of the run
 )
@@ -14,7 +14,10 @@ ppl = ss.People(10_000)
 init_p = 0.5 # Large prevalence to see results
 typhoid = ty.Typhoid(pars={'init_prev': ss.bernoulli(p=init_p)})
 # create and apply the test intervention
-tst = ty.base_test(prob_t=0.3, prob_tp=1.0, eligibility=ty.eligibility_by_age)
+
+blood_test   = ty.typhoid_test(pars=dict(sensitivity=ss.bernoulli(p=1.0)))
+screen_all= ty.routine_acute_screening(product=blood_test, prob=0.3, eligibility=ty.eligibility_by_age)  # Screen 30% of all individuals
+
 age_bin_edges = [0, 2, 5, 10, 15, 20, 40, 60, ty.max_age]
 age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15-19', '20-39', '40-59', '60+']
 
@@ -60,10 +63,9 @@ monitor_population = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
                                                       record_from=2010.0,
                                                       name="monitor_2")
 
-sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst, analyzers=[monitor_cases, monitor_population])
+sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=screen_all, analyzers=[monitor_cases, monitor_population])
 sim.run()
-timevec = sim.get_analyzers()[0].yearvec
+timevec = sim.analyzers[0].yearvec
 ty.plot_sim(sim, key="monitor_", yearvec=timevec)
 sim.plot(key="typhoid_new")
 plt.show()
-breakpoint()
