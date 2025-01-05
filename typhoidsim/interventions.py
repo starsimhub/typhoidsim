@@ -556,7 +556,7 @@ class environmental_seasonality(ss.Intervention):
         self.dur = dur
         self.pattern = seasonal_pattern  # pattern of seasonal cfu
         self.end_day = None
-        self.time = None # CK: TODO: refactor
+        self.t_relative = None # CK: TODO: refactor
         return
 
     def init_pre(self, sim):  # CK: TODO: refactor
@@ -565,23 +565,23 @@ class environmental_seasonality(ss.Intervention):
         if self.dur is None:
             self.dur = sim.pars['stop'] - sim.pars['start']
 
-        # This is the "time" variable that will be evaluated
-        self.time = sc.inclusiverange(0, self.dur, self.t.dt)
+        # This is the "time" variable relative to the specified start year
+        self.t_relative = sc.inclusiverange(0, self.dur, sim.t.dt)
         super().init_pre(sim)  # PSL: TODO: refactor? starsim interventions init_pre() call self.init_results() (?), so some attributes used by that method are not defined
         return
 
     def init_results(self):
         super().init_results()
         self.define_results(
-            ss.Result('seasonal_cfu', shape=len(self.time), dtype=float, label='Seasonal CFUs') # additional cfu in the environment due to seasonality
+            ss.Result('seasonal_cfu', shape=len(self.t_relative), dtype=float, label='Seasonal CFUs') # additional cfu in the environment due to seasonality
         )
         return
 
     def step(self):
         sim = self.sim
-        if sim.t.now('year') >= self.start and len(self.time): # CK: TODO: refactor
-            seasonal_cfu = self.pattern(self.time[0])
-            self.time = self.time[1:]
+        if sim.t.now('year') >= self.start and len(self.t_relative):   # CK: TODO: refactor
+            seasonal_cfu = self.pattern(self.t_relative[0])
+            self.t_relative = self.t_relative[1:]
             val = (sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1] *
                    sim.demographics['environmentalpool'].pars.volume)
             sim.demographics['environmentalpool'].sv.cfu_conc[sim.ti-1] = (val + seasonal_cfu) / sim.demographics['environmentalpool'].pars.volume
