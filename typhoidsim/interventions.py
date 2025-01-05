@@ -625,13 +625,17 @@ class vaccination_with_waning(ss.RoutineDelivery):
         self.debug = debug
         return
 
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        self.booster_prob = self.booster_prob * np.ones(shape=len(self.prob))
+        return
+
     def init_results(self):
         super().init_results()
-        self.booster_prob = self.booster_prob * np.ones(shape=len(self.prob)) # CK: TODO: move this?
         # Test without new people being born
         if self.debug:
             self.define_results(
-                ss.Result('immunity', shape=(self.sim.npts, self.sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
+                ss.Result('immunity', shape=(self.sim.t.npts, self.sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
             )
         return
 
@@ -650,7 +654,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
         max_immunity = module.imm_peak(a_vaccinated)
         fixed_immunity = module.imm_fixed_dur(a_vaccinated)
         decay = module.imm_waning_time(a_vaccinated)
-        module.immunity_acquired[uids] = np.clip(max_immunity * tyum.box_exponential(sim.year, t_vaccinated, fixed_immunity, decay), a_min=0.0, a_max=1.0)
+        module.immunity_acquired[uids] = np.clip(max_immunity * tyum.box_exponential(sim.t.now('year'), t_vaccinated, fixed_immunity, decay), a_min=0.0, a_max=1.0)
         return
 
     def step(self):
@@ -660,8 +664,9 @@ class vaccination_with_waning(ss.RoutineDelivery):
         sim = self.sim
         sim_year = sim.t.now('year')
         vaccinated_uids = self.vaccinated.uids
-        if sim_year >= self.start_year and sim.year <= self.end_year:
-            self.t_to_booster[self.t_to_booster > 0.0] -= self.dt
+
+        if sim.t.now('year') >= self.start_year and sim.t.now('year') <= self.end_year:
+            self.t_to_booster[self.t_to_booster > 0.0] -= self.sim.t.dt
             ti = sc.findinds(self.timepoints, sim.ti)[0]
             prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
             is_eligible = self.check_eligibility()  # Check eligibility by age for first dose
