@@ -14,7 +14,7 @@ def make_sim(n_agents=1_000):
     # Define the parameters
     pars = sc.objdict(
         start=2000,       # Starting year
-        n_years=1.0,      # Number of days to simulate
+        dur=1.0,      # Number of days to simulate
         n_agents=n_agents,
         dt=1.0/365.0,     # Timestep of 1 day, expressed in years
         verbose=0,        # Print details of the run
