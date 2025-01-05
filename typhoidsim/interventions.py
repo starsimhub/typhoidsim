@@ -372,12 +372,12 @@ class WASH(ss.Intervention):
         return
 
     def init_pre(self, sim):
-        super().init_pre(sim)
         # starsim base time units are in years, but the base unit of typhpoid is days # CK: TODO: fix
         if self.start is None:
             self.start = sim.pars['start']
         if self.dur is None:
-            self.dur = sim.pars['end'] - sim.pars['start']
+            self.dur = sim.pars['stop'] - sim.pars['start']
+        super().init_pre(sim)
         return
 
     def init_results(self):
@@ -560,15 +560,14 @@ class environmental_seasonality(ss.Intervention):
         return
 
     def init_pre(self, sim):  # CK: TODO: refactor
-        super().init_pre(sim)
-        # starsim base time units are in years, but the base unit of typhpoid is days
         if self.start is None:
             self.start = sim.pars['start']
         if self.dur is None:
-            self.dur = sim.pars['end'] - sim.pars['start']
+            self.dur = sim.pars['stop'] - sim.pars['start']
 
         # This is the "time" variable that will be evaluated
         self.time = sc.inclusiverange(0, self.dur, self.t.dt)
+        super().init_pre(sim)  # PSL: TODO: refactor? starsim interventions init_pre() call self.init_results() (?), so some attributes used by that method are not defined
         return
 
     def init_results(self):
