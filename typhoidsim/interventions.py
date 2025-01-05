@@ -365,7 +365,7 @@ class WASH(ss.Intervention):
         self.efficacy = None,             # current value of efficacy
         self.end = None
         self.time = None
-        self.ti = 0  # time index relative to the start of the simulation
+        self.tidx = 0  # time index relative to the start of the simulation
         self.target_baseline = None  # baseline value of the factor this intervention targets at the start of the simulation
         self.target_attr_path = None
         self.target_attr = None
@@ -386,7 +386,7 @@ class WASH(ss.Intervention):
         # time is the compact support to evaluate the pattern over.
         # time = 0, represents time relative to the start of the temporal pattern.
         # so a sin() pattern would always return a value of 0.0 on its start
-        self.time = sc.inclusiverange(0, self.dur, self.t.dt) # CK: TODO: replace with self.t
+        self.time = sc.inclusiverange(0, self.dur, self.t.dt)  # CK: TODO: replace with self.t
         self.define_results(
             ss.Result('efficacy', dtype=float, scale=False),
             ss.Result('effective_value', dtype=float, scale=False, label='Effective Value')
@@ -432,17 +432,19 @@ class WASH(ss.Intervention):
         return
 
     def step(self):
+        sim = self.sim
         self.results['effective_value'][self.sim.ti] = self.target_baseline
-        if self.sim.year >= self.start and len(self.time):
+        if sim.t.now('year')  >= self.start and len(self.time):
             self.efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
-            self._set_target_val_par(self.sim, (1.0 - self.efficacy) * self.target_baseline)
+            self._set_target_val_par((1.0 - self.efficacy) * self.target_baseline)
+            self.results['efficacy'][self.tidx] = self.efficacy
+            self.results['effective_value'][self.tidx] = (1.0 - self.efficacy) * self.target_baseline
+            self.tidx += 1
         return
 
     def update_results(self):
         super().update_results()
-        self.results['efficacy'][self.ti] = self.efficacy
-        self.results['effective_value'][self.ti] = (1.0 - self.efficacy) * self.target_baseline
         return
 
 
