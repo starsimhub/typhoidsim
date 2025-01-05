@@ -75,7 +75,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.aggregate_sex = aggregate_sex
         self.aggregate_time = aggregate_time
         self.resampling_period = resampling_period
-        self.ti = 0
+        self.tidx = 0
         # Attributes that will be set later
         self.monitor_step = None  # number of "dt" that fit in one resampling period
         self.monitor_period = None
@@ -210,12 +210,12 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def _record_fm(self, f_vals, m_vals, stock_name):
-        self.stocks[f"m_{stock_name}"][self.ti, :] = m_vals
-        self.stocks[f"f_{stock_name}"][self.ti, :] = f_vals
+        self.stocks[f"m_{stock_name}"][self.tidx, :] = m_vals
+        self.stocks[f"f_{stock_name}"][self.tidx, :] = f_vals
         return
 
     def _record_b(self, b_vals, stock_name):
-        self.stocks[f"b_{stock_name}"][self.ti, :] = b_vals
+        self.stocks[f"b_{stock_name}"][self.tidx, :] = b_vals
         return
 
     def _apply_individual_sexes(self, sim):
@@ -262,13 +262,13 @@ class histograms_by_age_sex_monitor(Monitor):
     def _default_sampling(self, sim):
         if sim.ti % self.monitor_step == 0:
             self._apply(sim)
-            self.ti += 1
+            self.tidx += 1
         return
 
     def _aggregate_sampling(self, sim):
         # Stores everything, then aggregates at the end
         self._apply(sim)
-        self.ti += 1
+        self.tidx += 1
         return
 
     def aggregate(self, vals):
