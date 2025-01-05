@@ -15,7 +15,7 @@ def make_sim(n_agents=10_000):
     # Define the parameters
     pars = sc.objdict(
         start=2000,        # Starting year
-        n_years=10.0,       # Number of days to simulate
+        dur=10.0,       # Number of days to simulate
         total_pop=50e6,    # Total population size
         pop_scale=None,    #
         n_agents=n_agents, #
@@ -30,7 +30,7 @@ def make_sim(n_agents=10_000):
     ppl = ss.People(pars["n_agents"])
 
     demographics = [
-        ty.Births(birth_rate=0),
+        ss.Births(birth_rate=0),
         ss.Deaths(death_rate=0)
     ]
 
@@ -39,7 +39,7 @@ def make_sim(n_agents=10_000):
     campaign_vax_2_5_yo = ty.vaccination_with_waning(
         start_year=2000.0,
         prob=0.66,
-        dose_interval=5.0, # interval between receiving first dose and booster
+        dose_interval=5.0,  # interval between receiving first dose and booster
         booster_prob=1.0,
         annual_prob=True,
         debug=True,  # only use for this example to keep track of each individual's acquired immunity level over time
@@ -60,7 +60,6 @@ def make_sim(n_agents=10_000):
     return sim
 
 
-
 sim = make_sim()
 sim.run()
 flat = sim.results.flatten()
@@ -70,6 +69,6 @@ are_vaccinated = sim.interventions[0].vaccinated
 data_imm = vax[:, (are_kids & are_vaccinated)]
 
 idx = 0
-plt.plot(flat["yearvec"], data_imm[:, 0:10])
+plt.plot(sim.timevec, data_imm[:, 0:10])
 
 plt.show()
