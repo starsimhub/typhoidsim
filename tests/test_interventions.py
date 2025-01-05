@@ -107,19 +107,21 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
     init_prev = 0.5
     typhoid = ty.Typhoid(pars={'init_prev': ss.bernoulli(p=init_prev)})
     # create and apply the test intervention
-    tst = ty.base_test(prob_t=prob_test, prob_tp=prob_test_positive, eligibility=ty.eligibility_by_age)
-    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst)
+    dx_product = ty.typhoid_test(pars=dict(sensitivity=ss.bernoulli(p=prob_test_positive)))
+    screen_acute = ty.routine_acute_screening(product=dx_product, prob=prob_test)  # Screen 30% of acute
+    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=screen_acute)
     sim.init(verbose=False)
     sim.run()
     # check the number of infected cases
     sim_prev = sum(sim.people.typhoid.infected)/sum(sim.people.alive)
     assert np.isclose(sim_prev, init_prev, atol=1e-1)
 
-    mean_tests = sim.interventions.base_test.results.new_tested.mean() / sum(sim.people.alive)
-    assert np.isclose(mean_tests, prob_test, atol=1e-1)
+    mean_tests = sim.interventions.routine_acute_screening.results.new_screened.mean() / sum(sim.diseases.typhoid.infected)
+    prob = init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test
+    assert np.isclose(mean_tests, prob, atol=1e-1)
 
-    mean_positive = sim.interventions.base_test.results.new_positive.mean() / sum(sim.people.alive)
-    prob = init_prev * prob_test * prob_test_positive
+    mean_positive = sim.interventions.routine_acute_screening.results.new_positive.mean() / (sum(sim.diseases.typhoid.acute) * prob_test)
+    prob = init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test_positive
     assert np.isclose(mean_positive, prob, atol=1e-1)
 
     if do_plot:
