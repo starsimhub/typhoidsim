@@ -246,6 +246,7 @@ class Typhoid(ss.Disease):
             initial_cases = self.pars.init_prev.filter((self.susceptible).uids)
             self.set_prognoses(initial_cases)
             self.progress_to_prepatent(self.sim.ti)  # Incubation period
+            self.ti_prepatent[initial_cases] = -2
             self.n_initial_cases = len(initial_cases)
         return
 
@@ -1006,6 +1007,8 @@ class Typhoid(ss.Disease):
         n = np.count_nonzero(self.sim.people.alive)
         res.prevalence[ti] = res.n_infected[ti] / n
         res.new_infections[ti] = np.count_nonzero(self.ti_prepatent == ti)
+        if ti == 0:
+            res.new_infections[ti] += np.count_nonzero(self.ti_prepatent == -2)  # Count initial cases
         res.cum_infections[ti] = np.sum(res['new_infections'][:ti+1])
         res.new_susceptible[ti] = np.count_nonzero(self.ti_susceptible == ti)
         res.new_prepatent[ti] = np.count_nonzero(self.ti_prepatent == ti)

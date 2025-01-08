@@ -28,7 +28,7 @@ def make_sim_no_deaths(run=False):
     # sim.diseases.typhoid.n_infections.sum() will have the "total" number of infections experienced by agents currently alive,
     # while cum_infections will have the total number of infections experienced by all agents who ever lived throughout the simulation
     diseases = [ty.Typhoid(pars={"p_death": ss.bernoulli(p=0.00)})]
-    networks = [ss.RandomNet({'n_contacts': 0})]
+    networks = [ss.RandomNet({'n_contacts': 5})]
     sim = ss.Sim(pars=pars, networks=networks, diseases=diseases)
 
     # Optionally run and plot
@@ -58,8 +58,8 @@ def test_n_infections():
     ti_start = 0
     ti_end = -1
     assert sim.diseases.typhoid.results.cum_infections[ti_start] == sim.diseases.typhoid.results.new_infections[ti_start]
-    assert sim.diseases.typhoid.results.cum_infections[ti_end] == sim.diseases.typhoid.n_initial_cases
     assert sim.diseases.typhoid.results.cum_infections[ti_end] == sim.diseases.typhoid.n_infections.sum()
+    assert sim.diseases.typhoid.results.new_infections.sum() == sim.diseases.typhoid.n_infections.sum()
     return
 
 
