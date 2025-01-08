@@ -281,7 +281,8 @@ def to_df(sim, sep='_'):
 
     flat = sim.results.flatten(sep=sep)
     for arr in flat.keys():
-        if len(flat[arr].shape) > 1 or arr.startswith("monitor"):
+        # We are using .values because of the following bug in starsim: https://github.com/starsimhub/starsim/issues/838
+        if len(flat[arr].values.shape) > 1 or arr.startswith("monitor"):
             del flat[arr]
     df = sc.dataframe.from_dict(flat)
     return df
