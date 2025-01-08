@@ -281,7 +281,7 @@ def to_df(sim, sep='_'):
 
     flat = sim.results.flatten(sep=sep)
     for arr in flat.keys():
-        if arr.startswith("monitor"):
+        if len(flat[arr].shape) > 1 or arr.startswith("monitor"):
             del flat[arr]
     df = sc.dataframe.from_dict(flat)
     return df
