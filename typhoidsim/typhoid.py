@@ -1005,8 +1005,8 @@ class Typhoid(ss.Disease):
         ti = self.ti
         n = np.count_nonzero(self.sim.people.alive)
         res.prevalence[ti] = res.n_infected[ti] / n
-        res.new_infections[ti] = np.count_nonzero(self.ti_prepatent == ti) + (np.array(self.n_initial_cases) if ti == 0 else np.array([0.0])) # Count initial cases that occur at ti=0 too
-        res.cum_infections[ti] = np.sum(res['new_infections'][:ti+1] ) #
+        res.new_infections[ti] = np.count_nonzero(self.ti_prepatent == ti)
+        res.cum_infections[ti] = np.sum(res['new_infections'][:ti+1])
         res.new_susceptible[ti] = np.count_nonzero(self.ti_susceptible == ti)
         res.new_prepatent[ti] = np.count_nonzero(self.ti_prepatent == ti)
         res.new_acute[ti] = np.count_nonzero(self.ti_acute == ti)
