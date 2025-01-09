@@ -33,6 +33,9 @@ class Typhoid(ss.Disease):
             # Initial conditions and transmissibility beta
             init_prev=ss.bernoulli(p=0.005),
 
+            # Initial susceptibility
+            init_susc = ss.constant(v=0.0),
+
             # NATURAL HISTORY PARAMETERS
             # From never exposed/invulnerable to susceptible
             p_unexp2sus_6m=ss.bernoulli(p=0.14),  # Proportion of never exposed/completely immune population at 6 months that moves to susceptible state
@@ -237,6 +240,7 @@ class Typhoid(ss.Disease):
         #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_function)
         #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_gauld2018),
         self.make_susceptible()
+        self.susceptibility[self.susceptible.uids] = self.pars.init_susc.rvs(self.susceptible.uids)
 
         if self.pars.init_prev is None:
             self.n_initial_cases = 0.0
