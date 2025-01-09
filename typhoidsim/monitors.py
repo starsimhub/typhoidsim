@@ -342,7 +342,7 @@ class histograms_by_age_sex_monitor(Monitor):
         yearvec = self.yearvec
 
         if t_index is None:
-            t_index = np.random.choice(len(yearvec)-2, 5, replace=False)  # Pick five time points to plot
+            t_index = np.random.choice(len(yearvec), size=np.min([len(yearvec), 7]), replace=False)  # Pick five time points to plot
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
