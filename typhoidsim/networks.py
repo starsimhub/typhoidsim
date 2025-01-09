@@ -22,7 +22,7 @@ class CommunityNet(ss.DynamicNetwork):
         self.define_pars(
             age_mixing=None,
             location='Chile',
-            dur=0, # TODO SOON: ss.dur(0, unit='day')  # Duration ensures new random edges each time step
+            dur=ss.dur(0, unit='day'),  # Duration ensures new random edges each time step
         )
         self.update_pars(pars, **kwargs)
 
