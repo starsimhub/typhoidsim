@@ -10,14 +10,14 @@ def make_sim(saturation_age=20.0):
     # Define the parameters
     pars = sc.objdict(
         start=1990.0,      # Starting year
-        n_years=2.0,       # Number of years to simulate
+        dur=2.0,       # Number of years to simulate
         dt=1.0/365.0,      # Timestep of 1 day, expressed in years
         use_aging=True,    # Use for debugging purposes, as a changing population may affect the results
         verbose=1,         # Print details of the run
         rand_seed=2,       # Set a non-default seed
     )
 
-    typhoids_pars = {"init_prev": None,  # Don't seed infections
+    typhoids_pars = {"init_prev": ss.bernoulli(p=0.0),  # Don't seed infections
                      "unexp2sus_saturation_age": saturation_age,
                      "unexp2sus_slope": 1.0}
 
@@ -53,8 +53,8 @@ sim2 = make_sim(saturation_age=5.0)
 sim1.run()
 sim2.run()
 
-report1 = sim1.get_analyzers()[0]
-report2 = sim2.get_analyzers()[0]
+report1 = sim1.analyzers[0]
+report2 = sim2.analyzers[0]
 report1.plot()
 report1.plot_waterfall()
 report2.plot_waterfall()

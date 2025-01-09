@@ -13,7 +13,7 @@ import typhoidsim as ty
 # Define the parameters
 pars = sc.objdict(
     start=2000,       # Starting year
-    n_years=30.0/365.0,# Number of days to simulate
+    dur=30.0/365.0,# Number of days to simulate
     dt=1.0/365.0,     # Timestep of 1 day, expressed in years
     verbose=1,        # Print details of the run
     rand_seed=2,      # Set a non-default seed
