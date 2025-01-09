@@ -65,7 +65,7 @@ monitor_population = ty.histograms_by_age_sex_monitor(age_bins=age_bin_edges,
 
 sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=screen_all, analyzers=[monitor_cases, monitor_population])
 sim.run()
-timevec = sim.analyzers[0].yearvec
-ty.plot_sim(sim, key="monitor_", yearvec=timevec)
-sim.plot(key="typhoid_new")
+timevec = sim.analyzers[0].timevec_
+ty.plot_sim(sim, key="monitor_", timevec=timevec)
+#sim.plot() # TODO: fix
 plt.show()
