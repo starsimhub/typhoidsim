@@ -81,7 +81,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.monitor_period = None
         self.ntpts = None  # Number of timepoints to record
         self.nags  = None  # Number of age groups to record
-        self.yearvec = None  # This monitor yearvec
+        self.timevec_ = None  # This monitor timevec
         self.record = None
         self.agg_func = None
         self.sample = None
@@ -110,15 +110,15 @@ class histograms_by_age_sex_monitor(Monitor):
             self.monitor_period = self.t.dt  # CK: TODO: use time units
 
         # Output year vector
-        self.yearvec = sc.inclusiverange(self.record_from, self.record_until, self.monitor_period) # CK: TODO: use time units
+        self.timevec_ = sc.inclusiverange(self.record_from, self.record_until, self.monitor_period) # CK: TODO: use time units
 
         if self.aggregate_time is None or self.aggregate_time == "subsample":
             self.sample = self._default_sampling
-            self.ntpts = len(self.yearvec)
-            self.stock_ntpts = len(self.yearvec)
+            self.ntpts = len(self.timevec_)
+            self.stock_ntpts = len(self.timevec_)
         else:
             self.sample = self._aggregate_sampling
-            self.ntpts = len(self.yearvec) # number of time points in the final result arrays
+            self.ntpts = len(self.timevec_) # number of time points in the final result arrays
             self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, self.t.dt))  # number of time points for the internal stock arrays  # CK: TODO: use time units
 
         self.nags = len(self.age_bins) - 1  # Number of age groups
@@ -172,7 +172,7 @@ class histograms_by_age_sex_monitor(Monitor):
                                   shape=(self.ntpts, self.nags),
                                   scale=True, label=f"{sex}_{reslbl}"), ]
 
-        self.results += [ss.Result(f"yearvec",
+        self.results += [ss.Result(f"time",
                                    dtype=float,
                                    shape=(self.ntpts,),
                                    scale=False, label=f"Calendar years (float representation)"), ]
@@ -293,7 +293,7 @@ class histograms_by_age_sex_monitor(Monitor):
     def finalize_results(self):
         for stock_name in self.stocks:
             self.results[stock_name][:] = self.aggregate(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
-        self.results["yearvec"][:] = self.yearvec
+        self.results["time"][:] = self.timevec_
         super().finalize_results()
         return
 
@@ -302,7 +302,7 @@ class histograms_by_age_sex_monitor(Monitor):
         #TODO: export year bin information too, will be useful for calibration
         dfs = []
         for res_name, res_value in self.results.items():
-            if res_name in ["yearvec", "timevec"]:
+            if res_name in ["timevec"]:
                 continue
             for ab_idx in range(res_value.shape[1]):
                 data = {"label": res_name,
@@ -310,7 +310,7 @@ class histograms_by_age_sex_monitor(Monitor):
                         "age_bin_lb": self.age_bins[ab_idx],    # Lower bound
                         "age_bin_ub": self.age_bins[ab_idx+1],  # Upper bound
                         "age_bin_label": self.age_bin_labels[ab_idx],
-                        "year": self.yearvec}
+                        "year": self.timevec_}
                 dfs.append(pd.DataFrame(data))
         df = pd.concat(dfs, axis=0)
         return df
@@ -321,7 +321,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
         Args:
             key (str): the results key to plot (by default, all)
-            t_index (int): the time index in the monitor's yearvec vector
+            t_index (int): the time index in the monitor's timevec vector
             fig (Figure): if provided, plot results into an existing figure
             style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
             fig_kw (dict): passed to ``plt.subplots()``
@@ -329,7 +329,7 @@ class histograms_by_age_sex_monitor(Monitor):
         """
         # Configuration
         flat = self.results.flatten()
-        flat.pop('yearvec')
+        flat.pop('timevec')
         n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
         default_figsize = np.array([8, 6])
         figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,
@@ -339,14 +339,14 @@ class histograms_by_age_sex_monitor(Monitor):
         plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
 
         # Time vector
-        yearvec = self.yearvec
+        timevec = self.timevec_
 
         if t_index is None:
-            t_index = np.random.choice(len(yearvec), size=np.min([len(yearvec), 7]), replace=False)  # Pick five time points to plot
+            t_index = np.random.choice(len(timevec), size=np.min([len(timevec), 7]), replace=False)  # Pick five time points to plot
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
-                flat = {k: v for k, v in flat.items() if k.startswith(key) and k.name != "yearvec"}
+                flat = {k: v for k, v in flat.items() if k.startswith(key) and k.name != "timevec"}
 
             # Get the figure
             if fig is None:
@@ -361,7 +361,7 @@ class histograms_by_age_sex_monitor(Monitor):
             # Do the plotting
             for ax, (key, res) in zip(axs, flat.items()):
                 for tidx in sorted(t_index):
-                    ax.bar(np.arange(0, len(self.age_bin_centers)), res[tidx, :], **plot_kw, label=f"t={yearvec[tidx]:.4f}", alpha=0.2)
+                    ax.bar(np.arange(0, len(self.age_bin_centers)), res[tidx, :], **plot_kw, label=f"t={timevec[tidx]:.4f}", alpha=0.2)
                     ax.set_xticks(np.arange(0, len(self.age_bin_centers)), self.age_bin_labels)
 
                 title = getattr(res, 'label', key)
@@ -397,7 +397,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
         # Configuration
         flat = self.results.flatten()
-        flat.pop('yearvec')
+        flat.pop('timevec')
 
         n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
         default_figsize = np.array([8, 6])
@@ -414,14 +414,14 @@ class histograms_by_age_sex_monitor(Monitor):
         t_indices = np.linspace(0,  ntpts-1, ntpts, dtype=int)
 
         # Time vector
-        yearvec = self.yearvec
+        timevec = self.timevec_
         y_scaling = plot_kw['y_scaling']
 
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
                 flat = {k: v for k, v in flat.items() if
-                        k.startswith(key) and k.name != "yearvec"}
+                        k.startswith(key) and k.name != "timevec"}
 
             # Get the figure
             if fig is None:
@@ -456,7 +456,7 @@ class histograms_by_age_sex_monitor(Monitor):
                 ax.set_xlabel('Age (years)')
                 # Set the y-axis (time) labels
                 ax.set_yticks(y_scaling * np.arange(len(t_indices)))
-                ax.set_yticklabels(yearvec[t_indices])
+                ax.set_yticklabels(timevec[t_indices])
                 ax.set_ylabel('Year')
                 title = getattr(res, 'label', key)
                 ax.set_title(title)
