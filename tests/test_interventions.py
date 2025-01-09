@@ -130,12 +130,42 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
     return sim
 
 
+def run_sim_with_wash(efficacy):
+    # Define the parameters
+    pars = sc.objdict(
+        start=2000,  # Starting year
+        dur=1.0,  # Number of days to simulate
+        dt=1.0/365.0,  # Timestep of 1 day, expressed in years
+        verbose=1,  # Print details of the run
+        rand_seed=2,  # Set a non-default seed
+    )
+    ppl = ss.People(10_000)
+    typhoid = ty.Typhoid()
+    environment = ty.EnvironmentalPool()
+    sanitation_efficacy = ty.Pattern("efficacy", pars={'efficacy': 0.5})
+    sanitation = ty.behavioral_change(efficacy=efficacy)
+    sim = ss.Sim(
+        pars=pars,
+        diseases=typhoid,
+        demographics=environment,
+        interventions=sanitation
+    )
+
+    sim.run()
+    assert (efficacy == sim.diseases.typhoid.rel_sus).all()
+    return sim
+
+
 def test_base_test(do_plot=False):
     return run_sim_base_test(0.3, 1.0, do_plot=do_plot)
 
 
 def test_base_test_leaky(do_plot=False):
     return run_sim_base_test(0.3, 0.5, do_plot=do_plot)
+
+
+def test_wash_behavior_change():
+    return run_sim_with_wash()
 
 
 # def test_vaccine_leaky(do_plot=False):
@@ -151,6 +181,7 @@ if __name__ == '__main__':
     do_plot = True
     test_base_test(do_plot=do_plot)
     test_base_test_leaky(do_plot=do_plot)
+    test_base_test()
     #test_vaccine_all_or_nothing(do_plot=do_plot)
 
     T.toc()
