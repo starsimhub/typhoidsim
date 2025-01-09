@@ -557,7 +557,7 @@ class behavioral_change(WASH):
         return
 
     def step(self):
-        if self.sim.t.now('year') >= self.start and len(self.time):
+        if self.sim.t.now('year') == self.start:
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
             val = self._get_target_baseline()
