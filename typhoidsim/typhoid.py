@@ -35,8 +35,8 @@ class Typhoid(ss.Disease):
             init_prev=ss.bernoulli(p=0.005),
 
             # Initial susceptibility (assumed state of the population, not everyone is naive)
-            init_seroprev = ss.bernoulli(p=0.01), # % of people who were previously infected
-            init_prior_infc = ss.poisson(lam=1.0),
+            init_seroprev = ss.bernoulli(p=0.0), # % of people who were previously infected
+            init_prior_infc = ss.poisson(lam=self.prior_infections_by_age),
 
             # NATURAL HISTORY PARAMETERS
             # From never exposed/invulnerable to susceptible
@@ -183,6 +183,7 @@ class Typhoid(ss.Disease):
         )
 
         self.n_initial_cases = None
+        self.n_infections_historical = None
 
         return
 
@@ -247,11 +248,12 @@ class Typhoid(ss.Disease):
         prior_cases = self.pars.init_seroprev.filter((self.susceptible).uids)
         self.n_infections[prior_cases] = self.pars.init_prior_infc.rvs(prior_cases)
         self.susceptibility[prior_cases] = self.update_immunity(prior_cases)
+        self.n_infections_historical = 0.0
 
-        if self.pars.init_prev is None:
-            self.n_initial_cases = 0.0
-            return
+        if len(prior_cases):
+            self.n_infections_historical = self.n_infections[prior_cases].sum()
 
+        self.n_initial_cases = 0.0
         if self.pars.init_prev is not None:
             eligible_uids =  np.setdiff1d((self.susceptible).uids, prior_cases)
             initial_cases = self.pars.init_prev.filter(eligible_uids)
@@ -982,6 +984,21 @@ class Typhoid(ss.Disease):
             std_arr[sim.people.age[uids] < th_age]  = module.pars.inf_dur_std_le
             std_arr[sim.people.age[uids] >= th_age] = module.pars.inf_dur_std_geq
         return std_arr
+
+    @staticmethod
+    def prior_infections_by_age(module, sim, uids):
+        """
+        TODO: [WIP] palceholder - the functional form is just a toy example
+        Function to modulate probability of prior n_infections by age at t=0,
+        but would need to discuss functional form/how to parameterize.
+        """
+        if uids is None:
+            lam_arr = np.array([])
+        else:
+            max_lam = 1.0 # average value (lambda) of prior n_infections as age -> infty
+            lam_arr = tyum.sigmoid(sim.people.age[uids], tyd.max_age, 1.0)
+        return lam_arr
+
 
     def update_immunity(self, uids):
         """
