@@ -30,11 +30,13 @@ class Typhoid(ss.Disease):
         """Initialize with parameters"""
         super().__init__()
         self.define_pars(
-            # Initial conditions and transmissibility beta
+            # Initial conditions
+            # Seeded cases at t=0
             init_prev=ss.bernoulli(p=0.005),
 
-            # Initial susceptibility
-            init_susc = ss.constant(v=0.0),
+            # Initial susceptibility (assumed state of the population, not everyone is naive)
+            init_seroprev = ss.bernoulli(p=0.01), # % of people who were previously infected
+            init_prior_infc = ss.poisson(lam=1.0),
 
             # NATURAL HISTORY PARAMETERS
             # From never exposed/invulnerable to susceptible
@@ -240,14 +242,19 @@ class Typhoid(ss.Disease):
         #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_function)
         #     p_unexp2sus = ss.bernoulli(p=self.unexp2susc_prob_gauld2018),
         self.make_susceptible()
-        self.susceptibility[self.susceptible.uids] = self.pars.init_susc.rvs(self.susceptible.uids)
+
+        # Of the people who are susceptible now, select those who we assume were infected before t=0
+        prior_cases = self.pars.init_seroprev.filter((self.susceptible).uids)
+        self.n_infections[prior_cases] = self.pars.init_prior_infc.rvs(prior_cases)
+        self.susceptibility[prior_cases] = self.update_immunity(prior_cases)
 
         if self.pars.init_prev is None:
             self.n_initial_cases = 0.0
             return
 
         if self.pars.init_prev is not None:
-            initial_cases = self.pars.init_prev.filter((self.susceptible).uids)
+            eligible_uids =  np.setdiff1d((self.susceptible).uids, prior_cases)
+            initial_cases = self.pars.init_prev.filter(eligible_uids)
             self.set_prognoses(initial_cases)
             self.progress_to_prepatent(self.sim.ti)  # Incubation period
             self.ti_prepatent[initial_cases] = -2
