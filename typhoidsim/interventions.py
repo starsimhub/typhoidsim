@@ -5,6 +5,7 @@ the intervention (eg, campaign that finds eligible people) and also products.
 import numpy as np
 import sciris as sc
 import starsim as ss
+import functools
 
 from .patterns import Pattern
 from .defaults import days_per_year
@@ -357,7 +358,7 @@ class WASH(ss.Intervention):
     Assumes the intervention is applied over an interval of (continuous) time.
     """
 
-    def __init__(self, start_year=None, dur=None, efficacy=None, *args, **kwargs):
+    def __init__(self, start_year=None, dur=None, efficacy=None, efficacy_kwargs=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.start = start_year
         self.dur   = dur
@@ -482,8 +483,26 @@ class environmental_trapezoidal_modulation(WASH):
     Results in a reduction of the relative exposure to the environment
     due crop irrigation, health inspections of food vendors.
     """
+    def __init__(self, efficacy_kwargs=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.efficacy_pars = efficacy_kwargs
+        return
+
+    def validate_efficacy_pars(self):
+        total_duration = (self.efficacy_pars['ramp_up_dur'] +
+                          self.efficacy_pars['ramp_dw_dur'] +
+                          self.efficacy_pars['cutoff_dur'])
+
+        if total_duration> self.efficacy_pars['period']:
+                raise ValueError(f"the duration of the pattern is longer than the period")
+        if total_duration == self.efficacy_pars['period']:
+                raise ValueError(f"the duration of the pattern is exactly the period, will get a triangular waveform")
+        return
+
     def init_pre(self, sim):
         super().init_pre(sim)
+        self.validate_efficacy_pars()
+        self.efficacy_pattern = functools.partial(self.efficacy_pattern, **self.efficacy_pars)
         self.target_attr_path = ['demographics', 'environmentalpool', 'pars', 'transmission', 'rel_trans']
         self.target_baseline = self._get_target_baseline()
         return

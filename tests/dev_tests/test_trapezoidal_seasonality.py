@@ -25,7 +25,7 @@ ppl = ss.People(10_000)
 # Modulates the level of CFUs in the environment by reducing the shedding rate from people to the environment,
 # Use a periodic rectangular pulse
 # Parameters
-seasonal_env_pars = {
+trapezoidal_pars = {
     'period': 365.0,  # in days
     'peak_start_doy': 275.0,  # day of the year
     'ramp_up_dur': 175.26,    # duration in days
@@ -33,18 +33,12 @@ seasonal_env_pars = {
     'cutoff_dur': 20.0,       # duration in days
     'max_amp': 1.0}
 
-
-def trapezoid(env_pars):
-    if env_pars['ramp_up_dur'] + env_pars['ramp_dw_dur'] + env_pars['cutoff_dur'] > env_pars['period']:
-        raise ValueError(f"the duration of the pattern is longer than the period")
-    elif env_pars['ramp_up_dur'] + env_pars['ramp_dw_dur'] + env_pars['cutoff_dur'] == env_pars['period']:
-        raise ValueError(f"the duration of the pattern is exactly the period, will get a triangular waveform")
-    else:
-        return functools.partial(ty.asym_trapezoidal, **env_pars)
-
-start_day = (seasonal_env_pars["peak_start_doy"] - seasonal_env_pars["ramp_up_dur"]) / ty.days_per_year
+start_day = (trapezoidal_pars["peak_start_doy"] - trapezoidal_pars["ramp_up_dur"]) / ty.days_per_year
 start_year = 2004.0 + start_day
-sanitation = ty.environmental_trapezoidal_modulation(efficacy=trapezoid(seasonal_env_pars), start_year=start_year)
+
+sanitation = ty.environmental_trapezoidal_modulation(start_year=start_year,
+                                                     efficacy=ty.asym_trapezoidal,
+                                                     efficacy_kwargs=trapezoidal_pars)
 
 sim = ss.Sim(
     pars=pars,
