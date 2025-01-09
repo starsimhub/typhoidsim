@@ -12,7 +12,7 @@ from .networks import CommunityNet
 __all__ = ["plot_age_histogram", "plot_age_mixing", "plot_sim", "plot_calib"]
 
 
-def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearvec=None, display_from=None, display_until=None):
+def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, timevec=None, display_from=None, display_until=None):
     """
     Plot all results in the Sim object after the simulation has run
 
@@ -23,7 +23,7 @@ def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, 
         style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
         fig_kw (dict): passed to ``plt.subplots()``
         plot_kw (dict): passed to ``plt.plot()``
-        yearvec (arr): the time vector (in years) we want to use for plotting the results, defaults to sim.yearvec
+        timevec (arr): the time vector (in years) we want to use for plotting the results, defaults to sim.timevec
 
     """
     # Configuration
@@ -39,18 +39,18 @@ def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, 
 
     # Do the plotting
     with sc.options.with_style(style):
-        if yearvec is None:
-            yearvec = flat.pop('yearvec')
+        if timevec is None:
+            timevec = flat.pop('timevec')
 
         mask = Ellipsis
         mask_from = None
         mask_until = None
 
         if display_from:
-            mask_from = yearvec >= display_from if display_from is not None else None
+            mask_from = timevec >= display_from if display_from is not None else None
 
         if display_until:
-            mask_until = yearvec <= display_until if display_until is not None else None
+            mask_until = timevec <= display_until if display_until is not None else None
 
         if mask_from and mask_until:
             mask = np.logical_and(mask_from, mask_until)
@@ -74,7 +74,7 @@ def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, 
 
         # Do the plotting
         for ax, (key, res) in zip(axs, flat.items()):
-            ax.plot(yearvec[mask], res[mask], **plot_kw, label=sim.label)
+            ax.plot(timevec[mask], res[mask], **plot_kw, label=sim.label)
             title = getattr(res, 'label', key)
             if res.module != 'sim':
                 try:
