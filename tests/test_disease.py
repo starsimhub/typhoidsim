@@ -12,7 +12,7 @@ import typhoidsim as ty
 pars = sc.objdict(
     n_agents=10e3,             # Number of agents
     start=2000,                # Starting year
-    dur=3.0/365.0,             # Number of days to simulate
+    dur=10.0/365.0,             # Number of days to simulate
     dt=1.0/ty.days_per_year,   # Timestep of 1 day, expressed in years
     verbose=0,                 # Don't print details of the run
     rand_seed=2,               # Set a non-default seed
@@ -58,8 +58,8 @@ def test_n_infections():
     ti_start = 0
     ti_end = -1
     assert sim.diseases.typhoid.results.cum_infections[ti_start] == sim.diseases.typhoid.results.new_infections[ti_start]
-    assert sim.diseases.typhoid.results.cum_infections[ti_end] == sim.diseases.typhoid.n_infections.sum()
-    assert sim.diseases.typhoid.results.new_infections.sum() == sim.diseases.typhoid.n_infections.sum()
+    assert sim.diseases.typhoid.results.new_infections.sum()  == (sim.diseases.typhoid.n_infections.sum() - sim.diseases.typhoid.n_infections_historical)
+    assert sim.diseases.typhoid.results.cum_infections[ti_end] == (sim.diseases.typhoid.n_infections.sum() - sim.diseases.typhoid.n_infections_historical)
     return
 
 
