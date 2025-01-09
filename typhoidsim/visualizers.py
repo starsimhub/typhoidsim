@@ -92,7 +92,7 @@ def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, 
     return fig
 
 
-def plot_calib(calib, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearvec=None, display_from=None, display_until=None):
+def plot_calib(calib, fig=None, style='fancy', fig_kw=None, plot_kw=None, timevec=None, display_from=None, display_until=None):
     """
     Plot all results in the Sim object after the simulation has run
 
@@ -103,7 +103,7 @@ def plot_calib(calib, fig=None, style='fancy', fig_kw=None, plot_kw=None, yearve
         style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
         fig_kw (dict): passed to ``plt.subplots()``
         plot_kw (dict): passed to ``plt.plot()``
-        yearvec (arr): the time vector (in years) we want to use for plotting the results, defaults to sim.yearvec
+        time (arr): the time vector (in years) we want to use for plotting the results, defaults to sim.timevec
 
     """
     import seaborn as sns
