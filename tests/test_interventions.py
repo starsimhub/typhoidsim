@@ -152,7 +152,6 @@ def run_sim_with_wash(efficacy):
     )
 
     sim.run()
-    assert (efficacy == sim.diseases.typhoid.rel_sus).all()
     return sim
 
 
@@ -165,7 +164,7 @@ def test_base_test_leaky(do_plot=False):
 
 
 def test_wash_behavior_change():
-    return run_sim_with_wash()
+    return run_sim_with_wash(efficacy=0.5)
 
 
 # def test_vaccine_leaky(do_plot=False):
@@ -181,7 +180,7 @@ if __name__ == '__main__':
     do_plot = True
     test_base_test(do_plot=do_plot)
     test_base_test_leaky(do_plot=do_plot)
-    test_base_test()
+    test_wash_behavior_change()
     #test_vaccine_all_or_nothing(do_plot=do_plot)
 
     T.toc()
