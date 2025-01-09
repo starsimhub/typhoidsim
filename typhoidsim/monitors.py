@@ -302,8 +302,8 @@ class histograms_by_age_sex_monitor(Monitor):
         #TODO: export year bin information too, will be useful for calibration
         dfs = []
         for res_name, res_value in self.results.items():
-            if res_name == "yearvec":
-                break
+            if res_name in ["yearvec", "timevec"]:
+                continue
             for ab_idx in range(res_value.shape[1]):
                 data = {"label": res_name,
                         "x": res_value[:, ab_idx],
