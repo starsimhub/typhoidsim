@@ -331,7 +331,7 @@ class histograms_by_age_sex_monitor(Monitor):
                         "age_bin_lb": self.age_bins[ab_idx],    # Lower bound
                         "age_bin_ub": self.age_bins[ab_idx+1],  # Upper bound
                         "age_bin_label": self.age_bin_labels[ab_idx],
-                        "year": self.timevec_}
+                        "time": res_value.timevec}
                 dfs.append(pd.DataFrame(data))
         df = pd.concat(dfs, axis=0)
         return df
@@ -350,7 +350,6 @@ class histograms_by_age_sex_monitor(Monitor):
         """
         # Configuration
         flat = self.results.flatten()
-        flat.pop('timevec')
         n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
         default_figsize = np.array([8, 6])
         figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,
@@ -364,10 +363,12 @@ class histograms_by_age_sex_monitor(Monitor):
 
         if t_index is None:
             t_index = np.random.choice(len(timevec), size=np.min([len(timevec), 7]), replace=False)  # Pick five time points to plot
+        else:
+            t_index = sc.promotetoarray(t_index)
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
-                flat = {k: v for k, v in flat.items() if k.startswith(key) and k.name != "timevec"}
+                flat = {k: v for k, v in flat.items() if k.startswith(key)}
 
             # Get the figure
             if fig is None:
