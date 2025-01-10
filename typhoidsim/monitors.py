@@ -419,7 +419,6 @@ class histograms_by_age_sex_monitor(Monitor):
 
         # Configuration
         flat = self.results.flatten()
-        flat.pop('timevec')
 
         n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
         default_figsize = np.array([8, 6])
@@ -442,8 +441,7 @@ class histograms_by_age_sex_monitor(Monitor):
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
-                flat = {k: v for k, v in flat.items() if
-                        k.startswith(key) and k.name != "timevec"}
+                flat = {k: v for k, v in flat.items() if k.startswith(key)}
 
             # Get the figure
             if fig is None:
@@ -462,7 +460,7 @@ class histograms_by_age_sex_monitor(Monitor):
                     data_ti = res[ti, :]
                     try:
                         resamples = np.random.choice(self.age_bin_centers, size=self.nags * 100,
-                                                     p=data_ti/data_ti.sum())
+                                                     p=sc.safedivide(data_ti, data_ti.sum()))
                         kde = gaussian_kde(resamples)
                         kde_data = kde(self.age_bin_centers)
                         kde_data = kde_data / kde_data.max() + y_scaling * idx
