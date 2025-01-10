@@ -48,15 +48,31 @@ class Monitor(ss.Analyzer):
 
 class histograms_by_age_sex_monitor(Monitor):
     """
-    Records statistics (counts) by age and sex for each timestep.
+    A class used to record statistics (counts) by age and sex for each timestep,
+    or a user-defined sampling period.
 
-    Scaling is a number to adjust the number of cases for imperfect sampling/testing
-    in the real-world.
+    Args:
+        age_bins (list, optional): The bins to use for age. Defaults to `None`.
+        age_bin_labels (list, optional): Labels for the age bins. Defaults to `None`.
+        to_record (dict): nested dictionary with the path to the quantity to record:
+             For instance: dict(ti_acute=dict(path=("diseases", "typhoid"), label="cases"))
+        record_from (float, optional): Time to start recording from, assumes it's time expressed in years in float representation.
+             If None, it records from the start of the simulation.
+        record_until (int, optional): Time until which to record. Assumes it's time expressed in years in float representation.
+             If None, it records until the end of the simulation.
+        aggregate_sex (bool, optional): Whether to record each quantity separetely by sex.
+             Defaults to `False`, ie, records the quantities in to_record separately for females and males.
+        aggregate_time (str, optional): If the monitor downsamples results with respect to the original simulation resoliution,
+            tell the monitor how to downsample. Options are "subsample", "mean", "median", "min", "max", "sum".
+        resampling_period (float, optional): New sampling period of the output/results of this monitor.
+        scaling (float, optional):  Scaling factor for adjusting the counts. Defaults to 1.0.
+            This is a crude way to scale down counts to mimic imperfect observation/reporting processes such as testing.
+        name (str, optional): The name of the monitor. Defaults to `None`.
 
-    For instance in the Pakistan simulations with EMOD a value of 0.6 * 0.75 *
-    reporting_rate (emod parameter) is used 60% blood culture sensitivity
-    and 75% health care seeking. By default scaling=1.0, as if we had
-    perfect sampling of the whole population.
+    Note:
+        Scaling factor value example: 0.6 * 0.75 * reporting_rate (emod parameter) is used
+        for 60% blood culture sensitivity and 75% healthcare seeking in Pakistan simulations with
+        EMOD. By default, scaling=1.0, as if we had perfect sampling of the whole population.
     """
     def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None,
                  record_until=None, aggregate_sex=False, aggregate_time=None, scaling=1.0,
