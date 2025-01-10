@@ -56,6 +56,8 @@ class histograms_by_age_sex_monitor(Monitor):
         age_bin_labels (list, optional): Labels for the age bins. Defaults to `None`.
         to_record (dict): nested dictionary with the path to the quantity to record:
              For instance: dict(ti_acute=dict(path=("diseases", "typhoid"), label="cases"))
+             If None (default), it records the main states of typhoid, both new cases in a given time step,
+             and total number of people in that state at each timestep.
         record_from (float, optional): Time to start recording from, assumes it's time expressed in years in float representation.
              If None, it records from the start of the simulation.
         record_until (int, optional): Time until which to record. Assumes it's time expressed in years in float representation.
@@ -149,7 +151,8 @@ class histograms_by_age_sex_monitor(Monitor):
         if self.to_record is None:
             states_of_interest = ["ti_infected", "infected",
                                   "ti_prepatent", "prepatent",
-                                  "ti_acute", "acute", "ti_subclinical", "subclinical",
+                                  "ti_acute", "acute",
+                                  "ti_subclinical", "subclinical",
                                   "ti_chronic", "chronic",
                                   "ti_recovered", "recovered"]
             self.to_record = {state: dict(path=("diseases", "typhoid")) for state in states_of_interest}
@@ -159,7 +162,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.attrname_to_stockname = dict()
         for attrname, specs in self.to_record.items():
             if "path" not in specs:
-                raise ValueError(f"Will not be able to record {attrname} because 'path' is "
+                raise ValueError(f"Not be able to record {attrname} because 'path' is "
                                  f"missing the `to_record` configuration dictionary.")
 
             else:
@@ -180,18 +183,17 @@ class histograms_by_age_sex_monitor(Monitor):
                     self.stocks += [ss.Result(f"{sex}_{attrlbl}",
                                               dtype=res_dtype,
                                               shape=(self.stock_ntpts, self.nags),
-                                              scale=False, label=f"{sex}_{reslbl}"), ]
+                                              scale=False,
+                                              label=f"{sex}_{reslbl}"), ]
 
                     self.results += [
                         ss.Result(f"{sex}_{attrlbl}",
                                   dtype=res_dtype,
                                   shape=(self.ntpts, self.nags),
-                                  scale=True, label=f"{sex}_{reslbl}"), ]
+                                  scale=True,
+                                  timevec=self.timevec_,
+                                  label=f"{sex}_{reslbl}"), ]
 
-        self.results += [ss.Result(f"time",
-                                   dtype=float,
-                                   shape=(self.ntpts,),
-                                   scale=False, label=f"Calendar years (float representation)"), ]
         # Configure the monitor
         self.configure_recording_functions()
         return
@@ -288,8 +290,6 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def aggregate(self, vals):
-        if self.aggregate_time is None:
-            return vals
         remainder = self.stock_ntpts % self.monitor_step
         reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
         if remainder != 0:
@@ -301,6 +301,11 @@ class histograms_by_age_sex_monitor(Monitor):
         else:
             return self.agg_func(reshaped_data, axis=1)
 
+    def report(self, vals):
+        if self.aggregate_time is None:
+            return vals
+        return self.aggregate(vals)
+
     def step(self):
         if self.t.now('year') >= self.record_from and (self.t.now('year') <= self.record_until):
             self.sample(self.sim)
@@ -308,8 +313,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
     def finalize_results(self):
         for stock_name in self.stocks:
-            self.results[stock_name][:] = self.aggregate(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
-        self.results["time"][:] = self.timevec_
+            self.results[stock_name][:] = self.report(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
+            self.results.timevec = self.timevec_
         super().finalize_results()
         return
 
