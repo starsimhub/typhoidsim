@@ -17,7 +17,7 @@ sc.options(interactive=False)  # Assume not running interactively
 pars = sc.objdict(
     n_agents=10e3,             # Number of agents
     start=2000,                # Starting year
-    n_years=2,                # Number of years to simulate
+    dur=2,                # Number of years to simulate
     dt=1.0/ty.days_per_year,   # Timestep of 1 day, expressed in years
     verbose=0,                 # Don't print details of the run
     rand_seed=2,               # Set a non-default seed
@@ -30,8 +30,10 @@ def make_sim(run=False):
     via pytest), also plot the sim by default.
     """
     diseases = [ty.Typhoid()]
-    networks = [ ss.RandomNet({'n_contacts': 5})]
-    sim = ss.Sim(pars=pars, networks=networks, diseases=diseases)
+    networks = [ss.RandomNet({'n_contacts': 1})]
+    demographics = [ty.EnvironmentalPool()]
+
+    sim = ss.Sim(pars=pars, networks=networks, demographics=demographics, diseases=diseases)
 
     # Optionally run and plot
     if run:
@@ -114,7 +116,7 @@ def test_benchmark(do_save=False, repeats=1, verbose=True):
         # Time initialization
         t0 = sc.tic()
         sim = make_sim()
-        sim.initialize()
+        sim.init()
         t_init = sc.toc(t0, output=True)
 
         # Time running
@@ -140,7 +142,7 @@ def test_benchmark(do_save=False, repeats=1, verbose=True):
     },
         'parameters': {
             'n_agents': sim.pars.n_agents,
-            'n_years': sim.pars.n_years,
+            'dur': sim.pars.dur,
             'dt': sim.pars.dt,
         },
         'cpu_performance': ratio,

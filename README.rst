@@ -10,12 +10,20 @@ Installation
 
 `typhoidsim` can be installed
 
-- via cloning or downloading the sources from github, and then running:
+There are two main versions of typhoidsim:
+  - the legacy `typhoidsim v0.11.7 <_6>`__ , which exclusively works with `starsim 1.0.3 <_5>`__ ()
+  - typhoidsim from the main branch, which works with `starsim 2.2.0 <_7>`__ or above.
+
+To install the legacy version first clone the specific branch
+  - ``git clone --single-branch --branch legacy/main-v0.11.7-starsim-1.0.3 origin``
+
+
+Make sure you're inside the typhoidsim repository:
    - ``cd typhoidsim``
+
+And then run
    - ``pip install -e .`` (don't forget the dot at the end!).
 
-- via PyPI (not available yet):
-   - ``pip install typhoidsim``.
 
 More detailed instructions can be found `<here>`__.
 
@@ -46,3 +54,6 @@ modeling needs as permitted under the MIT License.
 .. _Tutorials: https://github.com/starsimhub/typhoidsim/tree/main/docs/tutorials
 .. _here: https://github.com/starsimhub/typhoidsim/issues/87
 .. _Starsim: https://github.com/starsimhub
+.. _5: https://pypi.org/project/starsim/1.0.3/
+.. _6: https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.11.7-starsim-1.0.3
+.. _7: https://pypi.org/project/starsim/2.2.0/

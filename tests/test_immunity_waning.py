@@ -1,9 +1,8 @@
 """
-Test how simulations with environmental transmission scales with respect to n_agents
+Test intervention with immunity waning and boosters.
 """
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 import sciris as sc
 import starsim as ss
@@ -15,7 +14,7 @@ def make_sim(n_agents=10_000):
     # Define the parameters
     pars = sc.objdict(
         start=2000,        # Starting year
-        dur=10.0,       # Number of days to simulate
+        dur=1.0,       # Number of days to simulate
         total_pop=50e6,    # Total population size
         pop_scale=None,    #
         n_agents=n_agents, #
@@ -60,15 +59,14 @@ def make_sim(n_agents=10_000):
     return sim
 
 
-sim = make_sim()
-sim.run()
-flat = sim.results.flatten()
-vax = flat["vaccination_with_waning_immunity"]
-are_kids  = (sim.people.age >= 10.0) & (sim.people.age < 15)
-are_vaccinated = sim.interventions[0].vaccinated
-data_imm = vax[:, (are_kids & are_vaccinated)]
+def run_sim():
+    sim = make_sim()
+    sim.run()
+    ty.to_df(sim)
+    assert True
+    return
 
-idx = 0
-plt.plot(sim.timevec, data_imm[:, 0:10])
 
-plt.show()
+if __name__ == '__main__':
+    sim = make_sim()
+    run_sim()

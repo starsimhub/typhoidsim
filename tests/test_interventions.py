@@ -18,7 +18,7 @@ def run_sim_vaccine(efficacy, leaky=True, do_plot=False):
     # Define high-level simulation parameters
     pars = dict(
         start=2000,  # Starting year
-        n_years=1.0,  # Duration of the simulation in years
+        dur=1.0,  # Duration of the simulation in years
         dt=1.0/365.0,  # Timestep of 1 day, expressed in years
         verbose=0,  # Do not print details of the run
     )
@@ -31,7 +31,7 @@ def run_sim_vaccine(efficacy, leaky=True, do_plot=False):
 
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, networks=random_p2p)
 
-    sim.initialize(verbose=False)
+    sim.init(verbose=False)
     sim.diseases.typhoid.update_pre()
 
     # work out who to vaccinate
@@ -98,7 +98,7 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
     # Define high-level simulation parameters
     pars = dict(
         start=2000,  # Starting year
-        n_years=2.0/365.0,  # Duration of the simulation in years
+        dur=2.0/365.0,  # Duration of the simulation in years
         dt=1.0/365.0,  # Timestep of 1 day, expressed in years
         verbose=0,  # Do not print details of the run
     )
@@ -107,24 +107,52 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
     init_prev = 0.5
     typhoid = ty.Typhoid(pars={'init_prev': ss.bernoulli(p=init_prev)})
     # create and apply the test intervention
-    tst = ty.base_test(prob_t=prob_test, prob_tp=prob_test_positive, eligibility=ty.eligibility_by_age)
-    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=tst)
-    sim.initialize(verbose=False)
+    dx_product = ty.typhoid_test(pars=dict(sensitivity=ss.bernoulli(p=prob_test_positive)))
+    screen_acute = ty.routine_acute_screening(product=dx_product, prob=prob_test)  # Screen 30% of acute
+    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=screen_acute)
+    sim.init(verbose=False)
     sim.run()
     # check the number of infected cases
     sim_prev = sum(sim.people.typhoid.infected)/sum(sim.people.alive)
     assert np.isclose(sim_prev, init_prev, atol=1e-1)
 
-    mean_tests = sim.interventions.base_test.results.new_tested.mean() / sum(sim.people.alive)
-    assert np.isclose(mean_tests, prob_test, atol=1e-1)
+    mean_tests = sim.interventions.routine_acute_screening.results.new_screened.mean() / sum(sim.diseases.typhoid.infected)
+    prob = init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test
+    assert np.isclose(mean_tests, prob, atol=1e-1)
 
-    mean_positive = sim.interventions.base_test.results.new_positive.mean() / sum(sim.people.alive)
-    prob = init_prev * prob_test * prob_test_positive
+    mean_positive = sim.interventions.routine_acute_screening.results.new_positive.mean() / (sum(sim.diseases.typhoid.acute) * prob_test)
+    prob = init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test_positive
     assert np.isclose(mean_positive, prob, atol=1e-1)
 
     if do_plot:
         sim.plot()
 
+    return sim
+
+
+def run_sim_with_wash(efficacy):
+    # Define the parameters
+    pars = sc.objdict(
+        start=2000,  # Starting year
+        dur=1.0,  # Number of days to simulate
+        dt=1.0/365.0,  # Timestep of 1 day, expressed in years
+        verbose=1,  # Print details of the run
+        rand_seed=2,  # Set a non-default seed
+    )
+    ppl = ss.People(10_000)
+    typhoid = ty.Typhoid()
+    environment = ty.EnvironmentalPool()
+    sanitation_efficacy = ty.Pattern("efficacy", pars={'efficacy': 0.5})
+    sanitation = ty.behavioral_change(efficacy=efficacy)
+    sim = ss.Sim(
+        pars=pars,
+        diseases=typhoid,
+        demographics=environment,
+        interventions=sanitation
+    )
+
+    sim.run()
+    assert (sim.diseases.typhoid.rel_sus == efficacy).all()
     return sim
 
 
@@ -134,6 +162,10 @@ def test_base_test(do_plot=False):
 
 def test_base_test_leaky(do_plot=False):
     return run_sim_base_test(0.3, 0.5, do_plot=do_plot)
+
+
+def test_wash_behavior_change():
+    return run_sim_with_wash(efficacy=0.5)
 
 
 # def test_vaccine_leaky(do_plot=False):
@@ -149,6 +181,6 @@ if __name__ == '__main__':
     do_plot = True
     test_base_test(do_plot=do_plot)
     test_base_test_leaky(do_plot=do_plot)
+    test_wash_behavior_change()
     #test_vaccine_all_or_nothing(do_plot=do_plot)
-
     T.toc()

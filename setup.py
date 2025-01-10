@@ -40,9 +40,9 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
-        'pandas>=2.0.0',
-        'sciris>=3.2.0',
-        'starsim==1.0.3',
+        'pandas',
+        'sciris',
+        'starsim>=2.2.0',
         'synthpops',
         'matplotlib',
         'numba',

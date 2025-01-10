@@ -17,7 +17,7 @@ import typhoidsim as ty
 # Define the parameters
 pars = sc.objdict(
     start=2000,       # Starting year
-    n_years=1.0,      # Number of days to simulate
+    dur=1.0,      # Number of days to simulate
     dt=1.0/365.0,     # Timestep of 1 day, expressed in years
     verbose=1,        # Print details of the run
     rand_seed=2,      # Set a non-default seed
@@ -36,7 +36,7 @@ sim.run()
 
 uids = sim.people.auids
 prepatent_dur = sim.diseases.typhoid.pars.dur_prep_dist.rvs(uids).astype(float)  # prepatent duration in days
-prepatent_dur_ti = sc.randround((prepatent_dur * ty.day2year) / sim.dt)              # prepatent duration in number of timesteps (equivalent to 1 day if dt=1/365)
+prepatent_dur_ti = sc.randround((prepatent_dur * ty.day2year) / sim.t.dt)              # prepatent duration in number of timesteps (equivalent to 1 day if dt=1/365)
 
 fig, axs = plt.subplots(1, 1)
 

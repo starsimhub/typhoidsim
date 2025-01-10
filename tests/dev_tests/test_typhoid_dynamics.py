@@ -11,7 +11,7 @@ import typhoidsim as ty
 # Define the parameters
 pars = sc.objdict(
     start=2000,       # Starting year
-    n_years=1.0,      # Number of days to simulate
+    dur=1.0,      # Number of days to simulate
     dt=1.0/365.0,     # Timestep of 1 day, expressed in years
     verbose=1,        # Print details of the run
     rand_seed=2,      # Set a non-default seed
@@ -44,7 +44,7 @@ efficacy_pattern = ty.Pattern("average_efficacy + amp * cos((2*pi/period)*var)",
 # efficacy_pattern = ty.Pattern("where((var == 0.0), average_efficacy, 0.0)",
 #                               pars={'average_efficacy': 0.9})
 
-my_intervention = ty.environmental_cleanup(efficacy=efficacy_pattern, start=2500, dur=1)
+my_intervention = ty.environmental_cleanup(efficacy=efficacy_pattern, start_year=2500, dur=1)
 
 sim = ss.Sim(
     pars=pars,

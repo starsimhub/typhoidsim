@@ -16,7 +16,7 @@ def make_run_sim(n_agents=100_000):
     pars = dict(
         n_agents = n_agents,
         start    = 2000,  # Starting year
-        n_years  = 1.0,   # Duration of the simulation in years
+        dur      = 1.0,   # Duration of the simulation in years
         dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
         verbose  = 0,             # Do not print details of the run
     )

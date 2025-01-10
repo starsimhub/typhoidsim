@@ -1,5 +1,5 @@
 """
-Classes that supporte introducing 'pre-defined'
+Classes that support introducing 'pre-defined'
 spatiotemporal profiles as parameters. These patterns
 can be based on a callable or on data.
 
@@ -7,7 +7,7 @@ can be based on a callable or on data.
 
 import numpy as np
 import numexpr as ne
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 
 import sciris as sc
 import starsim as ss
@@ -30,7 +30,7 @@ class Pattern:
         name (str): the name for this particular pattern (e.g. "seasonal_modulation_exposure")
         sim (Sim): usually determined on initialization; the sim to use as input to callable parameters
         module (Module): usually determined on initialization; the module to use as input to callable parameters
-        kwargs (dict): parameters of the patter
+        kwargs (dict): parameters of the pattern
 
     **Examples**::
         pattern = typ.Pattern("a + var * b",
@@ -61,7 +61,7 @@ class Pattern:
         self.trace = None  # The path of this object within the parent
         self.ready = True
         self.initialized = False
-        self.initialize()
+        self.init()
         return
 
     def __repr__(self):
@@ -131,7 +131,7 @@ class Pattern:
             # self.process_pars(call=False)
         return
 
-    def initialize(self, trace=None, module=None, sim=None, force=False):
+    def init(self, trace=None, module=None, sim=None, force=False):
         """Calculate the starting seed and create the RNG"""
 
         if (
@@ -164,7 +164,7 @@ class Pattern:
 
     def evaluate(self, var):
         """
-        Generate a discretised representation of the equation for the domain
+        Generate a discretized representation of the equation for the domain
         represented by ``var``.
 
         The argument ``var`` can represent time, or age. It can be be a
@@ -190,16 +190,16 @@ class Pattern:
 
     def plot(self, data_kw=None, fig_kw=None, var_name=None):
         """Plot the pattern"""
-        pl.figure(**sc.mergedicts(fig_kw))
+        plt.figure(**sc.mergedicts(fig_kw))
         x, y = self.generate_data(**sc.mergedicts(data_kw))
-        pl.plot(x, y)
-        pl.title(str(self))
-        pl.xlabel(var_name or "var")
-        pl.ylabel(f"{self.equation}")
+        plt.plot(x, y)
+        plt.title(str(self))
+        plt.xlabel(var_name or "var")
+        plt.ylabel(f"{self.equation}")
         return
 
-
-class StateVariable(np.ndarray):
+# TODO: probably deprecate (remove)
+class StateVariable(ss.Result):
     """
     This class is identical to Results, but named to something more generic,
     so it can be used in different parts of the code and still make sense
@@ -207,45 +207,16 @@ class StateVariable(np.ndarray):
     does not necessarily align with the internal-state of a model.
     A results array may have outputs that are a transformed version of the
     internal 'state variables' and as such ideally we don't want them to be used
-    directly. A Results arrary *can* also map one-to-one to one of the internal
+    directly. A Results array *can* also map one-to-one to one of the internal
     state variables, but this is not always guaranteed.
 
     This is a structure that holds an internal state of our system (ie, module)
     prior to any transformations for output.
     """
-
-    def __new__(cls, module=None, name=None, shape=None, dtype=None, scale=None):
-        arr = np.zeros(shape=shape, dtype=dtype).view(cls)
-        arr.name = name
-        arr.module = module
-        arr.scale = scale
-        return arr
-
-    def __repr__(self):
-        modulestr = f"{self.module}." if (self.module is not None) else ""
-        cls_name = self.__class__.__name__
-        arrstr = super().__repr__().removeprefix(cls_name)
-        out = f"{cls_name}({modulestr}{self.name}):\narray{arrstr}"
-        return out
-
-    def __array_finalize__(self, obj):
-        if obj is None:
-            return
-        self.name = getattr(obj, "name", None)
-        self.module = getattr(obj, "module", None)
-        self.scale = getattr(obj, "scale", None)
-        return
-
-    def __array_wrap__(self, obj, **kwargs):
-        if obj.shape == ():
-            return obj[()]
-        else:
-            return super().__array_wrap__(obj, **kwargs)
-
-    def to_df(self):
-        return sc.dataframe({self.name: self})
+    pass
 
 
+# TODO: probably deprecate (remove)
 class StateVariables(ss.ndict):
 
     def __init__(self, module, strict=True, *args, **kwargs):

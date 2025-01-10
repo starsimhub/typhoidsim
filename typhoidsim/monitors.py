@@ -2,14 +2,14 @@
 Define "passive" observation methods that do not interfere with the course
 of a disease or with a simulation.
 
-These classes are derived from starsim's Analyzers anyway because they neeed
+These classes are derived from starsim's Analyzers anyway because they need
 to be executed in a specific part of the simulation workflow.
 
-This module exists to emphasise a functional distinction between classes
+This module exists to emphasize a functional distinction between classes
 that only subsamples and/or aggregates simulated data (monitors), and
 classes that can optionally take as input empirical data and
 perform additional calculations and be used as "components" or "steps" in
-an optimisation process.
+an optimization process.
 """
 
 import numpy as np
@@ -27,9 +27,7 @@ __all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor"]
 
 class Monitor(ss.Analyzer):
     """
-    Base class for passive measurments / observation processes.
-
-    Args:
+    Base class for passive measurements / observation processes.
     """
 
     def __init__(self, period=None, **kwargs):
@@ -50,15 +48,33 @@ class Monitor(ss.Analyzer):
 
 class histograms_by_age_sex_monitor(Monitor):
     """
-    Records statistics (counts) by age and sex for each timestep.
+    A class used to record statistics (counts) by age and sex for each timestep,
+    or a user-defined sampling period.
 
-    Scaling is a number to adjust the number of cases for imperfect sampling/testing
-    in the real-world.
+    Args:
+        age_bins (list, optional): The bins to use for age. Defaults to `None`.
+        age_bin_labels (list, optional): Labels for the age bins. Defaults to `None`.
+        to_record (dict): nested dictionary with the path to the quantity to record:
+             For instance: dict(ti_acute=dict(path=("diseases", "typhoid"), label="cases"))
+             If None (default), it records the main states of typhoid, both new cases in a given time step,
+             and total number of people in that state at each timestep.
+        record_from (float, optional): Time to start recording from, assumes it's time expressed in years in float representation.
+             If None, it records from the start of the simulation.
+        record_until (int, optional): Time until which to record. Assumes it's time expressed in years in float representation.
+             If None, it records until the end of the simulation.
+        aggregate_sex (bool, optional): Whether to record each quantity separetely by sex.
+             Defaults to `False`, ie, records the quantities in to_record separately for females and males.
+        aggregate_time (str, optional): If the monitor downsamples results with respect to the original simulation resoliution,
+            tell the monitor how to downsample. Options are "subsample", "mean", "median", "min", "max", "sum".
+        resampling_period (float, optional): New sampling period of the output/results of this monitor.
+        scaling (float, optional):  Scaling factor for adjusting the counts. Defaults to 1.0.
+            This is a crude way to scale down counts to mimic imperfect observation/reporting processes such as testing.
+        name (str, optional): The name of the monitor. Defaults to `None`.
 
-    For instance in the Pakistan simulations with EMOD a value of 0.6 * 0.75 *
-    reporting_rate (emod parameter) is used 60% blood culture sensitivity
-    and 75% health care seeking. By default scaling=1.0, as if we had
-    perfect sampling of the whole population.
+    Note:
+        Scaling factor value example: 0.6 * 0.75 * reporting_rate (emod parameter) is used
+        for 60% blood culture sensitivity and 75% healthcare seeking in Pakistan simulations with
+        EMOD. By default, scaling=1.0, as if we had perfect sampling of the whole population.
     """
     def __init__(self, age_bins=None, age_bin_labels=None, to_record=None, record_from=None,
                  record_until=None, aggregate_sex=False, aggregate_time=None, scaling=1.0,
@@ -77,13 +93,13 @@ class histograms_by_age_sex_monitor(Monitor):
         self.aggregate_sex = aggregate_sex
         self.aggregate_time = aggregate_time
         self.resampling_period = resampling_period
-        self.ti = 0
+        self.tidx = 0
         # Attributes that will be set later
         self.monitor_step = None  # number of "dt" that fit in one resampling period
         self.monitor_period = None
         self.ntpts = None  # Number of timepoints to record
         self.nags  = None  # Number of age groups to record
-        self.yearvec = None  # This monitor yearvec
+        self.timevec_ = None  # This monitor timevec
         self.record = None
         self.agg_func = None
         self.sample = None
@@ -104,24 +120,24 @@ class histograms_by_age_sex_monitor(Monitor):
             "subsample": None
         }
         if self.aggregate_time in set(aggregation_functions):
-            self.monitor_step = round(self.resampling_period/sim.dt)
+            self.monitor_step = round(self.resampling_period / self.t.dt) # CK: TODO: use time units
             self.monitor_period = self.resampling_period
             self.agg_func = aggregation_functions.get(self.aggregate_time)
         else:
             self.monitor_step = 1.0
-            self.monitor_period = sim.dt
+            self.monitor_period = self.t.dt  # CK: TODO: use time units
 
         # Output year vector
-        self.yearvec = sc.inclusiverange(self.record_from, self.record_until, self.monitor_period)
+        self.timevec_ = sc.inclusiverange(self.record_from, self.record_until, self.monitor_period) # CK: TODO: use time units
 
         if self.aggregate_time is None or self.aggregate_time == "subsample":
             self.sample = self._default_sampling
-            self.ntpts = len(self.yearvec)
-            self.stock_ntpts = len(self.yearvec)
+            self.ntpts = len(self.timevec_)
+            self.stock_ntpts = len(self.timevec_)
         else:
             self.sample = self._aggregate_sampling
-            self.ntpts = len(self.yearvec) # number of time points in the final result arrays
-            self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, sim.dt))  # number of time points for the internal stock arrays
+            self.ntpts = len(self.timevec_) # number of time points in the final result arrays
+            self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, self.t.dt))  # number of time points for the internal stock arrays  # CK: TODO: use time units
 
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
@@ -135,7 +151,8 @@ class histograms_by_age_sex_monitor(Monitor):
         if self.to_record is None:
             states_of_interest = ["ti_infected", "infected",
                                   "ti_prepatent", "prepatent",
-                                  "ti_acute", "acute", "ti_subclinical", "subclinical",
+                                  "ti_acute", "acute",
+                                  "ti_subclinical", "subclinical",
                                   "ti_chronic", "chronic",
                                   "ti_recovered", "recovered"]
             self.to_record = {state: dict(path=("diseases", "typhoid")) for state in states_of_interest}
@@ -145,7 +162,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.attrname_to_stockname = dict()
         for attrname, specs in self.to_record.items():
             if "path" not in specs:
-                raise ValueError(f"Will not be able to record {attrname} because 'path' is "
+                raise ValueError(f"Not be able to record {attrname} because 'path' is "
                                  f"missing the `to_record` configuration dictionary.")
 
             else:
@@ -163,17 +180,20 @@ class histograms_by_age_sex_monitor(Monitor):
                 else:
                     sexes = ["f", "m"]
                 for sex in sexes:
-                    self.stocks += [ss.Result(self.name, f"{sex}_{attrlbl}",
-                                               (self.stock_ntpts, self.nags), dtype=res_dtype,
-                                               scale=False, label=f"{sex}_{reslbl}"),]
+                    self.stocks += [ss.Result(f"{sex}_{attrlbl}",
+                                              dtype=res_dtype,
+                                              shape=(self.stock_ntpts, self.nags),
+                                              scale=False,
+                                              label=f"{sex}_{reslbl}"), ]
 
                     self.results += [
-                        ss.Result(self.name, f"{sex}_{attrlbl}",
-                                  (self.ntpts, self.nags), dtype=res_dtype,
-                                  scale=True, label=f"{sex}_{reslbl}"), ]
+                        ss.Result(f"{sex}_{attrlbl}",
+                                  dtype=res_dtype,
+                                  shape=(self.ntpts, self.nags),
+                                  scale=True,
+                                  timevec=self.timevec_,
+                                  label=f"{sex}_{reslbl}"), ]
 
-        self.results += [ss.Result(self.name, f"yearvec", (self.ntpts, ),
-                                   dtype=float, scale=False, label=f"Calendar years (float representation)"), ]
         # Configure the monitor
         self.configure_recording_functions()
         return
@@ -188,17 +208,17 @@ class histograms_by_age_sex_monitor(Monitor):
             self._apply = self._apply_individual_sexes
         return
 
-    def set_observation_interval(self, sim):
+    def set_observation_interval(self, sim): # CK: TODO: use time units
         """ Set the correction endpoints of the observation period recorded by this monitor"""
         if self.record_from is None and self.record_until is None:
             start_year = sim.pars.start
-            stop_year = sim.pars.end
+            stop_year = sim.pars.stop
         elif self.record_from is not None and self.record_until is None:
             start_year = self.record_from if not self.record_from < sim.pars.start else sim.pars.start
-            stop_year = sim.pars.end
+            stop_year = sim.pars.stop
         elif self.record_from is None and self.record_until is not None:
             start_year = sim.pars.start
-            stop_year = self.record_until if not self.record_until > sim.pars.end else sim.pars.end
+            stop_year = self.record_until if not self.record_until > sim.pars.stop else sim.pars.stop
         else:
             start_year = self.record_from
             stop_year = self.record_until
@@ -208,12 +228,12 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def _record_fm(self, f_vals, m_vals, stock_name):
-        self.stocks[f"m_{stock_name}"][self.ti, :] = m_vals
-        self.stocks[f"f_{stock_name}"][self.ti, :] = f_vals
+        self.stocks[f"m_{stock_name}"][self.tidx, :] = m_vals
+        self.stocks[f"f_{stock_name}"][self.tidx, :] = f_vals
         return
 
     def _record_b(self, b_vals, stock_name):
-        self.stocks[f"b_{stock_name}"][self.ti, :] = b_vals
+        self.stocks[f"b_{stock_name}"][self.tidx, :] = b_vals
         return
 
     def _apply_individual_sexes(self, sim):
@@ -260,18 +280,16 @@ class histograms_by_age_sex_monitor(Monitor):
     def _default_sampling(self, sim):
         if sim.ti % self.monitor_step == 0:
             self._apply(sim)
-            self.ti += 1
+            self.tidx += 1
         return
 
     def _aggregate_sampling(self, sim):
         # Stores everything, then aggregates at the end
         self._apply(sim)
-        self.ti += 1
+        self.tidx += 1
         return
 
     def aggregate(self, vals):
-        if self.aggregate_time is None:
-            return vals
         remainder = self.stock_ntpts % self.monitor_step
         reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
         if remainder != 0:
@@ -283,15 +301,20 @@ class histograms_by_age_sex_monitor(Monitor):
         else:
             return self.agg_func(reshaped_data, axis=1)
 
-    def apply(self, sim):
-        if sim.year >= self.record_from and (sim.year <= self.record_until):
-            self.sample(sim)
+    def report(self, vals):
+        if self.aggregate_time is None:
+            return vals
+        return self.aggregate(vals)
+
+    def step(self):
+        if self.t.now('year') >= self.record_from and (self.t.now('year') <= self.record_until):
+            self.sample(self.sim)
         return
 
     def finalize_results(self):
         for stock_name in self.stocks:
-            self.results[stock_name][:] = self.aggregate(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
-        self.results["yearvec"][:] = self.yearvec
+            self.results[stock_name][:] = self.report(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
+            self.results.timevec = self.timevec_
         super().finalize_results()
         return
 
@@ -300,15 +323,15 @@ class histograms_by_age_sex_monitor(Monitor):
         #TODO: export year bin information too, will be useful for calibration
         dfs = []
         for res_name, res_value in self.results.items():
-            if res_name == "yearvec":
-                break
+            if res_name in ["timevec"]:
+                continue
             for ab_idx in range(res_value.shape[1]):
                 data = {"label": res_name,
                         "x": res_value[:, ab_idx],
                         "age_bin_lb": self.age_bins[ab_idx],    # Lower bound
                         "age_bin_ub": self.age_bins[ab_idx+1],  # Upper bound
                         "age_bin_label": self.age_bin_labels[ab_idx],
-                        "year": self.yearvec}
+                        "time": res_value.timevec}
                 dfs.append(pd.DataFrame(data))
         df = pd.concat(dfs, axis=0)
         return df
@@ -319,7 +342,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
         Args:
             key (str): the results key to plot (by default, all)
-            t_index (int): the time index in the monitor's yearvec vector
+            t_index (int): the time index in the monitor's timevec vector
             fig (Figure): if provided, plot results into an existing figure
             style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
             fig_kw (dict): passed to ``plt.subplots()``
@@ -327,7 +350,6 @@ class histograms_by_age_sex_monitor(Monitor):
         """
         # Configuration
         flat = self.results.flatten()
-        flat.pop('yearvec')
         n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
         default_figsize = np.array([8, 6])
         figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,
@@ -337,14 +359,16 @@ class histograms_by_age_sex_monitor(Monitor):
         plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
 
         # Time vector
-        yearvec = self.yearvec
+        timevec = self.timevec_
 
         if t_index is None:
-            t_index = np.random.choice(len(yearvec)-2, 5, replace=False)  # Pick five time points to plot
+            t_index = np.random.choice(len(timevec), size=np.min([len(timevec), 7]), replace=False)  # Pick five time points to plot
+        else:
+            t_index = sc.promotetoarray(t_index)
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
-                flat = {k: v for k, v in flat.items() if k.startswith(key) and k.name != "yearvec"}
+                flat = {k: v for k, v in flat.items() if k.startswith(key)}
 
             # Get the figure
             if fig is None:
@@ -359,7 +383,7 @@ class histograms_by_age_sex_monitor(Monitor):
             # Do the plotting
             for ax, (key, res) in zip(axs, flat.items()):
                 for tidx in sorted(t_index):
-                    ax.bar(np.arange(0, len(self.age_bin_centers)), res[tidx, :], **plot_kw, label=f"t={yearvec[tidx]:.4f}", alpha=0.2)
+                    ax.bar(np.arange(0, len(self.age_bin_centers)), res[tidx, :], **plot_kw, label=f"t={timevec[tidx]:.4f}", alpha=0.2)
                     ax.set_xticks(np.arange(0, len(self.age_bin_centers)), self.age_bin_labels)
 
                 title = getattr(res, 'label', key)
@@ -370,7 +394,7 @@ class histograms_by_age_sex_monitor(Monitor):
         sc.figlayout(fig=fig)
         return fig
 
-    def plot_waterfall(self, key=None, max_timepoints=16,  fig=None, style='fancy', fig_kw=None, plot_kw=None):
+    def plot_waterfall(self, key=None, max_timepoints=16, fig=None, style='fancy', fig_kw=None, plot_kw=None):
         """
         Plot a waterfall plot showing the evolution of the distribution of
         a given metric (ie, number of new acute cases) with respect to age.
@@ -395,7 +419,6 @@ class histograms_by_age_sex_monitor(Monitor):
 
         # Configuration
         flat = self.results.flatten()
-        flat.pop('yearvec')
 
         n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
         default_figsize = np.array([8, 6])
@@ -412,14 +435,13 @@ class histograms_by_age_sex_monitor(Monitor):
         t_indices = np.linspace(0,  ntpts-1, ntpts, dtype=int)
 
         # Time vector
-        yearvec = self.yearvec
+        timevec = self.timevec_
         y_scaling = plot_kw['y_scaling']
 
         # Do the plotting
         with sc.options.with_style(style):
             if key is not None:
-                flat = {k: v for k, v in flat.items() if
-                        k.startswith(key) and k.name != "yearvec"}
+                flat = {k: v for k, v in flat.items() if k.startswith(key)}
 
             # Get the figure
             if fig is None:
@@ -438,7 +460,7 @@ class histograms_by_age_sex_monitor(Monitor):
                     data_ti = res[ti, :]
                     try:
                         resamples = np.random.choice(self.age_bin_centers, size=self.nags * 100,
-                                                     p=data_ti/data_ti.sum())
+                                                     p=sc.safedivide(data_ti, data_ti.sum()))
                         kde = gaussian_kde(resamples)
                         kde_data = kde(self.age_bin_centers)
                         kde_data = kde_data / kde_data.max() + y_scaling * idx
@@ -454,7 +476,7 @@ class histograms_by_age_sex_monitor(Monitor):
                 ax.set_xlabel('Age (years)')
                 # Set the y-axis (time) labels
                 ax.set_yticks(y_scaling * np.arange(len(t_indices)))
-                ax.set_yticklabels(yearvec[t_indices])
+                ax.set_yticklabels(timevec[t_indices])
                 ax.set_ylabel('Year')
                 title = getattr(res, 'label', key)
                 ax.set_title(title)
@@ -464,7 +486,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
 
 class states_consistency_monitor(Monitor):
-    """ Analyzer to track everything -- use for debug pruposes """
+    """ Analyzer to track everything -- use for debug purposes """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -472,14 +494,14 @@ class states_consistency_monitor(Monitor):
         self.success = True
         return
 
-    def update_results(self, sim):
-        return self.apply(sim)
+    def update_results(self):
+        return self.step()
 
-    def apply(self, sim):
+    def step(self):
         """
         Checks states that should be mutually exlusive and collectively exhaustive
         """
-        typ = sim.diseases.typhoid
+        typ = self.sim.diseases.typhoid
 
         # Mutually exclusive estates
         mut_exc_1 = ~(typ.unexposed & typ.susceptible & typ.prepatent & typ.acute &
@@ -505,9 +527,9 @@ class states_consistency_monitor(Monitor):
             raise ValueError(
                 'States Immune and Infected should be mutually exclusive but are not.')
 
-        # Collectively ehaustive
+        # Collectively exhaustive
         coll_exh = (typ.unexposed | typ.susceptible | typ.prepatent | typ.acute |
-                    typ.subclinical | typ.chronic | typ.recovered | sim.people.dead
+                    typ.subclinical | typ.chronic | typ.recovered | self.sim.people.dead
                     ).all()
 
         if not coll_exh:
