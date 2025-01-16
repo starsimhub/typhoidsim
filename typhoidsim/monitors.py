@@ -22,7 +22,7 @@ import typhoidsim.defaults as tyd
 import typhoidsim.utils as tyu
 
 
-__all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor"]
+__all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor", "histogram_by_vaccination_status"]
 
 
 class Monitor(ss.Analyzer):
@@ -540,4 +540,81 @@ class states_consistency_monitor(Monitor):
             [mut_exc_1, mut_exc_2, mut_exc_3, mut_exc_4, coll_exh])
         if not checkall.all():
             self.success = False
+        return
+
+
+class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
+    """
+    This class exist to avoid slowing down the parent class if there are no
+    vaccination interventions.
+    """
+    def __init__(self, track_vaccinated=True, **kwargs):
+        super().__init__(**kwargs)  # keyword arguments passed to histograms
+        self.track_vaccinated = track_vaccinated
+        self.vax_interventions = None
+        self.vax_state = ss.BoolArr('vax_state', default=False)
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        # Get any sim.interventions that have an attribute "vaccinated"
+        self.vax_interventions = []
+        for intervention_name in sim.interventions:
+            if hasattr(sim.interventions[intervention_name], "vaccinated"):
+                self.vax_interventions.append(intervention_name)
+
+
+    def _apply_individual_sexes(self, sim):
+        ti = sim.ti
+        living_folks = sim.people.alive
+
+        track_vax_state = ss.BoolArr(shape)
+        for vax_interv in self.vax_interventions:
+            track_vax_state = [~sim.interventions[vax_interv].vaccinated,
+                                sim.interventions[vax_interv].vaccinated][self.track_vaccinated]
+
+        living_folks = living_folks & track_vax_state
+
+        living_males = sim.people.male & living_folks
+        living_femal = sim.people.female & living_folks
+
+        for attrname, specs in sorted(self.to_record.items()):
+            attrpath = specs["path"]
+            vals = tyu.get_attr_vals(sim, attrpath, attrname)
+            if attrname.startswith("ti_"):
+                f_uids = ((vals == ti) & living_femal).uids
+                m_uids = ((vals == ti) & living_males).uids
+            else:
+                f_uids = (vals & living_femal).uids
+                m_uids = (vals & living_males).uids
+            f_vals = self.scaling * \
+                     np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
+            m_vals = self.scaling * \
+                     np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
+
+            stockname = self.attrname_to_stockname[attrname]
+            self.record(f_vals, m_vals, stockname)
+        return
+
+    def _apply_aggregated_sexes(self, sim):
+        ti = sim.ti
+        living_folks = sim.people.alive
+        self.vax_state[living_folks.uids] = False  # Reset tracking state to False
+        for vax_interv in self.vax_interventions:
+            # Find if agent has received any vaccination across all possible vax interventions
+            self.vax_state[:] = self.vax_state[:] | [~sim.interventions[vax_interv].vaccinated,
+                                                     sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+            living_folks = living_folks & self.vax_state
+
+        for attrname, specs in sorted(self.to_record.items()):
+            attrpath = specs["path"]
+            vals = tyu.get_attr_vals(sim, attrpath, attrname)
+            if attrname.startswith("ti_"):
+                b_uids = ((vals == ti) & living_folks).uids
+            else:
+                b_uids = (vals & living_folks).uids
+            b_vals = self.scaling * \
+                     np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
+            stockname = self.attrname_to_stockname[attrname]
+            self.record(b_vals, stockname)
         return
