@@ -651,11 +651,13 @@ class vaccination_with_waning(ss.RoutineDelivery):
 
     def init_results(self):
         super().init_results()
+        self.define_results(
+            ss.Result('cum_doses', shape=(self.sim.t.npts,), dtype=float, label="Cumulative Number of Doses")
+        )
+
         # Test without new people being born
         if self.debug:
-            self.define_results(
-                ss.Result('immunity', shape=(self.sim.t.npts, self.sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
-            )
+            self.results += ss.Result('immunity', shape=(self.sim.t.npts, self.sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
         return
 
     def age_eligibility(self, sim):
@@ -719,4 +721,5 @@ class vaccination_with_waning(ss.RoutineDelivery):
 
         if self.debug:
             self.results["immunity"][ti, :] = sim.diseases.typhoid.immunity_acquired[:]
+        self.results["cum_doses"][ti] = np.nansum(self.n_doses[:])
         return self.vaccinated.uids
