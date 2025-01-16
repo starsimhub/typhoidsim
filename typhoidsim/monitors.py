@@ -362,7 +362,8 @@ class histograms_by_age_sex_monitor(Monitor):
         timevec = self.timevec_
 
         if t_index is None:
-            t_index = np.random.choice(len(timevec), size=np.min([len(timevec), 7]), replace=False)  # Pick five time points to plot
+            n_tpts = np.min([len(timevec), 7])
+            t_index = np.linspace(0, len(timevec) - 1, n_tpts, dtype=int)
         else:
             t_index = sc.promotetoarray(t_index)
         # Do the plotting
