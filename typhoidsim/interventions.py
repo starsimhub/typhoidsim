@@ -612,11 +612,18 @@ class environmental_seasonality(ss.Intervention):
 
 class vaccination_with_waning(ss.RoutineDelivery):
     """
+
     An intervention that handles a vaccination with waning.
     NOTE: this case is a bit special because it agreggates vaccine protection and the immune
     system. Immunity waning could be handled in the disease, or there could be a module that is
-    called immune_system and it could have different responses depending on the product.
-    Maybe it's the job for a connector?
+    called immune_system and it could have different responses depending on a product.
+
+    This intervention does not use a product (ss.Product)
+
+    The "vaccine" administered here does not do much, it's essentially like an impulse
+    stimulus that triggeres and immune evoked response. What's commonly understood as
+    vaccine efficacy (VE) is defined in typhoid parameters under the name
+    immunity_max_acq_response -- a value between 0 and 1.
 
     Args:
          prob           (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
@@ -638,7 +645,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
         self.eligibility = self.age_eligibility
         self.vaccinated = ss.State('vaccinated')
         self.t_vaccinated = ss.FloatArr('t_vaccinated', default=np.nan)  # time (year) of vaccination
-        self.a_vaccinated = ss.FloatArr('a_vaccinated', default=np.nan)  # aged at vaccination
+        self.a_vaccinated = ss.FloatArr('a_vaccinated', default=np.nan)  # age at vaccination
         self.t_to_booster = ss.FloatArr('t_to_booster', default=np.nan)  # time until needing the booster
         self.n_doses = ss.FloatArr('n_doses')
         self.debug = debug
