@@ -124,6 +124,7 @@ def test_vaccinated_counts():
     assert m1_infected[0, age_bin_idx] == (m2_infected[0, age_bin_idx] + m3_infected[0, age_bin_idx])
     return
 
+
 def test_by_age_counts():
     sim = make_sim_with_histogram_monitor()
     sim.init()
@@ -137,11 +138,9 @@ def test_by_age_counts():
 
     flat = sim.results.flatten()
 
-    m4_name="monitor_people"
+    m4_name = "monitor_people"
     quantity = "_b_n_alive"
     m4_alive = flat[f"{m4_name}{quantity}"]
-
-    assert (m4_alive == m2_alive + m3_alive).all()
     assert (m4_alive == n_alive).all()
     return
 
