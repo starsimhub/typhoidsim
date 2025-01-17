@@ -118,6 +118,10 @@ class histograms_by_age_sex_monitor(Monitor):
             "sum": np.sum,
             "subsample": None
         }
+        if self.resampling_period and not self.aggregate_time:
+            raise ValueError("Provided a resampling period, but didn't specify how to aggregate over time. "
+                             f"Available aggregation methods are: {list(aggregation_functions.keys())}")
+
         if self.aggregate_time in set(aggregation_functions):
             self.monitor_step = round(self.resampling_period / self.t.dt) # CK: TODO: use time units
             self.monitor_period = self.resampling_period
