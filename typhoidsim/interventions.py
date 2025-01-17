@@ -266,6 +266,7 @@ class base_screening(BaseTest):
         self.coverage_dist = ss.bernoulli(p=self.prob)
         self.ti_positive = ss.FloatArr('ti_positive')
         self.validate_eligibility()
+        self.outcomes = ss.uids()
         return
 
     def validate_eligibility(self):
@@ -314,6 +315,7 @@ class base_screening(BaseTest):
         """ Where everything happens at each time step"""
         sim = self.sim
         accept_uids = ss.uids()
+        self.outcomes = ss.uids()
 
         if sim.ti in self.timepoints:
             accept_uids = self.deliver()
@@ -494,9 +496,9 @@ class environmental_trapezoidal_modulation(WASH):
                           self.efficacy_pars['cutoff_dur'])
 
         if total_duration> self.efficacy_pars['period']:
-                raise ValueError(f"the duration of the pattern is longer than the period")
+            raise ValueError(f"the duration of the pattern is longer than the period")
         if total_duration == self.efficacy_pars['period']:
-                raise ValueError(f"the duration of the pattern is exactly the period, will get a triangular waveform")
+            raise ValueError(f"the duration of the pattern is exactly the period, will get a triangular waveform")
         return
 
     def init_pre(self, sim):
