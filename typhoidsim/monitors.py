@@ -166,8 +166,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
             else:
                 res_dtype = specs["path"] if "dtype" in specs else float
-                if attrname.startswith("ti"):
-                    attrlbl = attrname.replace("ti", "new")
+                if attrname.startswith("ti_"):
+                    attrlbl = attrname.replace("ti_", "new_")
                 else:
                     attrlbl = f"n_{attrname}"
 
