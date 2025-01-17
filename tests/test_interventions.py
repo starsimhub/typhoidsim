@@ -123,21 +123,16 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
     msim.run()
     msim.reduce()
 
-    # check the number of infected cases at t=0
-    sim_init_prev = msim.results['typhoid_n_infected'][0]/msim.results['n_alive'][0]
-    #assert np.isclose(sim_init_prev, init_prev, rtol=0.1)
-
-    expected_cum_acute = (init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * msim.sims[0].pars.n_agents)
-    actual_cum_acute = msim.results['typhoid_cum_acute'][-1]
-    #assert np.isclose(expected_cum_acute, actual_cum_acute, rtol=0.1)
-
-    expected_cum_screened = init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * prob_test * msim.sims[0].pars.n_agents
     actual_cum_screened = np.cumsum(msim.results['routine_acute_screening_new_screened'])[-1]
-    #assert np.isclose(expected_cum_screened, actual_cum_screened, rtol=0.1)
-
-    expected_cum_positive = init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * prob_test * prob_test_positive * msim.sims[0].pars.n_agents
     actual_cum_positive = np.cumsum(msim.results['routine_acute_screening_new_positive'])[-1]
-    #assert np.isclose(expected_cum_positive, actual_cum_positive, rtol=0.1)
+
+    assert np.isclose(actual_cum_screened / msim.results['n_alive'][-1],
+                      init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * prob_test,
+                      rtol=0.1)
+
+    assert np.isclose(actual_cum_positive / msim.results['n_alive'][-1],
+                      init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * prob_test * prob_test_positive,
+                      rtol=0.1)
 
     if do_plot:
         sim.plot()
@@ -231,7 +226,7 @@ def test_screening_with_monitor():
 
     coverage = 0.5
     sim1 = run_sim_with_acute_screening(screen_coverage=coverage)
-    msim = ss.MultiSim(sims=sim1, n_runs=5)
+    msim = ss.MultiSim(sims=sim1, n_runs=10)
     msim.run()
 
     val = 0.0
@@ -248,7 +243,7 @@ def test_screening_with_monitor():
     sensitivity = 0.6
     sim2 = run_sim_with_acute_screening(screen_coverage=coverage,
                                         test_sensitivity=sensitivity)
-    msim = ss.MultiSim(sims=sim2, n_runs=5)
+    msim = ss.MultiSim(sims=sim2, n_runs=10)
     msim.run()
 
     val = 0.0
