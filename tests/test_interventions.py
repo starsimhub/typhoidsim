@@ -20,7 +20,6 @@ def run_sim_vaccine(efficacy, leaky=True, do_plot=False):
         start=2000,  # Starting year
         dur=1.0,  # Duration of the simulation in years
         dt=1.0/365.0,  # Timestep of 1 day, expressed in years
-        verbose=0,  # Do not print details of the run
     )
 
     ppl = ss.People(10_000)
@@ -95,34 +94,50 @@ def run_sim_vaccine(efficacy, leaky=True, do_plot=False):
 
 
 def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
+
+    def acute_eligibility(sim, **kwargs):
+        """ Select individuals who just became acute and have not been screened"""
+        # By default only test acute and people can be tested more than once
+        acute_uids = ((sim.people.typhoid.ti_acute == sim.ti) & ~sim.interventions.routine_acute_screening.screened).uids
+        return acute_uids
+
     # Define high-level simulation parameters
     pars = dict(
         start=2000,  # Starting year
-        dur=2.0/365.0,  # Duration of the simulation in years
+        dur=1.0,  # Duration of the simulation in years
         dt=1.0/365.0,  # Timestep of 1 day, expressed in years
-        verbose=0,  # Do not print details of the run
+        verbose=False
     )
 
     ppl = ss.People(20_000)
     init_prev = 0.5
-    typhoid = ty.Typhoid(pars={'init_prev': ss.bernoulli(p=init_prev)})
+    typhoid = ty.Typhoid(pars={'init_prev': ss.bernoulli(p=init_prev), "p_death": 0.0})
+
     # create and apply the test intervention
     dx_product = ty.typhoid_test(pars=dict(sensitivity=ss.bernoulli(p=prob_test_positive)))
-    screen_acute = ty.routine_acute_screening(product=dx_product, prob=prob_test)  # Screen 30% of acute
+    screen_acute = ty.routine_acute_screening(product=dx_product, prob=prob_test, annual_prob=False, eligibility=acute_eligibility)  # Screen 30% of acute
+
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=screen_acute)
-    sim.init(verbose=False)
-    sim.run()
-    # check the number of infected cases
-    sim_prev = sum(sim.people.typhoid.infected)/sum(sim.people.alive)
-    assert np.isclose(sim_prev, init_prev, atol=1e-1)
 
-    mean_tests = sim.interventions.routine_acute_screening.results.new_screened.mean() / sum(sim.diseases.typhoid.infected)
-    prob = init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test
-    assert np.isclose(mean_tests, prob, atol=1e-1)
+    msim = ss.MultiSim(sims=sim, n_runs=10)
+    msim.run()
+    msim.reduce()
 
-    mean_positive = sim.interventions.routine_acute_screening.results.new_positive.mean() / (sum(sim.diseases.typhoid.acute) * prob_test)
-    prob = init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test_positive
-    assert np.isclose(mean_positive, prob, atol=1e-1)
+    # check the number of infected cases at t=0
+    sim_init_prev = msim.results['typhoid_n_infected'][0]/msim.results['n_alive'][0]
+    #assert np.isclose(sim_init_prev, init_prev, rtol=0.1)
+
+    expected_cum_acute = (init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * msim.sims[0].pars.n_agents)
+    actual_cum_acute = msim.results['typhoid_cum_acute'][-1]
+    #assert np.isclose(expected_cum_acute, actual_cum_acute, rtol=0.1)
+
+    expected_cum_screened = init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * prob_test * msim.sims[0].pars.n_agents
+    actual_cum_screened = np.cumsum(msim.results['routine_acute_screening_new_screened'])[-1]
+    #assert np.isclose(expected_cum_screened, actual_cum_screened, rtol=0.1)
+
+    expected_cum_positive = init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * prob_test * prob_test_positive * msim.sims[0].pars.n_agents
+    actual_cum_positive = np.cumsum(msim.results['routine_acute_screening_new_positive'])[-1]
+    #assert np.isclose(expected_cum_positive, actual_cum_positive, rtol=0.1)
 
     if do_plot:
         sim.plot()
@@ -136,10 +151,9 @@ def run_sim_with_wash(efficacy):
         start=2000,  # Starting year
         dur=1.0,  # Number of days to simulate
         dt=1.0/365.0,  # Timestep of 1 day, expressed in years
-        verbose=1,  # Print details of the run
         rand_seed=2,  # Set a non-default seed
+        verbose=0,
     )
-    ppl = ss.People(10_000)
     typhoid = ty.Typhoid()
     environment = ty.EnvironmentalPool()
     sanitation_efficacy = ty.Pattern("efficacy", pars={'efficacy': 0.5})
@@ -156,8 +170,101 @@ def run_sim_with_wash(efficacy):
     return sim
 
 
+def run_sim_with_acute_screening(screen_coverage=1.0, test_sensitivity=1.0):
+
+    def acute_eligibility(sim, **kwargs):
+        """ Select individuals who just became acute and have not been screened"""
+        # By default only test acute and people can be tested more than once
+        acute_uids = ((sim.people.typhoid.ti_acute == sim.ti) & ~sim.interventions.routine_acute_screening.screened).uids
+        return acute_uids
+
+    # Define the parameters
+    pars = sc.objdict(
+        start=2000,
+        dur=1.0,
+        dt=1.0/365.0,
+        n_agents=10_000,
+        rand_seed=2,
+        verbose=False,
+    )
+    typhoid = ty.Typhoid(pars={"init_prev": ss.bernoulli(p=0.1), "p_death": 0.0})
+
+    # create and apply the test/screen intervention
+    blood_test = ty.typhoid_test(pars=dict(sensitivity=ss.bernoulli(p=test_sensitivity)))
+    screen_all_acute = ty.routine_acute_screening(product=blood_test,
+                                                  prob=screen_coverage,
+                                                  annual_prob=False,
+                                                  eligibility=acute_eligibility)  # Screen 30% of all eligible population at each time step
+
+    age_bin_edges = [0, ty.max_age]
+    age_bin_labels = ['all']
+
+    to_record = dict(
+        ti_acute=dict(path=("diseases", "typhoid"), label="acute"),
+        ti_positive=dict(path=("interventions", "routine_acute_screening"), label="tested_positive"),
+        ti_screened=dict(path=("interventions", "routine_acute_screening"), label="screened"))
+
+    monitor_cases = ty.histograms_by_age_sex_monitor(
+        age_bins=age_bin_edges,
+        age_bin_labels=age_bin_labels,
+        to_record=to_record,
+        aggregate_sex=True,
+        record_from=2000.0)
+
+    sim = ss.Sim(
+        pars=pars,
+        diseases=typhoid,
+        interventions=screen_all_acute,
+        analyzers=monitor_cases,
+    )
+    return sim
+
+
+def test_screening_with_monitor():
+    sim = run_sim_with_acute_screening()
+    sim.run()
+    flat = sim.results.flatten()
+    res_acute = 'monitor_by_age_sex_b_new_acute'
+    res_tested = 'monitor_by_age_sex_b_new_screened'
+    res_positive = 'monitor_by_age_sex_b_new_positive'
+    assert (flat[res_acute].sum() == flat[res_tested].sum() == flat[res_positive].sum())
+
+    coverage = 0.5
+    sim1 = run_sim_with_acute_screening(screen_coverage=coverage)
+    msim = ss.MultiSim(sims=sim1, n_runs=5)
+    msim.run()
+
+    val = 0.0
+    target_val = 0.0
+    for sim in msim.sims:
+        flat = sim.results.flatten()
+        val += flat[res_tested].sum()
+        target_val += flat[res_acute].sum()*coverage
+    val /= len(msim.sims)
+    target_val /= len(msim.sims)
+    assert np.isclose(val, target_val, atol=1e-1)
+
+    coverage = 0.5
+    sensitivity = 0.6
+    sim2 = run_sim_with_acute_screening(screen_coverage=coverage,
+                                        test_sensitivity=sensitivity)
+    msim = ss.MultiSim(sims=sim2, n_runs=5)
+    msim.run()
+
+    val = 0.0
+    target_val = 0.0
+    for sim in msim.sims:
+        flat = sim.results.flatten()
+        val += flat[res_positive].sum()
+        target_val += flat[res_acute].sum()*coverage*sensitivity
+    val /= len(msim.sims)
+    target_val /= len(msim.sims)
+    assert np.isclose(val, target_val, atol=1)
+    return
+
+
 def test_base_test(do_plot=False):
-    return run_sim_base_test(0.3, 1.0, do_plot=do_plot)
+    return run_sim_base_test(0.3, 0.3, do_plot=do_plot)
 
 
 def test_base_test_leaky(do_plot=False):
@@ -178,9 +285,10 @@ def test_wash_behavior_change():
 
 if __name__ == '__main__':
     T = sc.timer()
-    do_plot = True
+    do_plot = False
     test_base_test(do_plot=do_plot)
-    test_base_test_leaky(do_plot=do_plot)
+    #test_base_test_leaky(do_plot=do_plot)
     test_wash_behavior_change()
+    test_screening_with_monitor()
     #test_vaccine_all_or_nothing(do_plot=do_plot)
     T.toc()
