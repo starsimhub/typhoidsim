@@ -21,7 +21,6 @@ import starsim as ss
 import typhoidsim.defaults as tyd
 import typhoidsim.utils as tyu
 
-
 __all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor", "histogram_by_vaccination_status"]
 
 
@@ -429,11 +428,8 @@ class histograms_by_age_sex_monitor(Monitor):
         fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
         plot_kw = sc.mergedicts({'lw': 2, 'y_scaling': 0.9}, plot_kw)
 
-        if self.ntpts < max_timepoints:
-            ntpts = self.ntpts
-        else:
-            ntpts = max_timepoints
-        t_indices = np.linspace(0,  ntpts-1, ntpts, dtype=int)
+        n_tpts = np.min([self.ntpts, max_timepoints])
+        t_indices = np.linspace(0, self.ntpts-1, n_tpts, dtype=int)
 
         # Time vector
         timevec = self.timevec_
@@ -477,7 +473,8 @@ class histograms_by_age_sex_monitor(Monitor):
                 ax.set_xlabel('Age (years)')
                 # Set the y-axis (time) labels
                 ax.set_yticks(y_scaling * np.arange(len(t_indices)))
-                ax.set_yticklabels(timevec[t_indices])
+                yticklbls = [f"{t:.4f}" for t in timevec[t_indices]]
+                ax.set_yticklabels(yticklbls)
                 ax.set_ylabel('Year')
                 title = getattr(res, 'label', key)
                 ax.set_title(title)
