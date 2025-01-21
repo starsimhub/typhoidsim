@@ -554,7 +554,8 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
         super().__init__(**kwargs)  # keyword arguments passed to histograms
         self.track_vaccinated = track_vaccinated
         self.vax_interventions = None
-        self.vax_state = ss.BoolArr('vax_state', default=False)
+        self.vax_state_a = ss.BoolArr('vax_state_a', default=False)
+        self.vax_state_b = ss.BoolArr('vax_state_b', default=False)
         return
 
     def init_pre(self, sim):
@@ -568,27 +569,29 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
 
     def _apply_individual_sexes(self, sim):
         ti = sim.ti
-        living_folks = sim.people.alive
+        eligible_males = sim.people.alive & sim.people.male
+        eligible_females = sim.people.alive & sim.people.female
 
-        track_vax_state = ss.BoolArr(shape)
+        self.vax_state_a[eligible_males.uids] = False  # Reset tracking state to False
+        self.vax_state_b[eligible_females.uids] = False  # Reset tracking state to False
+
         for vax_interv in self.vax_interventions:
-            track_vax_state = [~sim.interventions[vax_interv].vaccinated,
-                                sim.interventions[vax_interv].vaccinated][self.track_vaccinated]
+            # Find if agent has received any vaccination across all possible vax interventions
+            self.vax_state_a[:] = self.vax_state_a[:] | [~sim.interventions[vax_interv].vaccinated,
+                                                          sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+            eligible_males = eligible_males & self.vax_state_a
+            eligible_females = eligible_females & self.vax_state_b
 
-        living_folks = living_folks & track_vax_state
-
-        living_males = sim.people.male & living_folks
-        living_femal = sim.people.female & living_folks
 
         for attrname, specs in sorted(self.to_record.items()):
             attrpath = specs["path"]
             vals = tyu.get_attr_vals(sim, attrpath, attrname)
             if attrname.startswith("ti_"):
-                f_uids = ((vals == ti) & living_femal).uids
-                m_uids = ((vals == ti) & living_males).uids
+                f_uids = ((vals == ti) & eligible_females).uids
+                m_uids = ((vals == ti) & eligible_females).uids
             else:
-                f_uids = (vals & living_femal).uids
-                m_uids = (vals & living_males).uids
+                f_uids = (vals & eligible_females).uids
+                m_uids = (vals & eligible_females).uids
             f_vals = self.scaling * \
                      np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
             m_vals = self.scaling * \
@@ -600,21 +603,21 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
 
     def _apply_aggregated_sexes(self, sim):
         ti = sim.ti
-        living_folks = sim.people.alive
-        self.vax_state[living_folks.uids] = False  # Reset tracking state to False
+        eligible_folks = sim.people.alive
+        self.vax_state_a[eligible_folks.uids] = False  # Reset tracking state to False
         for vax_interv in self.vax_interventions:
             # Find if agent has received any vaccination across all possible vax interventions
-            self.vax_state[:] = self.vax_state[:] | [~sim.interventions[vax_interv].vaccinated,
-                                                     sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
-            living_folks = living_folks & self.vax_state
+            self.vax_state_a[:] = self.vax_state_a[:] | [~sim.interventions[vax_interv].vaccinated,
+                                                      sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+            eligible_folks = eligible_folks & self.vax_state_a
 
         for attrname, specs in sorted(self.to_record.items()):
             attrpath = specs["path"]
             vals = tyu.get_attr_vals(sim, attrpath, attrname)
             if attrname.startswith("ti_"):
-                b_uids = ((vals == ti) & living_folks).uids
+                b_uids = ((vals == ti) & eligible_folks).uids
             else:
-                b_uids = (vals & living_folks).uids
+                b_uids = (vals & eligible_folks).uids
             b_vals = self.scaling * \
                      np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
             stockname = self.attrname_to_stockname[attrname]
