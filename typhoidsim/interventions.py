@@ -694,6 +694,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
         sim = self.sim
         sim_year = sim.t.now('year')
         vaccinated_uids = self.vaccinated.uids
+        ti = sim.ti
 
         if sim.t.now('year') >= self.start_year and sim.t.now('year') <= self.end_year:
             self.t_to_booster[self.t_to_booster > 0.0] -= self.sim.t.dt
@@ -728,7 +729,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
         # TODO: confirm with EES team how acquired immunity enters the expression for p_infc
         sim.diseases.typhoid.rel_sus[vaccinated_uids] = 1.0 - sim.diseases.typhoid.immunity_acquired[vaccinated_uids]
 
+        self.results["cum_doses"][ti] = np.nansum(self.n_doses[:])
         if self.debug:
             self.results["immunity"][ti, :] = sim.diseases.typhoid.immunity_acquired[:]
-        self.results["cum_doses"][ti] = np.nansum(self.n_doses[:])
         return self.vaccinated.uids
