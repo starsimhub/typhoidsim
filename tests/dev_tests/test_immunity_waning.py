@@ -16,7 +16,6 @@ def make_sim(n_agents=10_000):
     pars = sc.objdict(
         start=2000,        # Starting year
         dur=10.0,       # Number of days to simulate
-        #total_pop=50e6,    # Total population size
         pop_scale=None,    #
         n_agents=n_agents, #
         dt=1.0/365.0,      # Timestep of 1 day, expressed in years
@@ -84,7 +83,7 @@ def make_sim(n_agents=10_000):
         to_record=record_cases,
         resampling_period=30.0/365,
         # Record data on a montly basis, so we can aggregate later
-        aggregate_sex=True,
+        aggregate_sex=False,
         aggregate_time="sum",
         # Sum over the resampling period
         record_from=2000.0,
@@ -97,7 +96,7 @@ def make_sim(n_agents=10_000):
         to_record=record_cases,
         resampling_period=30.0/365,
         # Record data on a montly basis, so we can aggregate later
-        aggregate_sex=True,
+        aggregate_sex=False,
         aggregate_time="sum",
         # Sum over the resampling period
         record_from=2000.0,
@@ -123,14 +122,4 @@ sim.run()
 sim.analyzers[0].plot()
 sim.analyzers[1].plot()
 sim.analyzers[2].plot()
-plt.show()
-flat = sim.results.flatten()
-vax = flat["vaccination_with_waning_immunity"]
-are_kids  = (sim.people.age >= 10.0) & (sim.people.age < 15)
-are_vaccinated = sim.interventions[0].vaccinated
-data_imm = vax[:, (are_kids & are_vaccinated)]
-
-idx = 0
-plt.plot(sim.timevec, data_imm[:, 0:10])
-
 plt.show()

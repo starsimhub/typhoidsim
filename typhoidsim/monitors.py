@@ -566,7 +566,6 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
             if hasattr(sim.interventions[intervention_name], "vaccinated"):
                 self.vax_interventions.append(intervention_name)
 
-
     def _apply_individual_sexes(self, sim):
         ti = sim.ti
         eligible_males = sim.people.alive & sim.people.male
@@ -577,8 +576,15 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
 
         for vax_interv in self.vax_interventions:
             # Find if agent has received any vaccination across all possible vax interventions
-            self.vax_state_a[:] = self.vax_state_a[:] | [~sim.interventions[vax_interv].vaccinated,
-                                                          sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+            self.vax_state_a[:] = self.vax_state_a[:] | \
+                                  [~sim.interventions[vax_interv].vaccinated,
+                                    sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+
+            self.vax_state_b[:] = self.vax_state_b[:] | \
+                                  [~sim.interventions[vax_interv].vaccinated,
+                                   sim.interventions[vax_interv].vaccinated][
+                                      self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+
             eligible_males = eligible_males & self.vax_state_a
             eligible_females = eligible_females & self.vax_state_b
 
@@ -588,10 +594,10 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
             vals = tyu.get_attr_vals(sim, attrpath, attrname)
             if attrname.startswith("ti_"):
                 f_uids = ((vals == ti) & eligible_females).uids
-                m_uids = ((vals == ti) & eligible_females).uids
+                m_uids = ((vals == ti) & eligible_males).uids
             else:
                 f_uids = (vals & eligible_females).uids
-                m_uids = (vals & eligible_females).uids
+                m_uids = (vals & eligible_males).uids
             f_vals = self.scaling * \
                      np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
             m_vals = self.scaling * \
@@ -608,7 +614,7 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
         for vax_interv in self.vax_interventions:
             # Find if agent has received any vaccination across all possible vax interventions
             self.vax_state_a[:] = self.vax_state_a[:] | [~sim.interventions[vax_interv].vaccinated,
-                                                      sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+                                                          sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
             eligible_folks = eligible_folks & self.vax_state_a
 
         for attrname, specs in sorted(self.to_record.items()):
@@ -623,3 +629,15 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
             stockname = self.attrname_to_stockname[attrname]
             self.record(b_vals, stockname)
         return
+
+    def plot(self, **plot_kwargs):
+        fig = super().plot(**plot_kwargs)
+        fig_title = ["Unvaccinated", "Vaccinated"][self.track_vaccinated]
+        fig.suptitle(fig_title)
+        return fig
+
+    def plot_waterfall(self, **plot_waterfall_kwargs):
+        fig = super().plot_waterfall(**plot_waterfall_kwargs)
+        fig_title = ["Unvaccinated", "Vaccinated"][self.track_vaccinated]
+        fig.suptitle(fig_title)
+        return fig
