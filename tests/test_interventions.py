@@ -165,7 +165,7 @@ def run_sim_with_wash(efficacy):
     return sim
 
 
-def run_sim_with_acute_screening(screen_coverage=1.0, test_sensitivity=1.0):
+def make_sim_with_acute_screening(screen_coverage=1.0, test_sensitivity=1.0):
 
     def acute_eligibility(sim, **kwargs):
         """ Select individuals who just became acute and have not been screened"""
@@ -216,16 +216,16 @@ def run_sim_with_acute_screening(screen_coverage=1.0, test_sensitivity=1.0):
 
 
 def test_screening_with_monitor():
-    sim = run_sim_with_acute_screening()
-    sim.run()
-    flat = sim.results.flatten()
+    sim0 = make_sim_with_acute_screening()
+    sim0.run()
+    flat = sim0.results.flatten()
     res_acute = 'monitor_by_age_sex_b_new_acute'
     res_tested = 'monitor_by_age_sex_b_new_screened'
     res_positive = 'monitor_by_age_sex_b_new_positive'
     assert (flat[res_acute].sum() == flat[res_tested].sum() == flat[res_positive].sum())
 
     coverage = 0.5
-    sim1 = run_sim_with_acute_screening(screen_coverage=coverage)
+    sim1 = make_sim_with_acute_screening(screen_coverage=coverage)
     msim = ss.MultiSim(sims=sim1, n_runs=10)
     msim.run()
 
@@ -241,7 +241,7 @@ def test_screening_with_monitor():
 
     coverage = 0.5
     sensitivity = 0.6
-    sim2 = run_sim_with_acute_screening(screen_coverage=coverage,
+    sim2 = make_sim_with_acute_screening(screen_coverage=coverage,
                                         test_sensitivity=sensitivity)
     msim = ss.MultiSim(sims=sim2, n_runs=10)
     msim.run()
@@ -270,8 +270,8 @@ def test_wash_behavior_change():
     return run_sim_with_wash(efficacy=0.5)
 
 
-# def test_vaccine_leaky(do_plot=False):
-#     return run_sim_vaccine(0.3, False, do_plot=do_plot)
+def test_vaccine_leaky(do_plot=False):
+    return run_sim_vaccine(0.3, False, do_plot=do_plot)
 
 
 # def test_vaccine_all_or_nothing(do_plot=False):
@@ -285,5 +285,4 @@ if __name__ == '__main__':
     #test_base_test_leaky(do_plot=do_plot)
     test_wash_behavior_change()
     test_screening_with_monitor()
-    #test_vaccine_all_or_nothing(do_plot=do_plot)
     T.toc()
