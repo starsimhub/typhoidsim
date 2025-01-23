@@ -716,7 +716,7 @@ class vaccination_with_waning(RoutineDelivery):
         self.t_vaccinated = ss.FloatArr('t_vaccinated', default=np.nan)  # time (year) of most recent vaccination
         self.a_vaccinated = ss.FloatArr('a_vaccinated', default=np.nan)  # age at vaccination
         self.t_to_booster = ss.FloatArr('t_to_booster', default=np.nan)  # time until needing the booster
-        self.n_doses = ss.FloatArr('n_doses')
+        self.n_doses = ss.FloatArr('n_doses')                                  # number of doses received by each agent
         self.debug = debug
         return
 
@@ -728,8 +728,8 @@ class vaccination_with_waning(RoutineDelivery):
     def init_results(self):
         super().init_results()
         self.define_results(
-            ss.Result('cum_doses', shape=(self.sim.t.npts,), dtype=float, label="Cumulative Number of Doses")
-        )
+            ss.Result('cum_doses', shape=(self.sim.t.npts,), dtype=float, label="Cumulative Number of Doses"),
+            ss.Result('new_doses', shape=(self.sim.t.npts,), dtype=float, label="New Doses Delivered"))
 
         # Test without new people being born
         if self.debug:
@@ -775,6 +775,7 @@ class vaccination_with_waning(RoutineDelivery):
             new_accept_uids = self.coverage_dist.filter(is_eligible_not_vax)
             if len(new_accept_uids):
                 # Update people's state and dates
+                self.ti_vaccinated[new_accept_uids] = sim.ti
                 self.vaccinated[new_accept_uids] = True
                 self.t_vaccinated[new_accept_uids] = sim_year
                 self.a_vaccinated[new_accept_uids] = sim.people.age[new_accept_uids]
@@ -793,12 +794,16 @@ class vaccination_with_waning(RoutineDelivery):
                 self.n_doses[new_booster_uids] += 1
 
             vaccinated_uids =  self.vaccinated.uids
-            ti_sim = sim.ti
-            self.results["cum_doses"][ti_sim] = np.nansum(self.n_doses[:])
 
         self.step_acquired_immunity(sim, vaccinated_uids)
         # TODO: confirm with EES team how acquired immunity enters the expression for p_infc
         sim.diseases.typhoid.rel_sus[vaccinated_uids] = 1.0 - sim.diseases.typhoid.immunity_acquired[vaccinated_uids]
+
+
+        # Update results
+        ti_sim = sim.ti
+        self.results["new_doses"][ti_sim] = np.count_nonzero(self.ti_vaccinated == ti_sim)
+        self.results["cum_doses"][ti_sim] = np.sum(self.results["new_doses"][:ti_sim])
 
         if self.debug:
             ti_sim = sim.ti
