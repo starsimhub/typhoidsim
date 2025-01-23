@@ -21,8 +21,7 @@ import starsim as ss
 import typhoidsim.defaults as tyd
 import typhoidsim.utils as tyu
 
-
-__all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor"]
+__all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor", "histogram_by_vaccination_status"]
 
 
 class Monitor(ss.Analyzer):
@@ -119,6 +118,10 @@ class histograms_by_age_sex_monitor(Monitor):
             "sum": np.sum,
             "subsample": None
         }
+        if self.resampling_period and not self.aggregate_time:
+            raise ValueError("Provided a resampling period, but didn't specify how to aggregate over time. "
+                             f"Available aggregation methods are: {list(aggregation_functions.keys())}")
+
         if self.aggregate_time in set(aggregation_functions):
             self.monitor_step = round(self.resampling_period / self.t.dt) # CK: TODO: use time units
             self.monitor_period = self.resampling_period
@@ -167,8 +170,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
             else:
                 res_dtype = specs["path"] if "dtype" in specs else float
-                if attrname.startswith("ti"):
-                    attrlbl = attrname.replace("ti", "new")
+                if attrname.startswith("ti_"):
+                    attrlbl = attrname.replace("ti_", "new_")
                 else:
                     attrlbl = f"n_{attrname}"
 
@@ -362,7 +365,8 @@ class histograms_by_age_sex_monitor(Monitor):
         timevec = self.timevec_
 
         if t_index is None:
-            t_index = np.random.choice(len(timevec), size=np.min([len(timevec), 7]), replace=False)  # Pick five time points to plot
+            n_tpts = np.min([len(timevec), 7])
+            t_index = np.linspace(0, len(timevec) - 1, n_tpts, dtype=int)
         else:
             t_index = sc.promotetoarray(t_index)
         # Do the plotting
@@ -428,11 +432,8 @@ class histograms_by_age_sex_monitor(Monitor):
         fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
         plot_kw = sc.mergedicts({'lw': 2, 'y_scaling': 0.9}, plot_kw)
 
-        if self.ntpts < max_timepoints:
-            ntpts = self.ntpts
-        else:
-            ntpts = max_timepoints
-        t_indices = np.linspace(0,  ntpts-1, ntpts, dtype=int)
+        n_tpts = np.min([self.ntpts, max_timepoints])
+        t_indices = np.linspace(0, self.ntpts-1, n_tpts, dtype=int)
 
         # Time vector
         timevec = self.timevec_
@@ -476,7 +477,8 @@ class histograms_by_age_sex_monitor(Monitor):
                 ax.set_xlabel('Age (years)')
                 # Set the y-axis (time) labels
                 ax.set_yticks(y_scaling * np.arange(len(t_indices)))
-                ax.set_yticklabels(timevec[t_indices])
+                yticklbls = [f"{t:.4f}" for t in timevec[t_indices]]
+                ax.set_yticklabels(yticklbls)
                 ax.set_ylabel('Year')
                 title = getattr(res, 'label', key)
                 ax.set_title(title)
@@ -541,3 +543,101 @@ class states_consistency_monitor(Monitor):
         if not checkall.all():
             self.success = False
         return
+
+
+class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
+    """
+    This class exist to avoid slowing down the parent class if there are no
+    vaccination interventions.
+    """
+    def __init__(self, track_vaccinated=True, **kwargs):
+        super().__init__(**kwargs)  # keyword arguments passed to histograms
+        self.track_vaccinated = track_vaccinated
+        self.vax_interventions = None
+        self.vax_state_a = ss.BoolArr('vax_state_a', default=False)
+        self.vax_state_b = ss.BoolArr('vax_state_b', default=False)
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        # Get any sim.interventions that have an attribute "vaccinated"
+        self.vax_interventions = []
+        for intervention_name in sim.interventions:
+            if hasattr(sim.interventions[intervention_name], "vaccinated"):
+                self.vax_interventions.append(intervention_name)
+
+    def _apply_individual_sexes(self, sim):
+        ti = sim.ti
+        eligible_males = sim.people.alive & sim.people.male
+        eligible_females = sim.people.alive & sim.people.female
+
+        self.vax_state_a[eligible_males.uids] = False  # Reset tracking state to False
+        self.vax_state_b[eligible_females.uids] = False  # Reset tracking state to False
+
+        for vax_interv in self.vax_interventions:
+            # Find if agent has received any vaccination across all possible vax interventions
+            self.vax_state_a[:] = self.vax_state_a[:] | \
+                                  [~sim.interventions[vax_interv].vaccinated,
+                                    sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+
+            self.vax_state_b[:] = self.vax_state_b[:] | \
+                                  [~sim.interventions[vax_interv].vaccinated,
+                                   sim.interventions[vax_interv].vaccinated][
+                                      self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+
+            eligible_males = eligible_males & self.vax_state_a
+            eligible_females = eligible_females & self.vax_state_b
+
+
+        for attrname, specs in sorted(self.to_record.items()):
+            attrpath = specs["path"]
+            vals = tyu.get_attr_vals(sim, attrpath, attrname)
+            if attrname.startswith("ti_"):
+                f_uids = ((vals == ti) & eligible_females).uids
+                m_uids = ((vals == ti) & eligible_males).uids
+            else:
+                f_uids = (vals & eligible_females).uids
+                m_uids = (vals & eligible_males).uids
+            f_vals = self.scaling * \
+                     np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
+            m_vals = self.scaling * \
+                     np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
+
+            stockname = self.attrname_to_stockname[attrname]
+            self.record(f_vals, m_vals, stockname)
+        return
+
+    def _apply_aggregated_sexes(self, sim):
+        ti = sim.ti
+        eligible_folks = sim.people.alive
+        self.vax_state_a[eligible_folks.uids] = False  # Reset tracking state to False
+        for vax_interv in self.vax_interventions:
+            # Find if agent has received any vaccination across all possible vax interventions
+            self.vax_state_a[:] = self.vax_state_a[:] | [~sim.interventions[vax_interv].vaccinated,
+                                                          sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+            eligible_folks = eligible_folks & self.vax_state_a
+
+        for attrname, specs in sorted(self.to_record.items()):
+            attrpath = specs["path"]
+            vals = tyu.get_attr_vals(sim, attrpath, attrname)
+            if attrname.startswith("ti_"):
+                b_uids = ((vals == ti) & eligible_folks).uids
+            else:
+                b_uids = (vals & eligible_folks).uids
+            b_vals = self.scaling * \
+                     np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
+            stockname = self.attrname_to_stockname[attrname]
+            self.record(b_vals, stockname)
+        return
+
+    def plot(self, **plot_kwargs):
+        fig = super().plot(**plot_kwargs)
+        fig_title = ["Unvaccinated", "Vaccinated"][self.track_vaccinated]
+        fig.suptitle(fig_title)
+        return fig
+
+    def plot_waterfall(self, **plot_waterfall_kwargs):
+        fig = super().plot_waterfall(**plot_waterfall_kwargs)
+        fig_title = ["Unvaccinated", "Vaccinated"][self.track_vaccinated]
+        fig.suptitle(fig_title)
+        return fig

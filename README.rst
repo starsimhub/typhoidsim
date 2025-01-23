@@ -2,7 +2,7 @@ Typhoidsim
 =======
 
 Typhodisim implements an agent-based disease model of Typhoid fever (caused by S. Typhi).
-This package is part of the `<Starsim>`__ family. Currently, typhoidsim needs **v1.0.3** of the Starsim framework to run.
+This package is part of the `Starsim <https://github.com/starsimhub>`_ family. Currently, typhoidsim needs **v1.0.3** of the Starsim framework to run.
 
 
 Installation
@@ -11,8 +11,8 @@ Installation
 `typhoidsim` can be installed
 
 There are two main versions of typhoidsim:
-  - the legacy `typhoidsim v0.11.7 <_6>`__ , which exclusively works with `starsim 1.0.3 <_5>`__ ()
-  - typhoidsim from the main branch, which works with `starsim 2.2.0 <_7>`__ or above.
+  - the legacy `typhoidsim v0.11.7 <https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.11.7-starsim-1.0.3>`_ , which exclusively works with `starsim 1.0.3 <https://pypi.org/project/starsim/1.0.3/>`_.
+  - typhoidsim from the main branch, which works with `starsim 2.2.0 <https://pypi.org/project/starsim/2.2.0/>`_ or above.
 
 To install the legacy version first clone the specific branch
   - ``git clone --single-branch --branch legacy/main-v0.11.7-starsim-1.0.3 origin``
@@ -25,13 +25,13 @@ And then run
    - ``pip install -e .`` (don't forget the dot at the end!).
 
 
-More detailed instructions can be found `<here>`__.
+More detailed instructions can be found `here <https://github.com/starsimhub/typhoidsim/issues/87>`_.
 
 Usage and documentation
 -----------------------
 
 Documentation is available at <PLACEHOLDER>.
-`<Tutorials>`__ (ipython notebooks) are available.
+`Tutorials <https://github.com/starsimhub/typhoidsim/tree/main/docs/tutorials>`_ (ipython notebooks) are available.
 
 
 Contributing
@@ -44,16 +44,7 @@ Disclaimer
 ----------
 
 The code in this repository was developed by IDM. It wil be made public under
-the `<MIT>`__ License. We make no representations that the code works as intended or
+the `MIT <https://github.com/starsimhub/typhoidsim/blob/main/LICENSE>`_ License. We make no representations that the code works as intended or
 that we will provide support, address issues that are found, or accept pull requests.
 You are welcome to create your own fork and modify the code to suit your own
 modeling needs as permitted under the MIT License.
-
-
-.. _MIT: https://github.com/starsimhub/typhoidsim/blob/main/LICENSE
-.. _Tutorials: https://github.com/starsimhub/typhoidsim/tree/main/docs/tutorials
-.. _here: https://github.com/starsimhub/typhoidsim/issues/87
-.. _Starsim: https://github.com/starsimhub
-.. _5: https://pypi.org/project/starsim/1.0.3/
-.. _6: https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.11.7-starsim-1.0.3
-.. _7: https://pypi.org/project/starsim/2.2.0/

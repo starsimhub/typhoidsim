@@ -25,12 +25,12 @@ class typhoid_test(ss.Product):
         return
 
     def administer(self, people, uids):
-        """ Apply the diagnostic test to the requested uids. """
-        # uids are the uids of people who were eligible to receive the test or accepted to have the test
-        infected_uids = (people.typhoid.infected).uids
-        are_pos_uids = ss.uids(np.intersect1d(infected_uids, uids))
+        """
+        Apply the diagnostic test to the requested uids. Assumes the requested
+        uids are of agents who are infected.
+        """
         # Decide whether the test actually comes back positive
-        tested_pos_uids = self.pars.sensitivity.filter(are_pos_uids)
+        tested_pos_uids = self.pars.sensitivity.filter(uids)
         return tested_pos_uids
 
 

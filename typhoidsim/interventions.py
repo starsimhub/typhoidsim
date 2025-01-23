@@ -266,6 +266,7 @@ class base_screening(BaseTest):
         self.coverage_dist = ss.bernoulli(p=self.prob)
         self.ti_positive = ss.FloatArr('ti_positive')
         self.validate_eligibility()
+        self.outcomes = ss.uids()
         return
 
     def validate_eligibility(self):
@@ -314,6 +315,7 @@ class base_screening(BaseTest):
         """ Where everything happens at each time step"""
         sim = self.sim
         accept_uids = ss.uids()
+        self.outcomes = ss.uids()
 
         if sim.ti in self.timepoints:
             accept_uids = self.deliver()
@@ -494,9 +496,9 @@ class environmental_trapezoidal_modulation(WASH):
                           self.efficacy_pars['cutoff_dur'])
 
         if total_duration> self.efficacy_pars['period']:
-                raise ValueError(f"the duration of the pattern is longer than the period")
+            raise ValueError(f"the duration of the pattern is longer than the period")
         if total_duration == self.efficacy_pars['period']:
-                raise ValueError(f"the duration of the pattern is exactly the period, will get a triangular waveform")
+            raise ValueError(f"the duration of the pattern is exactly the period, will get a triangular waveform")
         return
 
     def init_pre(self, sim):
@@ -609,26 +611,146 @@ class environmental_seasonality(ss.Intervention):
             self.results['seasonal_cfu'][self.ti] = seasonal_cfu
         return
 
+## - Vaccination interventions
 
-class vaccination_with_waning(ss.RoutineDelivery):
+class RoutineDelivery(ss.Intervention):
     """
+    Base class for any intervention that uses routine delivery
+
+    Args:
+        args: Variable length argument list.
+        kwargs (dict): Arbitrary keyword arguments that are passed to ss.Intervention
+
+    Keyword Args:
+        years (int, optional): The years of intervention.
+        start_year (float, optional): The start year of intervention.
+        end_year (float, optional): The end year of intervention.
+        prob (float, array-like, optional): The coverage probability. Promoted to be an array if not already.
+        prob_type (str, optional): whether the probability/coverage represents an annual, per time step
+         or per intervention probability. Default is per "timestep" (if prob_type=None, or prob_type="timestep"").
+
+    Returns:
+        None
+    """
+
+    def __init__(self, *args, years=None, start_year=None, end_year=None, prob=None, prob_type=None,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self.years = years
+        self.start_year = start_year
+        self.end_year = end_year
+        self.prob = sc.promotetoarray(prob)
+        self.prob_type = prob_type if prob_type is not None else "timestep" # Determines the period over which the probability/coverage has been defined
+        self.coverage_dist = ss.bernoulli(p=0)  # Placeholder - initialize delivery
+        self._dt = None
+        self._timevec = None
+
+        # Validate inputs
+        avail_prob_types = ["annual", "timestep", "interval"]
+        if self.prob_type not in avail_prob_types:
+            raise ValueError(f"Invalid prob_type: {prob_type}. Must be one of {avail_prob_types}.")
+
+        if (self.years is not None) and (
+                self.start_year is not None or self.end_year is not None):
+            errormsg = 'Provide either a list of years or a start year, not both.'
+            raise ValueError(errormsg)
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        # If start_year and end_year are not provided, figure them out from the provided years or the sim
+        if self.start_year is None: self.start_year = sim.pars.start
+        if self.end_year is None:   self.end_year = sim.pars.stop
+        self._dt = sim.pars.dt  # TODO: need to eventually replace with own timestep, but not initialized yet since super().init_pre() hasn't been called
+        self._timevec = sim.t.timevec
+
+        self._define_intervention_duration()
+        self._configure_time_attributes()
+        self._conform_prob()
+        self._calculate_dt_probability()
+        return
+
+    def _define_intervention_duration(self):
+        if self.years:
+            self.years = sc.promotetoarray(self.years)
+            self.start_year = self.years[0]
+            self.end_year = self.years[-1]
+
+        self.dur_years = self.end_year - self.start_year
+        if not self.dur_years:
+            errormsg = 'Start and end years must be at least one timestep (dt) apart.'
+            raise ValueError(errormsg)
+
+        if not (any(np.isclose(self.start_year, self._timevec)) and any(np.isclose(self.end_year, self._timevec))):
+            errormsg = 'Years must be within simulation start and end dates.'
+            raise ValueError(errormsg)
+        return
+
+    def _configure_time_attributes(self):
+        # Determine the timepoints at which the intervention will be applied
+        self.start_point = sc.findnearest(self._timevec-self.start_year, 0.0)
+        self.end_point   = sc.findnearest(self._timevec-self.end_year, 0.0)
+        self.years       = sc.inclusiverange(self.start_year, self.end_year)
+        self.timepoints  = sc.inclusiverange(self.start_point, self.end_point).astype(int)
+        self._timevec     = np.arange(self.start_year, self.end_year, self._dt) # TODO: integrate with self.t
+        return
+
+    def _conform_prob(self):
+        """" Make an array of probabilities to match the period of time the intervention is defined over"""
+        # Get the probability input into a format compatible with timepoints
+        if len(self.years) != len(self.prob):
+            if len(self.prob) == 1:
+                self.prob = np.array([self.prob[0]] * len(self.timepoints))
+            else:
+                errormsg = f'Length of years incompatible with length of probabilities: {len(self.years)} vs {len(self.prob)}'
+                raise ValueError(errormsg)
+        else:
+            self.prob = sc.smoothinterp(self._timevec, self.years, self.prob, smoothness=0)
+        return
+
+    def _calculate_dt_probability(self):
+        # Adjust the probability by the sim's timestep, if it's an annual probability
+        match self.prob_type:
+            case "annual":
+                # Assumes units of time in sim.timevec are in years, and so is dt, or
+                # assumes that sim.timevec and dt are in the same units.
+                self.n_timesteps_per_prob_interval = int(1.0/self._dt) # TODO: integrate with time parameters,
+                pass
+            case "interval":
+                self.n_timesteps_per_prob_interval = len(self.timepoints)
+            case "timestep":
+                self.n_timesteps_per_prob_interval = 1
+
+        self.prob = 1 - (1 - self.prob) ** (1.0 / self.n_timesteps_per_prob_interval)
+        return
+
+
+
+class vaccination_with_waning(RoutineDelivery):
+    """
+
     An intervention that handles a vaccination with waning.
     NOTE: this case is a bit special because it agreggates vaccine protection and the immune
     system. Immunity waning could be handled in the disease, or there could be a module that is
-    called immune_system and it could have different responses depending on the product.
-    Maybe it's the job for a connector?
+    called immune_system and it could have different responses depending on a product.
+
+    This intervention does not use a product (ss.Product)
+
+    The "vaccine" administered here does not do much, it's essentially like an impulse
+    stimulus that triggeres and immune evoked response. What's commonly understood as
+    vaccine efficacy (VE) is defined in typhoid parameters under the name
+    immunity_max_acq_response -- a value between 0 and 1.
 
     Args:
          prob           (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
-         annual_prob    (bool)      : whether prob represents an annual probbability or a per-time-step proability
          booster_prob   (float)     : conditional probability of receiving a boster dose given that an individual has received their first dose
          dose_interval  (float)     : the interval of time in years between an individual receiving their first dose and their booster
-         age_pars       (dict)      : a dictionary with min_age and max_age to determine the age group who is eligible
+         age_pars       (dict)      : a dictionary with keys 'min_age' and 'max_age' to determine the age group who is eligible
          label          (str)       : the name of vaccination strategy
          kwargs         (dict)      : passed to Intervention()
     """
     def __init__(self, *args, booster_prob=0.0, dose_interval=None, label=None, age_pars=None, debug=False, **kwargs):
-        # **kwargs: years=None, start_year=None, end_year=None, prob=None, annual_prob=True,
+        # **kwargs: years=None, start_year=None, end_year=None, prob=None, prob_type=None,
         super().__init__(*args, **kwargs) # CK: TODO: refactor with define_pars
         self.label = label
         self.booster_prob = sc.toarray(booster_prob)
@@ -636,11 +758,12 @@ class vaccination_with_waning(ss.RoutineDelivery):
         self.age_pars = ss.Pars(age_pars)
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
         self.eligibility = self.age_eligibility
-        self.vaccinated = ss.State('vaccinated')
-        self.t_vaccinated = ss.FloatArr('t_vaccinated', default=np.nan)  # time (year) of vaccination
-        self.a_vaccinated = ss.FloatArr('a_vaccinated', default=np.nan)  # aged at vaccination
+        self.vaccinated = ss.BoolArr('vaccinated')                             # keep track of who has been vaccinated
+        self.ti_vaccinated = ss.FloatArr('ti_vaccinated')                      # Keep track of when the agent received their last vaccine in timesteps
+        self.t_vaccinated = ss.FloatArr('t_vaccinated', default=np.nan)  # time (year) of most recent vaccination
+        self.a_vaccinated = ss.FloatArr('a_vaccinated', default=np.nan)  # age at vaccination
         self.t_to_booster = ss.FloatArr('t_to_booster', default=np.nan)  # time until needing the booster
-        self.n_doses = ss.FloatArr('n_doses')
+        self.n_doses = ss.FloatArr('n_doses')                                  # number of doses received by each agent
         self.debug = debug
         return
 
@@ -651,21 +774,25 @@ class vaccination_with_waning(ss.RoutineDelivery):
 
     def init_results(self):
         super().init_results()
-        # Test without new people being born
+        self.define_results(
+            ss.Result('cum_doses', shape=(self.sim.t.npts,), dtype=float, label="Cumulative Number of Doses"),
+            ss.Result('new_doses', shape=(self.sim.t.npts,), dtype=float, label="New Doses Delivered"))
+
+        # Mostly to test that we're counting things correctly. Meant to be used with vital dynamics disabled,
+        # especially births, as we're setting the size to be that of the population at t=start of sim
         if self.debug:
-            self.define_results(
-                ss.Result('immunity', shape=(self.sim.t.npts, self.sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
-            )
+            self.results += ss.Result('immunity', shape=(self.sim.t.npts, self.sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
         return
 
     def age_eligibility(self, sim):
         is_eligible = (sim.people.age >= self.age_pars.min_age) & (sim.people.age < self.age_pars.max_age)
         return is_eligible
 
-    def update_acquired_immunity(self, sim, uids):
+    def step_acquired_immunity(self, sim, uids):
         """
-        This is the immunity response to a vaccine. The acquired immunity wanes
-        over time.
+        This is the model of the the dynamics of an individual's immunity
+        response to receiving a vaccination. The acquired immunity wanes over
+        time with an exponential decay.
         """
         module = sim.diseases.typhoid
         t_vaccinated = self.t_vaccinated[uids] # Time, in calendar years, when the individual received the vaccine. t_0 in the waning equation.
@@ -678,7 +805,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
 
     def step(self):
         """
-        Deliver the diagnostics by finding who's eligible, and apply the product, only once.
+        Delivery the vaccines
         """
         sim = self.sim
         sim_year = sim.t.now('year')
@@ -686,8 +813,8 @@ class vaccination_with_waning(ss.RoutineDelivery):
 
         if sim.t.now('year') >= self.start_year and sim.t.now('year') <= self.end_year:
             self.t_to_booster[self.t_to_booster > 0.0] -= self.sim.t.dt
-            ti = sc.findinds(self.timepoints, sim.ti)[0]
-            prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
+            ti_rel = sc.findinds(self.timepoints, sim.ti)[0] # ti relative to the start of the intervention
+            prob = self.prob[ti_rel]  # Get the proportion of people who will be tested this timestep
             is_eligible = self.check_eligibility()  # Check eligibility by age for first dose
             # Select never vaccinated
             is_eligible_not_vax = (is_eligible) & ~(self.vaccinated)
@@ -695,6 +822,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
             new_accept_uids = self.coverage_dist.filter(is_eligible_not_vax)
             if len(new_accept_uids):
                 # Update people's state and dates
+                self.ti_vaccinated[new_accept_uids] = sim.ti
                 self.vaccinated[new_accept_uids] = True
                 self.t_vaccinated[new_accept_uids] = sim_year
                 self.a_vaccinated[new_accept_uids] = sim.people.age[new_accept_uids]
@@ -702,21 +830,35 @@ class vaccination_with_waning(ss.RoutineDelivery):
                 self.t_to_booster[new_accept_uids] = self.dose_interval   # set the timer to get the booster
 
             # Select eligible for a booster
-            booster_prob = self.booster_prob[ti]
+            booster_prob = self.booster_prob[ti_rel]
             if booster_prob > 0.0:
                 is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster <= 0.0) # For boosters we do not filter by age
                 self.coverage_dist.set(p=booster_prob)
                 new_booster_uids = self.coverage_dist.filter(is_eligible_booster)
+                self.ti_vaccinated[new_accept_uids] = sim.ti
                 self.t_vaccinated[new_booster_uids] = sim_year
                 self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
                 self.t_to_booster[new_booster_uids] = np.inf # reset time for those who received the booster
                 self.n_doses[new_booster_uids] += 1
 
             vaccinated_uids =  self.vaccinated.uids
-        self.update_acquired_immunity(sim, vaccinated_uids)
-        # TODO: confirm with EES team how acquired immunity enters the expression for p_infc
+
+        # Update immunity_acquired
+        self.step_acquired_immunity(sim, vaccinated_uids)
+
+        # Relative susceptibility is between 0-1, 1: susceptible; 0: invulnerable. This
+        # variable is used in transmission dynamics
+        # immunity_acquired is defined to provide a mechanism for immunity waning dynamics to exist.
+        # This is also a value between 0-1. 1: perfectly immune/invulnerable; 0: no immunity, and it
+        # is often conflated with, or referred to as, vaccine efficacy and vaccine efficacy waning
         sim.diseases.typhoid.rel_sus[vaccinated_uids] = 1.0 - sim.diseases.typhoid.immunity_acquired[vaccinated_uids]
 
+        # Update results
+        ti_sim = sim.ti
+        self.results["new_doses"][ti_sim] = np.count_nonzero(self.ti_vaccinated == ti_sim)
+        self.results["cum_doses"][ti_sim] = np.sum(self.results["new_doses"][:ti_sim])
+
         if self.debug:
-            self.results["immunity"][ti, :] = sim.diseases.typhoid.immunity_acquired[:]
+            ti_sim = sim.ti
+            self.results["immunity"][ti_sim, :] = sim.diseases.typhoid.immunity_acquired[:]
         return self.vaccinated.uids

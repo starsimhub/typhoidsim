@@ -16,7 +16,6 @@ def make_sim(n_agents=10_000):
     pars = sc.objdict(
         start=2000,        # Starting year
         dur=10.0,       # Number of days to simulate
-        total_pop=50e6,    # Total population size
         pop_scale=None,    #
         n_agents=n_agents, #
         dt=1.0/365.0,      # Timestep of 1 day, expressed in years
@@ -31,21 +30,77 @@ def make_sim(n_agents=10_000):
 
     demographics = [
         ss.Births(birth_rate=0),
-        ss.Deaths(death_rate=0)
+        ss.Deaths(death_rate=0)  # Needed to use debug=True with the vax intervention, tracks immunity level of of every agent
     ]
 
-    typhoid = ty.Typhoid(pars={"init_prev":ss.bernoulli(p=0.0)})
+    typhoid = ty.Typhoid(pars={"init_prev":ss.bernoulli(p=0.05),
+                               "immunity_age_bins": [0.75, 2.0, 5.0, 15.0, 125.0],
+                               # Define age bins to represent different immunity waning dynamics for each agent based on their age when receive a vaccination
+                               "immunity_fixed_dur": [940.4, 240.91, 0.0, 0.0],
+                               # Duration of fixed immunity in days, one value per age bin of interest
+                               "immunity_decay": [505.27, 505.27, 505.27, 505.27],
+                               # Decay time constant, in days, one value per age bin of interest
+                               "immunity_max_acq_response":[0.0, 0.9, 0.3, 0.3],
+                               # Maximum protection at t=0 of receiving a vaccine
+                               })
+
+    network = ss.RandomNet({'n_contacts': 5})
 
     campaign_vax_2_5_yo = ty.vaccination_with_waning(
         start_year=2000.0,
         prob=0.66,
         dose_interval=5.0,  # interval between receiving first dose and booster
-        booster_prob=1.0,
+        booster_prob=0.0,
         annual_prob=True,
-        debug=True,  # only use for this example to keep track of each individual's acquired immunity level over time
-        age_pars={'min_age': 0.0,
-                  'max_age': 2.0}
+        debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
+        age_pars={'min_age': 2.0,
+                  'max_age': 5.0}
         )
+
+    age_bin_edges = [0, 2, 5, 10, 15, 20, 40, 60, ty.max_age]
+    age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15-19', '20-39', '40-59',
+                      '60+']
+
+    record_cases = dict(ti_infected=dict(path=("diseases", "typhoid"), label="infected"))
+
+
+    monitor_cases = ty.histograms_by_age_sex_monitor(
+        age_bins=age_bin_edges,
+        age_bin_labels=age_bin_labels,
+        to_record=record_cases,
+        resampling_period=30.0/365,
+        # Record data on a montly basis, so we can aggregate later
+        aggregate_sex=True,
+        aggregate_time="sum",
+        # Sum over the resampling period
+        record_from=2000.0,
+        name="monitor_cases")
+
+    monitor_cases_vax = ty.histogram_by_vaccination_status(
+        track_vaccinated=True,
+        age_bins=age_bin_edges,
+        age_bin_labels=age_bin_labels,
+        to_record=record_cases,
+        resampling_period=30.0/365,
+        # Record data on a montly basis, so we can aggregate later
+        aggregate_sex=False,
+        aggregate_time="sum",
+        # Sum over the resampling period
+        record_from=2000.0,
+        name="monitor_vax")
+
+    monitor_cases_unvax = ty.histogram_by_vaccination_status(
+        track_vaccinated=False,   # tracks unvaccinated
+        age_bins=age_bin_edges,
+        age_bin_labels=age_bin_labels,
+        to_record=record_cases,
+        resampling_period=30.0/365,
+        # Record data on a montly basis, so we can aggregate later
+        aggregate_sex=False,
+        aggregate_time="sum",
+        # Sum over the resampling period
+        record_from=2000.0,
+        name="monitor_unvax")
 
 
     #
@@ -53,7 +108,9 @@ def make_sim(n_agents=10_000):
         pars=pars,
         demographics=demographics,
         diseases=typhoid,
+        networks=network,
         interventions=campaign_vax_2_5_yo,
+        analyzers=[monitor_cases, monitor_cases_vax, monitor_cases_unvax],
         people=ppl,
         label=f"n_agents={pars['n_agents']}"
         )
@@ -62,13 +119,7 @@ def make_sim(n_agents=10_000):
 
 sim = make_sim()
 sim.run()
-flat = sim.results.flatten()
-vax = flat["vaccination_with_waning_immunity"]
-are_kids  = (sim.people.age >= 10.0) & (sim.people.age < 15)
-are_vaccinated = sim.interventions[0].vaccinated
-data_imm = vax[:, (are_kids & are_vaccinated)]
-
-idx = 0
-plt.plot(sim.timevec, data_imm[:, 0:10])
-
+sim.analyzers[0].plot()
+sim.analyzers[1].plot()
+sim.analyzers[2].plot()
 plt.show()
