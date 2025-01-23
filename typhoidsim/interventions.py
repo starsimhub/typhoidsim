@@ -676,6 +676,11 @@ class RoutineDelivery(ss.Intervention):
             self.start_year = self.years[0]
             self.end_year = self.years[-1]
 
+        self.dur_years = self.end_year - self.start_year
+        if not self.dur_years:
+            errormsg = 'Start and end years must be at least one timestep (dt) apart.'
+            raise ValueError(errormsg)
+
         if not (any(np.isclose(self.start_year, self._timevec)) and any(np.isclose(self.end_year, self._timevec))):
             errormsg = 'Years must be within simulation start and end dates.'
             raise ValueError(errormsg)
