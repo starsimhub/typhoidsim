@@ -698,7 +698,7 @@ class vaccination_with_waning(RoutineDelivery):
          annual_prob    (bool)      : whether prob represents an annual probbability or a per-time-step proability
          booster_prob   (float)     : conditional probability of receiving a boster dose given that an individual has received their first dose
          dose_interval  (float)     : the interval of time in years between an individual receiving their first dose and their booster
-         age_pars       (dict)      : a dictionary with min_age and max_age to determine the age group who is eligible
+         age_pars       (dict)      : a dictionary with keys 'min_age' and 'max_age' to determine the age group who is eligible
          label          (str)       : the name of vaccination strategy
          kwargs         (dict)      : passed to Intervention()
     """
@@ -731,7 +731,8 @@ class vaccination_with_waning(RoutineDelivery):
             ss.Result('cum_doses', shape=(self.sim.t.npts,), dtype=float, label="Cumulative Number of Doses"),
             ss.Result('new_doses', shape=(self.sim.t.npts,), dtype=float, label="New Doses Delivered"))
 
-        # Test without new people being born
+        # Mostly to test that we're counting things correctly. Meant to be used with vital dynamics disabled,
+        # especially births, as we're setting the size to be that of the population at t=start of sim
         if self.debug:
             self.results += ss.Result('immunity', shape=(self.sim.t.npts, self.sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
         return
@@ -742,10 +743,9 @@ class vaccination_with_waning(RoutineDelivery):
 
     def step_acquired_immunity(self, sim, uids):
         """
-        This is the models of the the dynamics of an individual'ss immunity
-        response to receiving a vaccination.
-
-        The acquired immunity wanes over time with an exponential decay.
+        This is the model of the the dynamics of an individual's immunity
+        response to receiving a vaccination. The acquired immunity wanes over
+        time with an exponential decay.
         """
         module = sim.diseases.typhoid
         t_vaccinated = self.t_vaccinated[uids] # Time, in calendar years, when the individual received the vaccine. t_0 in the waning equation.
@@ -758,7 +758,7 @@ class vaccination_with_waning(RoutineDelivery):
 
     def step(self):
         """
-        Deliver the diagnostics by finding who's eligible, and apply the product, only once.
+        Delivery the vaccines
         """
         sim = self.sim
         sim_year = sim.t.now('year')
@@ -795,10 +795,15 @@ class vaccination_with_waning(RoutineDelivery):
 
             vaccinated_uids =  self.vaccinated.uids
 
+        # Update immunity_acquired
         self.step_acquired_immunity(sim, vaccinated_uids)
-        # TODO: confirm with EES team how acquired immunity enters the expression for p_infc
-        sim.diseases.typhoid.rel_sus[vaccinated_uids] = 1.0 - sim.diseases.typhoid.immunity_acquired[vaccinated_uids]
 
+        # Relative susceptibility is between 0-1, 1: susceptible; 0: invulnerable. This
+        # variable is used in transmission dynamics
+        # immunity_acquired is defined to provide a mechanism for immunity waning dynamics to exist.
+        # This is also a value between 0-1. 1: perfectly immune/invulnerable; 0: no immunity, and it
+        # is often conflated with, or referred to as, vaccine efficacy and vaccine efficacy waning
+        sim.diseases.typhoid.rel_sus[vaccinated_uids] = 1.0 - sim.diseases.typhoid.immunity_acquired[vaccinated_uids]
 
         # Update results
         ti_sim = sim.ti
