@@ -742,7 +742,6 @@ class vaccination_with_waning(RoutineDelivery):
 
     Args:
          prob           (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
-         annual_prob    (bool)      : whether prob represents an annual probbability or a per-time-step proability
          booster_prob   (float)     : conditional probability of receiving a boster dose given that an individual has received their first dose
          dose_interval  (float)     : the interval of time in years between an individual receiving their first dose and their booster
          age_pars       (dict)      : a dictionary with keys 'min_age' and 'max_age' to determine the age group who is eligible
