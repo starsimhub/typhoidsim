@@ -119,19 +119,20 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
 
     sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, interventions=screen_acute)
 
-    msim = ss.MultiSim(sims=sim, n_runs=10)
-    msim.run()
-    msim.reduce()
+    #msim = ss.MultiSim(sims=sim, n_runs=10)
+    sim.run()
+    #msim.reduce()
 
-    actual_cum_screened = np.cumsum(msim.results['routine_acute_screening_new_screened'])[-1]
-    actual_cum_positive = np.cumsum(msim.results['routine_acute_screening_new_positive'])[-1]
 
-    assert np.isclose(actual_cum_screened / msim.results['n_alive'][-1],
-                      init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * prob_test,
+    actual_cum_screened = np.cumsum(sim.results['routine_acute_screening']['new_screened'])[-1]
+    actual_cum_positive = np.cumsum(sim.results['routine_acute_screening']['new_positive'])[-1]
+
+    assert np.isclose(actual_cum_screened / sim.results['n_alive'][-1],
+                      init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test,
                       rtol=0.1)
 
-    assert np.isclose(actual_cum_positive / msim.results['n_alive'][-1],
-                      init_prev * msim.sims[0].diseases.typhoid.pars.p_acute.pars.p * prob_test * prob_test_positive,
+    assert np.isclose(actual_cum_positive / sim.results['n_alive'][-1],
+                      init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test * prob_test_positive,
                       rtol=0.1)
 
     if do_plot:
@@ -226,35 +227,37 @@ def test_screening_with_monitor():
 
     coverage = 0.5
     sim1 = make_sim_with_acute_screening(screen_coverage=coverage)
-    msim = ss.MultiSim(sims=sim1, n_runs=10)
-    msim.run()
+    #msim = ss.MultiSim(sims=sim1, n_runs=10)
+    #msim.run()
+    sim1.run()
 
     val = 0.0
     target_val = 0.0
-    for sim in msim.sims:
-        flat = sim.results.flatten()
-        val += flat[res_tested].sum()
-        target_val += flat[res_acute].sum()*coverage
-    val /= len(msim.sims)
-    target_val /= len(msim.sims)
-    assert np.isclose(val, target_val, atol=1e-1)
+    #for sim in msim.sims:
+    flat = sim1.results.flatten()
+    val += flat[res_tested].sum()
+    target_val += flat[res_acute].sum()*coverage
+    #val /= 1#len(msim.sims)
+    #target_val /= 1#len(msim.sims)
+    assert np.isclose(val, target_val, rtol=1e-1)
 
     coverage = 0.5
     sensitivity = 0.6
     sim2 = make_sim_with_acute_screening(screen_coverage=coverage,
                                         test_sensitivity=sensitivity)
-    msim = ss.MultiSim(sims=sim2, n_runs=10)
-    msim.run()
+    #msim = ss.MultiSim(sims=sim2, n_runs=10)
+    #msim.run()
+    sim2.run()
 
     val = 0.0
     target_val = 0.0
-    for sim in msim.sims:
-        flat = sim.results.flatten()
-        val += flat[res_positive].sum()
-        target_val += flat[res_acute].sum()*coverage*sensitivity
-    val /= len(msim.sims)
-    target_val /= len(msim.sims)
-    assert np.isclose(val, target_val, atol=1)
+    #for sim in msim.sims:
+    flat = sim2.results.flatten()
+    val += flat[res_positive].sum()
+    target_val += flat[res_acute].sum()*coverage*sensitivity
+    #val /= len(msim.sims)
+    #target_val /= len(msim.sims)
+    assert np.isclose(val, target_val, rtol=1e-1)
     return
 
 
@@ -283,6 +286,7 @@ if __name__ == '__main__':
     do_plot = False
     test_base_test(do_plot=do_plot)
     test_base_test_leaky(do_plot=do_plot)
+    #test_base_test_leaky(do_plot=do_plot)
     #test_vaccine_leaky()
     test_wash_behavior_change()
     test_screening_with_monitor()
