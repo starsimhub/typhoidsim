@@ -611,8 +611,74 @@ class environmental_seasonality(ss.Intervention):
             self.results['seasonal_cfu'][self.ti] = seasonal_cfu
         return
 
+## - Vaccination interventions
 
-class vaccination_with_waning(ss.RoutineDelivery):
+class RoutineDelivery(ss.Intervention):
+    """
+    Base class for any intervention that uses routine delivery; handles interpolation of input years.
+    """
+
+    def __init__(self, *args, years=None, start_year=None, end_year=None, prob=None, annual_prob=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.years = years
+        self.start_year = start_year
+        self.end_year = end_year
+        self.prob = sc.promotetoarray(prob)
+        self.annual_prob = annual_prob  # Determines whether the probability is annual or per timestep
+        self.coverage_dist = ss.bernoulli(p=0)  # Placeholder - initialize delivery
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+
+        # Validate inputs
+        if (self.years is not None) and (self.start_year is not None or self.end_year is not None):
+            errormsg = 'Provide either a list of years or a start year, not both.'
+            raise ValueError(errormsg)
+
+        # If start_year and end_year are not provided, figure them out from the provided years or the sim
+        if self.years is None:
+            if self.start_year is None: self.start_year = sim.pars.start
+            if self.end_year is None:   self.end_year = sim.pars.stop
+        else:
+            self.years = sc.promotetoarray(self.years)
+            self.start_year = self.years[0]
+            self.end_year = self.years[-1]
+
+        # More validation
+        yearvec = sim.t.yearvec
+        if not(any(np.isclose(self.start_year, yearvec)) and any(np.isclose(self.end_year, yearvec))):
+            errormsg = 'Years must be within simulation start and end dates.'
+            raise ValueError(errormsg)
+
+        # Adjustment to get the right end point
+        dt = sim.pars.dt # TODO: need to eventually replace with own timestep, but not initialized yet since super().init_pre() hasn't been called
+        adj_factor = int(1/dt) - 1 if dt < 1 else 1
+
+        # Determine the timepoints at which the intervention will be applied
+        self.start_point = sc.findfirst(yearvec, self.start_year)
+        self.end_point   = sc.findfirst(yearvec, self.end_year) + adj_factor
+        self.years       = sc.inclusiverange(self.start_year, self.end_year)
+        self.timepoints  = sc.inclusiverange(self.start_point, self.end_point).astype(int)
+        self.yearvec     = np.arange(self.start_year, self.end_year + adj_factor, dt) # TODO: integrate with self.t
+
+        # Get the probability input into a format compatible with timepoints
+        if len(self.years) != len(self.prob):
+            if len(self.prob) == 1:
+                self.prob = np.array([self.prob[0]] * len(self.timepoints))
+            else:
+                errormsg = f'Length of years incompatible with length of probabilities: {len(self.years)} vs {len(self.prob)}'
+                raise ValueError(errormsg)
+        else:
+            self.prob = sc.smoothinterp(self.yearvec, self.years, self.prob, smoothness=0)
+
+        # Lastly, adjust the probability by the sim's timestep, if it's an annual probability
+        if self.annual_prob: self.prob = 1 - (1 - self.prob) ** dt
+
+        return
+
+
+class vaccination_with_waning(RoutineDelivery):
     """
 
     An intervention that handles a vaccination with waning.
@@ -645,8 +711,9 @@ class vaccination_with_waning(ss.RoutineDelivery):
         self.age_pars = ss.Pars(age_pars)
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
         self.eligibility = self.age_eligibility
-        self.vaccinated = ss.State('vaccinated')
-        self.t_vaccinated = ss.FloatArr('t_vaccinated', default=np.nan)  # time (year) of vaccination
+        self.vaccinated = ss.BoolArr('vaccinated')                             # keep track of who has been vaccinated
+        self.ti_vaccinated = ss.FloatArr('ti_vaccinated')                      # Keep track of when the agent received their last vaccine in timesteps
+        self.t_vaccinated = ss.FloatArr('t_vaccinated', default=np.nan)  # time (year) of most recent vaccination
         self.a_vaccinated = ss.FloatArr('a_vaccinated', default=np.nan)  # age at vaccination
         self.t_to_booster = ss.FloatArr('t_to_booster', default=np.nan)  # time until needing the booster
         self.n_doses = ss.FloatArr('n_doses')
@@ -673,10 +740,12 @@ class vaccination_with_waning(ss.RoutineDelivery):
         is_eligible = (sim.people.age >= self.age_pars.min_age) & (sim.people.age < self.age_pars.max_age)
         return is_eligible
 
-    def update_acquired_immunity(self, sim, uids):
+    def step_acquired_immunity(self, sim, uids):
         """
-        This is the immunity response to a vaccine. The acquired immunity wanes
-        over time.
+        This is the models of the the dynamics of an individual'ss immunity
+        response to receiving a vaccination.
+
+        The acquired immunity wanes over time with an exponential decay.
         """
         module = sim.diseases.typhoid
         t_vaccinated = self.t_vaccinated[uids] # Time, in calendar years, when the individual received the vaccine. t_0 in the waning equation.
@@ -694,12 +763,11 @@ class vaccination_with_waning(ss.RoutineDelivery):
         sim = self.sim
         sim_year = sim.t.now('year')
         vaccinated_uids = self.vaccinated.uids
-        ti = sim.ti
 
         if sim.t.now('year') >= self.start_year and sim.t.now('year') <= self.end_year:
             self.t_to_booster[self.t_to_booster > 0.0] -= self.sim.t.dt
-            ti = sc.findinds(self.timepoints, sim.ti)[0]
-            prob = self.prob[ti]  # Get the proportion of people who will be tested this timestep
+            ti_rel = sc.findinds(self.timepoints, sim.ti)[0] # ti relative to the start of the intervention
+            prob = self.prob[ti_rel]  # Get the proportion of people who will be tested this timestep
             is_eligible = self.check_eligibility()  # Check eligibility by age for first dose
             # Select never vaccinated
             is_eligible_not_vax = (is_eligible) & ~(self.vaccinated)
@@ -714,7 +782,7 @@ class vaccination_with_waning(ss.RoutineDelivery):
                 self.t_to_booster[new_accept_uids] = self.dose_interval   # set the timer to get the booster
 
             # Select eligible for a booster
-            booster_prob = self.booster_prob[ti]
+            booster_prob = self.booster_prob[ti_rel]
             if booster_prob > 0.0:
                 is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster <= 0.0) # For boosters we do not filter by age
                 self.coverage_dist.set(p=booster_prob)
@@ -725,11 +793,14 @@ class vaccination_with_waning(ss.RoutineDelivery):
                 self.n_doses[new_booster_uids] += 1
 
             vaccinated_uids =  self.vaccinated.uids
-        self.update_acquired_immunity(sim, vaccinated_uids)
+            ti_sim = sim.ti
+            self.results["cum_doses"][ti_sim] = np.nansum(self.n_doses[:])
+
+        self.step_acquired_immunity(sim, vaccinated_uids)
         # TODO: confirm with EES team how acquired immunity enters the expression for p_infc
         sim.diseases.typhoid.rel_sus[vaccinated_uids] = 1.0 - sim.diseases.typhoid.immunity_acquired[vaccinated_uids]
 
-        self.results["cum_doses"][ti] = np.nansum(self.n_doses[:])
         if self.debug:
-            self.results["immunity"][ti, :] = sim.diseases.typhoid.immunity_acquired[:]
+            ti_sim = sim.ti
+            self.results["immunity"][ti_sim, :] = sim.diseases.typhoid.immunity_acquired[:]
         return self.vaccinated.uids
