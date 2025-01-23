@@ -615,53 +615,87 @@ class environmental_seasonality(ss.Intervention):
 
 class RoutineDelivery(ss.Intervention):
     """
-    Base class for any intervention that uses routine delivery; handles interpolation of input years.
+    Base class for any intervention that uses routine delivery
+
+    Args:
+        args: Variable length argument list.
+        kwargs (dict): Arbitrary keyword arguments that are passed to ss.Intervention
+
+    Keyword Args:
+        years (int, optional): The years of intervention.
+        start_year (float, optional): The start year of intervention.
+        end_year (float, optional): The end year of intervention.
+        prob (float, array-like, optional): The coverage probability. Promoted to be an array if not already.
+        prob_type (str, optional): whether the probability/coverage represents an annual, per time step
+         or per intervention probability. Default is per "timestep" (if prob_type=None, or prob_type="timestep"").
+
+    Returns:
+        None
     """
 
-    def __init__(self, *args, years=None, start_year=None, end_year=None, prob=None, annual_prob=True, **kwargs):
+    def __init__(self, *args, years=None, start_year=None, end_year=None, prob=None, prob_type=None,
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.years = years
         self.start_year = start_year
         self.end_year = end_year
         self.prob = sc.promotetoarray(prob)
-        self.annual_prob = annual_prob  # Determines whether the probability is annual or per timestep
+        self.prob_type = prob_type if prob_type is not None else "timestep" # Determines the period over which the probability/coverage has been defined
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder - initialize delivery
+        self._dt = None
+        self._timevec = None
+
+        # Validate inputs
+        avail_prob_types = ["annual", "timestep", "interval"]
+        if self.prob_type not in avail_prob_types:
+            raise ValueError(f"Invalid prob_type: {prob_type}. Must be one of {avail_prob_types}.")
+
+        if (self.years is not None) and (
+                self.start_year is not None or self.end_year is not None):
+            errormsg = 'Provide either a list of years or a start year, not both.'
+            raise ValueError(errormsg)
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
-
-        # Validate inputs
-        if (self.years is not None) and (self.start_year is not None or self.end_year is not None):
-            errormsg = 'Provide either a list of years or a start year, not both.'
-            raise ValueError(errormsg)
-
         # If start_year and end_year are not provided, figure them out from the provided years or the sim
-        if self.years is None:
-            if self.start_year is None: self.start_year = sim.pars.start
-            if self.end_year is None:   self.end_year = sim.pars.stop
-        else:
+        if self.start_year is None: self.start_year = sim.pars.start
+        if self.end_year is None:   self.end_year = sim.pars.stop
+        self._dt = sim.pars.dt  # TODO: need to eventually replace with own timestep, but not initialized yet since super().init_pre() hasn't been called
+        self._timevec = sim.t.timevec
+
+        self._define_intervention_duration()
+        self._configure_time_attributes()
+        self._conform_prob()
+        self._calculate_dt_probability()
+        return
+
+    def _define_intervention_duration(self):
+        if self.years:
             self.years = sc.promotetoarray(self.years)
             self.start_year = self.years[0]
             self.end_year = self.years[-1]
 
-        # More validation
-        yearvec = sim.t.yearvec
-        if not(any(np.isclose(self.start_year, yearvec)) and any(np.isclose(self.end_year, yearvec))):
+        if not (any(np.isclose(self.start_year, self._timevec)) and any(np.isclose(self.end_year, self._timevec))):
             errormsg = 'Years must be within simulation start and end dates.'
             raise ValueError(errormsg)
+        return
 
+    def _configure_time_attributes(self):
         # Adjustment to get the right end point
-        dt = sim.pars.dt # TODO: need to eventually replace with own timestep, but not initialized yet since super().init_pre() hasn't been called
-        adj_factor = int(1/dt) - 1 if dt < 1 else 1
+        adj_factor = int(1/self._dt) - 1 if self._dt < 1 else 1
 
         # Determine the timepoints at which the intervention will be applied
-        self.start_point = sc.findfirst(yearvec, self.start_year)
-        self.end_point   = sc.findfirst(yearvec, self.end_year) + adj_factor
+        self.start_point = sc.findfirst(self._timevec, self.start_year)
+        self.end_point   = sc.findfirst(self._timevec, self.end_year) + adj_factor
         self.years       = sc.inclusiverange(self.start_year, self.end_year)
         self.timepoints  = sc.inclusiverange(self.start_point, self.end_point).astype(int)
-        self.yearvec     = np.arange(self.start_year, self.end_year + adj_factor, dt) # TODO: integrate with self.t
+        # Redefine timevec
+        self._timevec     = np.arange(self.start_year, self.end_year + adj_factor, self._dt) # TODO: integrate with self.t
+        return
 
+    def _conform_prob(self):
+        """" Make an array of probabilities to match the period of time the intervention is defined over"""
         # Get the probability input into a format compatible with timepoints
         if len(self.years) != len(self.prob):
             if len(self.prob) == 1:
@@ -670,12 +704,25 @@ class RoutineDelivery(ss.Intervention):
                 errormsg = f'Length of years incompatible with length of probabilities: {len(self.years)} vs {len(self.prob)}'
                 raise ValueError(errormsg)
         else:
-            self.prob = sc.smoothinterp(self.yearvec, self.years, self.prob, smoothness=0)
-
-        # Lastly, adjust the probability by the sim's timestep, if it's an annual probability
-        if self.annual_prob: self.prob = 1 - (1 - self.prob) ** dt
-
+            self.prob = sc.smoothinterp(self._timevec, self.years, self.prob, smoothness=0)
         return
+
+    def _calculate_dt_probability(self):
+        # Adjust the probability by the sim's timestep, if it's an annual probability
+        match self.prob_type:
+            case "annual":
+                # Assumes units of time in sim.timevec are in years, and so is dt, or
+                # assumes that sim.timevec and dt are in the same units.
+                self.n_timesteps_per_prob_interval = int(1.0/self._dt) # TODO: integrate with time parameters,
+                pass
+            case "interval":
+                self.n_timesteps_per_prob_interval = len(self.timepoints)
+            case "timestep":
+                self.n_timesteps_per_prob_interval = 1
+
+        self.prob = 1 - (1 - self.prob) ** (1.0 / self.n_timesteps_per_prob_interval)
+        return
+
 
 
 class vaccination_with_waning(RoutineDelivery):
@@ -703,7 +750,7 @@ class vaccination_with_waning(RoutineDelivery):
          kwargs         (dict)      : passed to Intervention()
     """
     def __init__(self, *args, booster_prob=0.0, dose_interval=None, label=None, age_pars=None, debug=False, **kwargs):
-        # **kwargs: years=None, start_year=None, end_year=None, prob=None, annual_prob=True,
+        # **kwargs: years=None, start_year=None, end_year=None, prob=None, prob_type=None,
         super().__init__(*args, **kwargs) # CK: TODO: refactor with define_pars
         self.label = label
         self.booster_prob = sc.toarray(booster_prob)
@@ -788,6 +835,7 @@ class vaccination_with_waning(RoutineDelivery):
                 is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster <= 0.0) # For boosters we do not filter by age
                 self.coverage_dist.set(p=booster_prob)
                 new_booster_uids = self.coverage_dist.filter(is_eligible_booster)
+                self.ti_vaccinated[new_accept_uids] = sim.ti
                 self.t_vaccinated[new_booster_uids] = sim_year
                 self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
                 self.t_to_booster[new_booster_uids] = np.inf # reset time for those who received the booster
