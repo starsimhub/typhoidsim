@@ -627,7 +627,26 @@ class RoutineDelivery(ss.Intervention):
         end_year (float, optional): The end year of intervention.
         prob (float, array-like, optional): The coverage probability. Promoted to be an array if not already.
         prob_type (str, optional): whether the probability/coverage represents an annual, per time step
-         or per intervention probability. Default is per "timestep" (if prob_type=None, or prob_type="timestep"").
+         or per intervention duration probability. Default is per "timestep" (if prob_type=None, or prob_type="timestep"").
+
+         Available prob_types: ["annual", "timestep", "interval", "age_based"]
+
+         prob_type age_based:
+             To achieve X% coverage of the entire eligible population over Y years,
+             we need to set each agent to have X% probability of being vaccinated
+             over the "period" that they are eligible based on their age.
+
+             X% may not be exactlty achieved depeding on other feedback mechanisms,
+             but for the purposes of this intervention we ignore vital dyanmics.
+
+             This prob_type works only in the case that the duration of the
+             intervention is longer than the 'duration' or age range of eligibility.
+
+             This is typically the case when we want to create regular, routine
+             vaccination (like vaccinating every 'Z' year old child in perpetuity).
+             the age eligibility could be
+                 min_age = Z-dt
+                 max_age = Z+dt
 
     Returns:
         None
@@ -646,7 +665,7 @@ class RoutineDelivery(ss.Intervention):
         self._timevec = None
 
         # Validate inputs
-        avail_prob_types = ["annual", "timestep", "interval"]
+        avail_prob_types = ["annual", "timestep", "interval", "age_based"]
         if self.prob_type not in avail_prob_types:
             raise ValueError(f"Invalid prob_type: {prob_type}. Must be one of {avail_prob_types}.")
 
@@ -720,6 +739,12 @@ class RoutineDelivery(ss.Intervention):
                 self.n_timesteps_per_prob_interval = len(self.timepoints)
             case "timestep":
                 self.n_timesteps_per_prob_interval = 1
+
+            case "age_based":
+                age_n_timepoints = round((self.age_pars.max_age - self.age_pars.min_age) / self._dt)
+                self.n_timesteps_per_prob_interval = min(len(self.timepoints), age_n_timepoints)
+                if self.n_timesteps_per_prob_interval == 0:
+                    self.n_timesteps_per_prob_interval = 1  # one time step is the bare minimum we can have
 
         self.prob = 1 - (1 - self.prob) ** (1.0 / self.n_timesteps_per_prob_interval)
         return
