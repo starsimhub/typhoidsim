@@ -687,16 +687,12 @@ class RoutineDelivery(ss.Intervention):
         return
 
     def _configure_time_attributes(self):
-        # Adjustment to get the right end point
-        adj_factor = int(1/self._dt) - 1 if self._dt < 1 else 1
-
         # Determine the timepoints at which the intervention will be applied
-        self.start_point = sc.findfirst(self._timevec, self.start_year)
-        self.end_point   = sc.findfirst(self._timevec, self.end_year) + adj_factor
+        self.start_point = sc.findnearest(self._timevec-self.start_year, 0.0)
+        self.end_point   = sc.findnearest(self._timevec-self.end_year, 0.0)
         self.years       = sc.inclusiverange(self.start_year, self.end_year)
         self.timepoints  = sc.inclusiverange(self.start_point, self.end_point).astype(int)
-        # Redefine timevec
-        self._timevec     = np.arange(self.start_year, self.end_year + adj_factor, self._dt) # TODO: integrate with self.t
+        self._timevec     = np.arange(self.start_year, self.end_year, self._dt) # TODO: integrate with self.t
         return
 
     def _conform_prob(self):
