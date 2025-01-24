@@ -47,11 +47,11 @@ def make_sim(n_agents=10_000):
     network = ss.RandomNet({'n_contacts': 5})
 
     campaign_vax_2_5_yo = ty.vaccination_with_waning(
-        start_year=2000.0,
-        prob=0.66,
+        prob=0.8,
         dose_interval=5.0,  # interval between receiving first dose and booster
         booster_prob=0.0,
-        annual_prob=True,
+        start_year=2001.0,
+        prob_type="interval",
         debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 2.0,
                   'max_age': 5.0}
