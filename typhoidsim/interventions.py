@@ -697,7 +697,8 @@ class RoutineDelivery(ss.Intervention):
             raise ValueError(errormsg)
 
         # Validate age parameters
-        if (self.age_pars.max_age - self.age_pars.min_age) < self._dt:
+        age_timepoints = np.round((self.age_pars.max_age - self.age_pars.min_age)/self._dt).astype(int)
+        if age_timepoints < 1:
             errormsg = f'Min and max age must must be at least one timestep (dt: {self._dt}) apart.'
             raise ValueError(errormsg)
         self.eligibity_interval = self.age_pars.max_age - self.age_pars.min_age
