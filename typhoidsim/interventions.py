@@ -701,7 +701,7 @@ class RoutineDelivery(ss.Intervention):
         if age_timepoints < 1:
             errormsg = f'Min and max age must must be at least one timestep (dt: {self._dt}) apart.'
             raise ValueError(errormsg)
-        self.eligibity_interval = self.age_pars.max_age - self.age_pars.min_age
+        self.eligibility_interval = self.age_pars.max_age - self.age_pars.min_age
         return
 
     def _configure_time_attributes(self):
@@ -853,7 +853,7 @@ class vaccination_with_waning(RoutineDelivery):
         sim_year = sim.t.now('year')
         vaccinated_uids = self.vaccinated.uids
 
-        if sim.t.now('year') >= self.start_year and sim.t.now('year') <= self.end_year:
+        if sim.t.now('year') >= self.start_year and sim.t.now('year') < self.end_year:
             self.t_to_booster[self.t_to_booster > 0.0] -= self.sim.t.dt
             ti_rel = sc.findinds(self.timepoints, sim.ti)[0] # ti relative to the start of the intervention
             prob = self.prob[ti_rel]  # Get the proportion of people who will be tested this timestep
