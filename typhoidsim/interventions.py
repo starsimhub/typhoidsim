@@ -625,6 +625,7 @@ class RoutineDelivery(ss.Intervention):
         years (int, optional): The years of intervention.
         start_year (float, optional): The start year of intervention.
         end_year (float, optional): The end year of intervention.
+        age_pars (dict): a dictionary with keys 'min_age' and 'max_age' to determine the age group who is eligible.
         prob (float, array-like, optional): The coverage probability. Promoted to be an array if not already.
         prob_type (str, optional): whether the probability/coverage represents an annual, per time step
          or per intervention duration probability. Default is per "timestep" (if prob_type=None, or prob_type="timestep"").
@@ -652,12 +653,13 @@ class RoutineDelivery(ss.Intervention):
         None
     """
 
-    def __init__(self, *args, years=None, start_year=None, end_year=None, prob=None, prob_type=None,
+    def __init__(self, *args, years=None, start_year=None, end_year=None, age_pars=None, prob=None, prob_type=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.years = years
         self.start_year = start_year
         self.end_year = end_year
+        self.age_pars = ss.Pars(age_pars)
         self.prob = sc.promotetoarray(prob)
         self.prob_type = prob_type if prob_type is not None else "timestep" # Determines the period over which the probability/coverage has been defined
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder - initialize delivery
@@ -770,17 +772,15 @@ class vaccination_with_waning(RoutineDelivery):
          prob           (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
          booster_prob   (float)     : conditional probability of receiving a boster dose given that an individual has received their first dose
          dose_interval  (float)     : the interval of time in years between an individual receiving their first dose and their booster
-         age_pars       (dict)      : a dictionary with keys 'min_age' and 'max_age' to determine the age group who is eligible
          label          (str)       : the name of vaccination strategy
          kwargs         (dict)      : passed to Intervention()
     """
-    def __init__(self, *args, booster_prob=0.0, dose_interval=None, label=None, age_pars=None, debug=False, **kwargs):
+    def __init__(self, *args, booster_prob=0.0, dose_interval=None, label=None, debug=False, **kwargs):
         # **kwargs: years=None, start_year=None, end_year=None, prob=None, prob_type=None,
         super().__init__(*args, **kwargs) # CK: TODO: refactor with define_pars
         self.label = label
         self.booster_prob = sc.toarray(booster_prob)
         self.dose_interval = dose_interval  # TODO SOON: ss.years(dose_interval) # number of years betweem 1st dose and booster dose
-        self.age_pars = ss.Pars(age_pars)
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
         self.eligibility = self.age_eligibility
         self.vaccinated = ss.BoolArr('vaccinated')                             # keep track of who has been vaccinated
