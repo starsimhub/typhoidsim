@@ -29,8 +29,8 @@ def make_sim(n_agents=10_000):
     ppl = ss.People(pars["n_agents"])
 
     demographics = [
-        ss.Births(birth_rate=0),
-        ss.Deaths(death_rate=0)  # Needed to use debug=True with the vax intervention, tracks immunity level of of every agent
+        ss.Births(birth_rate=10),
+        ss.Deaths(death_rate=10)  # Needed to use debug=True with the vax intervention, tracks immunity level of of every agent
     ]
 
     typhoid = ty.Typhoid(pars={"init_prev":ss.bernoulli(p=0.05),
@@ -47,14 +47,30 @@ def make_sim(n_agents=10_000):
     network = ss.RandomNet({'n_contacts': 5})
 
     campaign_vax_2_5_yo = ty.vaccination_with_waning(
-        start_year=2000.0,
-        prob=0.66,
+        prob=0.4,
         dose_interval=5.0,  # interval between receiving first dose and booster
         booster_prob=0.0,
-        annual_prob=True,
+        start_year=2001.0,
+        end_year=2003.0,
+        prob_type="interval",
         debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 2.0,
-                  'max_age': 5.0}
+                  'max_age': 5.0},
+        name = "campaign_1"
+        )
+
+
+    campaign_vax_5_10_yo = ty.vaccination_with_waning(
+        prob=0.8,
+        dose_interval=5.0,  # interval between receiving first dose and booster
+        booster_prob=0.0,
+        start_year=2004.0,
+        end_year=2006.0,
+        prob_type="interval",
+        debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
+        age_pars={'min_age': 5.0,
+                  'max_age': 10.0},
+        name="campaign_2"
         )
 
     age_bin_edges = [0, 2, 5, 10, 15, 20, 40, 60, ty.max_age]
@@ -109,7 +125,7 @@ def make_sim(n_agents=10_000):
         demographics=demographics,
         diseases=typhoid,
         networks=network,
-        interventions=campaign_vax_2_5_yo,
+        interventions=[campaign_vax_2_5_yo, campaign_vax_5_10_yo],
         analyzers=[monitor_cases, monitor_cases_vax, monitor_cases_unvax],
         people=ppl,
         label=f"n_agents={pars['n_agents']}"

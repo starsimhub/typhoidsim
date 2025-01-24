@@ -622,9 +622,9 @@ class RoutineDelivery(ss.Intervention):
         kwargs (dict): Arbitrary keyword arguments that are passed to ss.Intervention
 
     Keyword Args:
-        years (int, optional): The years of intervention.
         start_year (float, optional): The start year of intervention.
         end_year (float, optional): The end year of intervention.
+        age_pars (dict): a dictionary with keys 'min_age' and 'max_age' to determine the age group who is eligible.
         prob (float, array-like, optional): The coverage probability. Promoted to be an array if not already.
         prob_type (str, optional): whether the probability/coverage represents an annual, per time step
          or per intervention duration probability. Default is per "timestep" (if prob_type=None, or prob_type="timestep"").
@@ -652,12 +652,12 @@ class RoutineDelivery(ss.Intervention):
         None
     """
 
-    def __init__(self, *args, years=None, start_year=None, end_year=None, prob=None, prob_type=None,
+    def __init__(self, *args, start_year=None, end_year=None, age_pars=None, prob=None, prob_type=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
-        self.years = years
         self.start_year = start_year
         self.end_year = end_year
+        self.age_pars = ss.Pars(age_pars)
         self.prob = sc.promotetoarray(prob)
         self.prob_type = prob_type if prob_type is not None else "timestep" # Determines the period over which the probability/coverage has been defined
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder - initialize delivery
@@ -669,10 +669,6 @@ class RoutineDelivery(ss.Intervention):
         if self.prob_type not in avail_prob_types:
             raise ValueError(f"Invalid prob_type: {prob_type}. Must be one of {avail_prob_types}.")
 
-        if (self.years is not None) and (
-                self.start_year is not None or self.end_year is not None):
-            errormsg = 'Provide either a list of years or a start year, not both.'
-            raise ValueError(errormsg)
         return
 
     def init_pre(self, sim):
@@ -683,48 +679,44 @@ class RoutineDelivery(ss.Intervention):
         self._dt = sim.pars.dt  # TODO: need to eventually replace with own timestep, but not initialized yet since super().init_pre() hasn't been called
         self._timevec = sim.t.timevec
 
-        self._define_intervention_duration()
+        self._validate_time_parameters()
         self._configure_time_attributes()
         self._conform_prob()
         self._calculate_dt_probability()
         return
 
-    def _define_intervention_duration(self):
-        if self.years:
-            self.years = sc.promotetoarray(self.years)
-            self.start_year = self.years[0]
-            self.end_year = self.years[-1]
-
+    def _validate_time_parameters(self):
         self.dur_years = self.end_year - self.start_year
-        if not self.dur_years:
+        self.dur_timepoints = np.round((self.end_year - self.start_year)/self._dt).astype(int)
+        if self.dur_timepoints < 1:
             errormsg = 'Start and end years must be at least one timestep (dt) apart.'
             raise ValueError(errormsg)
 
         if not (any(np.isclose(self.start_year, self._timevec)) and any(np.isclose(self.end_year, self._timevec))):
             errormsg = 'Years must be within simulation start and end dates.'
             raise ValueError(errormsg)
+
+        # Validate age parameters
+        age_timepoints = np.round((self.age_pars.max_age - self.age_pars.min_age)/self._dt).astype(int)
+        if age_timepoints < 1:
+            errormsg = f'Min and max age must must be at least one timestep (dt: {self._dt}) apart.'
+            raise ValueError(errormsg)
+        self.eligibility_interval = self.age_pars.max_age - self.age_pars.min_age
         return
 
     def _configure_time_attributes(self):
         # Determine the timepoints at which the intervention will be applied
         self.start_point = sc.findnearest(self._timevec-self.start_year, 0.0)
         self.end_point   = sc.findnearest(self._timevec-self.end_year, 0.0)
-        self.years       = sc.inclusiverange(self.start_year, self.end_year)
-        self.timepoints  = sc.inclusiverange(self.start_point, self.end_point).astype(int)
-        self._timevec     = np.arange(self.start_year, self.end_year, self._dt) # TODO: integrate with self.t
+        self.timepoints  = sc.inclusiverange(self.start_point, self.end_point-1).astype(int) # TODO: when integrating with self.t, check if -1 still needed.
+        self._timevec    = sc.inclusiverange(self.start_year, self.end_year, self._dt) # TODO: integrate with self.t
         return
 
     def _conform_prob(self):
         """" Make an array of probabilities to match the period of time the intervention is defined over"""
         # Get the probability input into a format compatible with timepoints
-        if len(self.years) != len(self.prob):
-            if len(self.prob) == 1:
-                self.prob = np.array([self.prob[0]] * len(self.timepoints))
-            else:
-                errormsg = f'Length of years incompatible with length of probabilities: {len(self.years)} vs {len(self.prob)}'
-                raise ValueError(errormsg)
-        else:
-            self.prob = sc.smoothinterp(self._timevec, self.years, self.prob, smoothness=0)
+        if len(self.prob) == 1:
+            self.prob = np.array([self.prob[0]] * len(self.timepoints))
         return
 
     def _calculate_dt_probability(self):
@@ -733,22 +725,49 @@ class RoutineDelivery(ss.Intervention):
             case "annual":
                 # Assumes units of time in sim.timevec are in years, and so is dt, or
                 # assumes that sim.timevec and dt are in the same units.
-                self.n_timesteps_per_prob_interval = int(1.0/self._dt) # TODO: integrate with time parameters,
-                pass
+                # The probability an agent will receive a vaccine over the period of 1 year
+                self.n_timesteps_per_prob_interval = round(1.0/self._dt) # TODO: integrate with time parameters,
             case "interval":
+                # The probability an agent will receive a vaccine over the intervention interval defined
+                # by start_year and stop_year
                 self.n_timesteps_per_prob_interval = len(self.timepoints)
             case "timestep":
+                # The probability an agent will receive a vaccine at each time step
                 self.n_timesteps_per_prob_interval = 1
+            case "eligibility_interval":
+                # The probability an agent will receive a vaccine over the period where they are eligible
+                # The eligibility_interval is defined by [min_age, max_age]
+                # This prob_type will produce the wrong results if ageing is disabled.
+                # Coverage will likely be lower than the value specified if vital dynamics are disabled,
+                # depending on when in the simulation the intervention is applied.
+                # This approach gets, on average, to x% coverage over the intervention interval
+                # if birth rates are similar to deaths rates, ie population size is in a 'steady' state
 
+                # If the intervention interval is < than eligibility interval, then the
+                # total effective coverage can be expected to be approximtely
+                # prob/(eligibility_interval/intevention_interval). This is equivalent to
+                # having a sampling period lower than the nyquist frequency in signal processing
+                # We could even warn the user, and suggest that intervention_period
+                # should be at least == eligibility_interval
+                self.n_timesteps_per_prob_interval = round(self.eligibility_interval / self._dt)
             case "age_based":
-                age_n_timepoints = round((self.age_pars.max_age - self.age_pars.min_age) / self._dt)
-                self.n_timesteps_per_prob_interval = min(len(self.timepoints), age_n_timepoints)
-                if self.n_timesteps_per_prob_interval == 0:
-                    self.n_timesteps_per_prob_interval = 1  # one time step is the bare minimum we can have
+                # A 'hybrid', or defined-by parts, approach. The intervention qualitatively changes
+                # behaviour depending on the relative 'sizes' of eligibility_interval and
+                # intervention interval, and forces the user specified 'coverage' over the intervention period.
+                # If eligibility_interval <= intervention_interval, then this should effectively
+                # behave like "eligibility_interval", otherwise like "interval"
+
+                # For the same input parameters start/stop years and age pars,
+                # this prob_type will provide different results to those generated by
+                # "prob_type=eligibility_interval".
+                if self.eligibility_interval <= self.dur_years:
+                    self.n_timesteps_per_prob_interval = self.eligibility_interval / self._dt
+                else:
+                    # eligibility_interval > intervention_interval
+                    self.n_timesteps_per_prob_interval = len(self.timepoints)
 
         self.prob = 1 - (1 - self.prob) ** (1.0 / self.n_timesteps_per_prob_interval)
         return
-
 
 
 class vaccination_with_waning(RoutineDelivery):
@@ -770,17 +789,15 @@ class vaccination_with_waning(RoutineDelivery):
          prob           (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
          booster_prob   (float)     : conditional probability of receiving a boster dose given that an individual has received their first dose
          dose_interval  (float)     : the interval of time in years between an individual receiving their first dose and their booster
-         age_pars       (dict)      : a dictionary with keys 'min_age' and 'max_age' to determine the age group who is eligible
          label          (str)       : the name of vaccination strategy
          kwargs         (dict)      : passed to Intervention()
     """
-    def __init__(self, *args, booster_prob=0.0, dose_interval=None, label=None, age_pars=None, debug=False, **kwargs):
+    def __init__(self, *args, booster_prob=0.0, dose_interval=None, label=None, debug=False, **kwargs):
         # **kwargs: years=None, start_year=None, end_year=None, prob=None, prob_type=None,
         super().__init__(*args, **kwargs) # CK: TODO: refactor with define_pars
         self.label = label
         self.booster_prob = sc.toarray(booster_prob)
         self.dose_interval = dose_interval  # TODO SOON: ss.years(dose_interval) # number of years betweem 1st dose and booster dose
-        self.age_pars = ss.Pars(age_pars)
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
         self.eligibility = self.age_eligibility
         self.vaccinated = ss.BoolArr('vaccinated')                             # keep track of who has been vaccinated
@@ -836,7 +853,7 @@ class vaccination_with_waning(RoutineDelivery):
         sim_year = sim.t.now('year')
         vaccinated_uids = self.vaccinated.uids
 
-        if sim.t.now('year') >= self.start_year and sim.t.now('year') <= self.end_year:
+        if sim.t.now('year') >= self.start_year and sim.t.now('year') < self.end_year:
             self.t_to_booster[self.t_to_booster > 0.0] -= self.sim.t.dt
             ti_rel = sc.findinds(self.timepoints, sim.ti)[0] # ti relative to the start of the intervention
             prob = self.prob[ti_rel]  # Get the proportion of people who will be tested this timestep
