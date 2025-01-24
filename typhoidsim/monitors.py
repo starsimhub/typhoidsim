@@ -585,8 +585,8 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
                                    sim.interventions[vax_interv].vaccinated][
                                       self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
 
-            eligible_males = eligible_males & self.vax_state_a
-            eligible_females = eligible_females & self.vax_state_b
+        eligible_males = eligible_males & self.vax_state_a
+        eligible_females = eligible_females & self.vax_state_b
 
 
         for attrname, specs in sorted(self.to_record.items()):
@@ -610,12 +610,12 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
     def _apply_aggregated_sexes(self, sim):
         ti = sim.ti
         eligible_folks = sim.people.alive
-        self.vax_state_a[eligible_folks.uids] = False  # Reset tracking state to False
+        self.vax_state_a[:] = False  # Reset tracking state to False
         for vax_interv in self.vax_interventions:
             # Find if agent has received any vaccination across all possible vax interventions
-            self.vax_state_a[:] = self.vax_state_a[:] | [~sim.interventions[vax_interv].vaccinated,
-                                                          sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
-            eligible_folks = eligible_folks & self.vax_state_a
+            vax_status  = [~sim.interventions[vax_interv].vaccinated, sim.interventions[vax_interv].vaccinated][self.track_vaccinated]
+            self.vax_state_a[:] = self.vax_state_a[:] | vax_status # union of all interventions (an agent could have received two vaccines, but we count them once)
+        eligible_folks = eligible_folks & self.vax_state_a
 
         for attrname, specs in sorted(self.to_record.items()):
             attrpath = specs["path"]
