@@ -622,7 +622,6 @@ class RoutineDelivery(ss.Intervention):
         kwargs (dict): Arbitrary keyword arguments that are passed to ss.Intervention
 
     Keyword Args:
-        years (int, optional): The years of intervention.
         start_year (float, optional): The start year of intervention.
         end_year (float, optional): The end year of intervention.
         age_pars (dict): a dictionary with keys 'min_age' and 'max_age' to determine the age group who is eligible.
