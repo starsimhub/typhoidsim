@@ -725,7 +725,7 @@ class RoutineDelivery(ss.Intervention):
                 # Assumes units of time in sim.timevec are in years, and so is dt, or
                 # assumes that sim.timevec and dt are in the same units.
                 # The probability an agent will receive a vaccine over the period of 1 year
-                self.n_timesteps_per_prob_interval = int(1.0/self._dt) # TODO: integrate with time parameters,
+                self.n_timesteps_per_prob_interval = round(1.0/self._dt) # TODO: integrate with time parameters,
             case "interval":
                 # The probability an agent will receive a vaccine over the intervention interval defined
                 # by start_year and stop_year
