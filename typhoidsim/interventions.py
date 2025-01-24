@@ -653,10 +653,9 @@ class RoutineDelivery(ss.Intervention):
         None
     """
 
-    def __init__(self, *args, years=None, start_year=None, end_year=None, age_pars=None, prob=None, prob_type=None,
+    def __init__(self, *args, start_year=None, end_year=None, age_pars=None, prob=None, prob_type=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
-        self.years = years
         self.start_year = start_year
         self.end_year = end_year
         self.age_pars = ss.Pars(age_pars)
@@ -671,10 +670,6 @@ class RoutineDelivery(ss.Intervention):
         if self.prob_type not in avail_prob_types:
             raise ValueError(f"Invalid prob_type: {prob_type}. Must be one of {avail_prob_types}.")
 
-        if (self.years is not None) and (
-                self.start_year is not None or self.end_year is not None):
-            errormsg = 'Provide either a list of years or a start year, not both.'
-            raise ValueError(errormsg)
         return
 
     def init_pre(self, sim):
@@ -692,13 +687,9 @@ class RoutineDelivery(ss.Intervention):
         return
 
     def _validate_time_parameters(self):
-        if self.years:
-            self.years = sc.promotetoarray(self.years)
-            self.start_year = self.years[0]
-            self.end_year = self.years[-1]
-
         self.dur_years = self.end_year - self.start_year
-        if self.dur_years < self._dt:
+        self.dur_timepoints = np.round((self.end_year - self.start_year)/self._dt).astype(int)
+        if self.dur_timepoints < 1:
             errormsg = 'Start and end years must be at least one timestep (dt) apart.'
             raise ValueError(errormsg)
 
@@ -717,22 +708,15 @@ class RoutineDelivery(ss.Intervention):
         # Determine the timepoints at which the intervention will be applied
         self.start_point = sc.findnearest(self._timevec-self.start_year, 0.0)
         self.end_point   = sc.findnearest(self._timevec-self.end_year, 0.0)
-        self.years       = sc.inclusiverange(self.start_year, self.end_year)
         self.timepoints  = sc.inclusiverange(self.start_point, self.end_point).astype(int)
-        self._timevec     = np.arange(self.start_year, self.end_year, self._dt) # TODO: integrate with self.t
+        self._timevec    = sc.inclusiverange(self.start_year, self.end_year, self._dt) # TODO: integrate with self.t
         return
 
     def _conform_prob(self):
         """" Make an array of probabilities to match the period of time the intervention is defined over"""
         # Get the probability input into a format compatible with timepoints
-        if len(self.years) != len(self.prob):
-            if len(self.prob) == 1:
-                self.prob = np.array([self.prob[0]] * len(self.timepoints))
-            else:
-                errormsg = f'Length of years incompatible with length of probabilities: {len(self.years)} vs {len(self.prob)}'
-                raise ValueError(errormsg)
-        else:
-            self.prob = sc.smoothinterp(self._timevec, self.years, self.prob, smoothness=0)
+        if len(self.prob) == 1:
+            self.prob = np.array([self.prob[0]] * len(self.timepoints))
         return
 
     def _calculate_dt_probability(self):
@@ -784,7 +768,6 @@ class RoutineDelivery(ss.Intervention):
 
         self.prob = 1 - (1 - self.prob) ** (1.0 / self.n_timesteps_per_prob_interval)
         return
-
 
 
 class vaccination_with_waning(RoutineDelivery):
