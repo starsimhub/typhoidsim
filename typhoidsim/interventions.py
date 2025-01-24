@@ -708,7 +708,7 @@ class RoutineDelivery(ss.Intervention):
         # Determine the timepoints at which the intervention will be applied
         self.start_point = sc.findnearest(self._timevec-self.start_year, 0.0)
         self.end_point   = sc.findnearest(self._timevec-self.end_year, 0.0)
-        self.timepoints  = sc.inclusiverange(self.start_point, self.end_point).astype(int)
+        self.timepoints  = sc.inclusiverange(self.start_point, self.end_point-1).astype(int) # TODO: when integrating with self.t, check if -1 still needed.
         self._timevec    = sc.inclusiverange(self.start_year, self.end_year, self._dt) # TODO: integrate with self.t
         return
 
