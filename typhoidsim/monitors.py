@@ -17,6 +17,7 @@ import pandas as pd
 
 import sciris as sc
 import starsim as ss
+import typhoidsim
 
 import typhoidsim.defaults as tyd
 import typhoidsim.utils as tyu
@@ -61,6 +62,10 @@ class histograms_by_age_sex_monitor(Monitor):
              If None, it records from the start of the simulation.
         record_until (int, optional): Time until which to record. Assumes it's time expressed in years in float representation.
              If None, it records until the end of the simulation.
+             The monitor records on semiopen interval [record_from, record_until),
+             such that if we had two monitors, A: [record_from_a, record_until_a),
+             and B: [record_from_b, record_until_b), and record_until_a == record_from_b,
+             then that time point would not be counted twice.
         aggregate_sex (bool, optional): Whether to record each quantity separetely by sex.
              Defaults to `False`, ie, records the quantities in to_record separately for females and males.
         aggregate_time (str, optional): If the monitor downsamples results with respect to the original simulation resoliution,
@@ -81,7 +86,7 @@ class histograms_by_age_sex_monitor(Monitor):
                  name=None):
         super().__init__()
         self.name = "monitor_by_age_sex" if name is None else name
-        self.age_bins = sc.promotetoarray(age_bins)
+        self.age_bins = sc.promotetoarray(age_bins) if age_bins is not None else np.array([0, tyd.max_age])
         self.age_bin_labels = age_bin_labels
         self.age_bin_centers = None
         self.age_bin_lbl_to_idx = None
@@ -109,7 +114,9 @@ class histograms_by_age_sex_monitor(Monitor):
 
     def init_pre(self, sim):
         super().init_pre(sim)
+
         self.set_observation_interval(sim)
+
         aggregation_functions = {
             "mean": np.mean,
             "min": np.min,
@@ -123,6 +130,7 @@ class histograms_by_age_sex_monitor(Monitor):
                              f"Available aggregation methods are: {list(aggregation_functions.keys())}")
 
         if self.aggregate_time in set(aggregation_functions):
+            # integer number of timesteps we need to aggregate to downsample result arrays
             self.monitor_step = round(self.resampling_period / self.t.dt) # CK: TODO: use time units
             self.monitor_period = self.resampling_period
             self.agg_func = aggregation_functions.get(self.aggregate_time)
@@ -130,8 +138,14 @@ class histograms_by_age_sex_monitor(Monitor):
             self.monitor_step = 1.0
             self.monitor_period = self.t.dt  # CK: TODO: use time units
 
+        self.start_point = sc.findnearest(sim.timevec - self.record_from, 0.0)
+        self.end_point = sc.findnearest(sim.timevec - self.record_until, 0.0)
+        self.timepoints = sc.inclusiverange(self.start_point, self.end_point - 1).astype(int)  # TODO: when integrating with self.t, check if -1 (minus 1 timestep) still needed.
+
         # Output year vector
-        self.timevec_ = sc.inclusiverange(self.record_from, self.record_until, self.monitor_period) # CK: TODO: use time units
+        self.timevec_ = sc.inclusiverange(sim.timevec[self.timepoints[0]],
+                                          sim.timevec[self.timepoints[-1]],
+                                          self.monitor_period) # CK: TODO: use time units
 
         if self.aggregate_time is None or self.aggregate_time == "subsample":
             self.sample = self._default_sampling
@@ -310,7 +324,8 @@ class histograms_by_age_sex_monitor(Monitor):
         return self.aggregate(vals)
 
     def step(self):
-        if self.t.now('year') >= self.record_from and (self.t.now('year') <= self.record_until):
+        sim = self.sim
+        if sim.ti in self.timepoints:
             self.sample(self.sim)
         return
 
@@ -384,14 +399,26 @@ class histograms_by_age_sex_monitor(Monitor):
             if not sc.isiterable(axs):
                 axs = [axs]
 
+            xticks = []
+            xticklabels = []
+
+            for idx in range(self.nags):
+                xticks.append(idx)
+                if self.nags == 1:
+                    xticklabels.append(self.age_bin_labels)
+                else:
+                    xticklabels.append(self.age_bin_labels[idx])
+
             # Do the plotting
             for ax, (key, res) in zip(axs, flat.items()):
                 for tidx in sorted(t_index):
-                    ax.bar(np.arange(0, len(self.age_bin_centers)), res[tidx, :], **plot_kw, label=f"t={timevec[tidx]:.4f}", alpha=0.2)
-                    ax.set_xticks(np.arange(0, len(self.age_bin_centers)), self.age_bin_labels)
+                    ax.bar(xticks, res[tidx, :], **plot_kw, label=f"t={timevec[tidx]:.4f}", alpha=0.2)
 
                 title = getattr(res, 'label', key)
+                if self.nags:
+                    ax.set_xlim([-0.5, 0.5])
                 ax.set_title(title)
+                ax.set_xticks(xticks, labels=xticklabels)
                 ax.set_xlabel('Age (years)')
                 ax.legend()
 
