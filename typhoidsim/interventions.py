@@ -880,7 +880,7 @@ class vaccination_with_waning(RoutineDelivery):
                 self.ti_vaccinated[new_accept_uids] = sim.ti
                 self.t_vaccinated[new_booster_uids] = sim_year
                 self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
-                self.t_to_booster[new_booster_uids] = np.inf # reset time for those who received the booster
+                self.t_to_booster[is_eligible_booster] = np.inf # reset time for those eligible for booster, regardless of receipt
                 self.n_doses[new_booster_uids] += 1
 
             vaccinated_uids =  self.vaccinated.uids
