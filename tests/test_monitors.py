@@ -35,7 +35,7 @@ def make_sim_with_histogram_monitor():
 
     # Create the interventions
     my_intervention_vax1 = ss.routine_vx(
-        start_year=2000,
+        start_year=pars["start"],
         prob=0.2,
         product=vax1,
         eligibility=elgibility
@@ -49,15 +49,16 @@ def make_sim_with_histogram_monitor():
                      alive=dict(path=("people",)))
 
     m1_name="monitor_cases"
+    agg_sex = True
     monitor_cases = ty.histograms_by_age_sex_monitor(
         age_bins=age_bin_edges,
         age_bin_labels=age_bin_labels,
         to_record=to_record,
         resampling_period=1.0,
-        aggregate_sex=True,
+        aggregate_sex=agg_sex,
         aggregate_time="sum",
         # Sum over the resampling period
-        record_from=2000.0,
+        record_from=pars["start"],
         name=m1_name)
 
     m2_name="monitor_cases_vax"
@@ -67,10 +68,10 @@ def make_sim_with_histogram_monitor():
         age_bin_labels=age_bin_labels,
         to_record=to_record,
         resampling_period=1.0,
-        aggregate_sex=True,
+        aggregate_sex=agg_sex,
         aggregate_time="sum",
         # Sum over the resampling period
-        record_from=2000.0,
+        record_from=pars["start"],
         name=m2_name)
 
     m3_name="monitor_cases_unvax"
@@ -80,10 +81,10 @@ def make_sim_with_histogram_monitor():
         age_bin_labels=age_bin_labels,
         to_record=to_record,
         resampling_period=1.0,
-        aggregate_sex=True,
+        aggregate_sex=agg_sex,
         aggregate_time="sum",
         # Sum over the resampling period
-        record_from=2000.0,
+        record_from=pars["start"],
         name=m3_name)
 
     m4_name="monitor_people"
@@ -92,8 +93,8 @@ def make_sim_with_histogram_monitor():
         age_bin_labels=age_bin_labels,
         to_record=to_record,
         resampling_period=None,
-        aggregate_sex=True,
-        record_from=2000.0,
+        aggregate_sex=agg_sex,
+        record_from=pars["start"],
         name=m4_name)
 
     sim = ss.Sim(pars=pars,
