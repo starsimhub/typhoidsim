@@ -218,10 +218,10 @@ class histograms_by_age_sex_monitor(Monitor):
         # Select which function should be used
         if self.aggregate_sex:
             self.record = self._record_b
-            self._apply = self._apply_aggregated_sexes
+            self.count_fn = self._apply_aggregated_sexes
         else:
             self.record = self._record_fm
-            self._apply = self._apply_individual_sexes
+            self.count_fn = self._apply_individual_sexes
         return
 
     def set_observation_interval(self, sim): # CK: TODO: use time units
@@ -252,7 +252,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.stocks[f"b_{stock_name}"][self.tidx, :] = b_vals
         return
 
-    def _apply_individual_sexes(self, sim):
+    def _count_individual_sexes(self, sim):
         ti = sim.ti
         living_folks = sim.people.alive
         living_males = sim.people.male & living_folks
@@ -276,7 +276,7 @@ class histograms_by_age_sex_monitor(Monitor):
             self.record(f_vals, m_vals, stockname)
         return
 
-    def _apply_aggregated_sexes(self, sim):
+    def _count_aggregated_sexes(self, sim):
         ti = sim.ti
         living_folks = sim.people.alive
 
@@ -295,13 +295,13 @@ class histograms_by_age_sex_monitor(Monitor):
 
     def _default_sampling(self, sim):
         if sim.ti % self.monitor_step == 0:
-            self._apply(sim)
+            self.count_fn(sim)
             self.tidx += 1
         return
 
     def _aggregate_sampling(self, sim):
         # Stores everything, then aggregates at the end
-        self._apply(sim)
+        self.count_fn(sim)
         self.tidx += 1
         return
 
@@ -598,7 +598,7 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
             if hasattr(sim.interventions[intervention_name], "vaccinated"):
                 self.vax_interventions.append(intervention_name)
 
-    def _apply_individual_sexes(self, sim):
+    def _count_individual_sexes(self, sim):
         ti = sim.ti
         eligible_males = sim.people.alive & sim.people.male
         eligible_females = sim.people.alive & sim.people.female
@@ -639,7 +639,7 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
             self.record(f_vals, m_vals, stockname)
         return
 
-    def _apply_aggregated_sexes(self, sim):
+    def _count_aggregated_sexes(self, sim):
         ti = sim.ti
         eligible_folks = sim.people.alive
         self.vax_state_a[:] = False  # Reset tracking state to False
