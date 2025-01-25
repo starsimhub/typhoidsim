@@ -217,11 +217,11 @@ class histograms_by_age_sex_monitor(Monitor):
     def configure_recording_functions(self):
         # Select which function should be used
         if self.aggregate_sex:
-            self.record = self._record_b
-            self.count_fn = self._apply_aggregated_sexes
+            self.record_fn = self._record_b
+            self.count_fn = self._count_aggregated_sexes
         else:
-            self.record = self._record_fm
-            self.count_fn = self._apply_individual_sexes
+            self.record_fn = self._record_fm
+            self.count_fn = self._count_individual_sexes
         return
 
     def set_observation_interval(self, sim): # CK: TODO: use time units
@@ -273,7 +273,7 @@ class histograms_by_age_sex_monitor(Monitor):
                      np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
 
             stockname = self.attrname_to_stockname[attrname]
-            self.record(f_vals, m_vals, stockname)
+            self.record_fn(f_vals, m_vals, stockname)
         return
 
     def _count_aggregated_sexes(self, sim):
@@ -290,7 +290,7 @@ class histograms_by_age_sex_monitor(Monitor):
             b_vals = self.scaling * \
                      np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
             stockname = self.attrname_to_stockname[attrname]
-            self.record(b_vals, stockname)
+            self.record_fn(b_vals, stockname)
         return
 
     def _default_sampling(self, sim):
@@ -305,7 +305,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.tidx += 1
         return
 
-    def aggregate(self, vals):
+    def aggregate_time_fn(self, vals):
         """ Aggregate time"""
         remainder = self.stock_ntpts % self.monitor_step
         reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
@@ -322,7 +322,7 @@ class histograms_by_age_sex_monitor(Monitor):
     def report(self, vals):
         if self.aggregate_time is None:
             return vals
-        return self.aggregate(vals)
+        return self.aggregate_time_fn(vals)
 
     def step(self):
         sim = self.sim
@@ -636,7 +636,7 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
                      np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
 
             stockname = self.attrname_to_stockname[attrname]
-            self.record(f_vals, m_vals, stockname)
+            self.record_fn(f_vals, m_vals, stockname)
         return
 
     def _count_aggregated_sexes(self, sim):
@@ -659,7 +659,7 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
             b_vals = self.scaling * \
                      np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
             stockname = self.attrname_to_stockname[attrname]
-            self.record(b_vals, stockname)
+            self.record_fn(b_vals, stockname)
         return
 
     def plot(self, **plot_kwargs):
