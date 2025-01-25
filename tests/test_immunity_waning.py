@@ -40,7 +40,7 @@ def make_sim(n_agents=10_000):
         prob=0.66,
         dose_interval=5.0,  # interval between receiving first dose and booster
         booster_prob=1.0,
-        annual_prob=True,
+        prob_type="annual",
         debug=True,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 0.0,
                   'max_age': 2.0}

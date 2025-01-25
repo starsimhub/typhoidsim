@@ -106,7 +106,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.timevec_ = None  # This monitor timevec
         self.record = None
         self.agg_func = None
-        self.sample = None
+        self.sampling_fn = None
         self._apply = None
         self.stock_ntpts = None
         self.stocks = ss.Results(self.name)
@@ -148,13 +148,13 @@ class histograms_by_age_sex_monitor(Monitor):
                                           self.monitor_period) # CK: TODO: use time units
 
         if self.aggregate_time is None or self.aggregate_time == "subsample":
-            self.sample = self._default_sampling
+            self.sampling_fn = self._default_sampling
             self.ntpts = len(self.timevec_)
             self.stock_ntpts = len(self.timevec_)
         else:
-            self.sample = self._aggregate_sampling
+            self.sampling_fn = self._aggregate_sampling
             self.ntpts = len(self.timevec_) # number of time points in the final result arrays
-            self.stock_ntpts = len(sc.inclusiverange(self.record_from, self.record_until, self.t.dt))  # number of time points for the internal stock arrays  # CK: TODO: use time units
+            self.stock_ntpts = len(self.timepoints)  # number of time points for the internal stock arrays  # CK: TODO: use time units
 
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
@@ -210,7 +210,6 @@ class histograms_by_age_sex_monitor(Monitor):
                                   scale=True,
                                   timevec=self.timevec_,
                                   label=f"{sex}_{reslbl}"), ]
-
         # Configure the monitor
         self.configure_recording_functions()
         return
@@ -307,6 +306,7 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def aggregate(self, vals):
+        """ Aggregate time"""
         remainder = self.stock_ntpts % self.monitor_step
         reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
         if remainder != 0:
@@ -314,9 +314,10 @@ class histograms_by_age_sex_monitor(Monitor):
             if downsampled_main.shape[0] == self.ntpts:
                 return downsampled_main
             downsampled_remainder = self.agg_func(vals[-remainder:], axis=0)
-            return np.vstack([downsampled_main, downsampled_remainder[None, :]])
+            arr = np.vstack([downsampled_main, downsampled_remainder[None, :]])
         else:
-            return self.agg_func(reshaped_data, axis=1)
+            arr = self.agg_func(reshaped_data, axis=1)
+        return arr
 
     def report(self, vals):
         if self.aggregate_time is None:
@@ -326,7 +327,7 @@ class histograms_by_age_sex_monitor(Monitor):
     def step(self):
         sim = self.sim
         if sim.ti in self.timepoints:
-            self.sample(self.sim)
+            self.sampling_fn(self.sim)
         return
 
     def finalize_results(self):

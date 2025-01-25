@@ -51,7 +51,7 @@ def make_sim(n_agents=10_000):
         dose_interval=5.0,  # interval between receiving first dose and booster
         booster_prob=0.0,
         start_year=2001.0,
-        end_year=2003.0,
+        end_year=2001.0+0.125,
         prob_type="interval",
         debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 2.0,
@@ -84,7 +84,7 @@ def make_sim(n_agents=10_000):
         age_bins=age_bin_edges,
         age_bin_labels=age_bin_labels,
         to_record=record_cases,
-        resampling_period=30.0/365,
+        resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
         aggregate_sex=True,
         aggregate_time="sum",
@@ -97,7 +97,7 @@ def make_sim(n_agents=10_000):
         age_bins=age_bin_edges,
         age_bin_labels=age_bin_labels,
         to_record=record_cases,
-        resampling_period=30.0/365,
+        resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
         aggregate_sex=False,
         aggregate_time="sum",
@@ -110,7 +110,7 @@ def make_sim(n_agents=10_000):
         age_bins=age_bin_edges,
         age_bin_labels=age_bin_labels,
         to_record=record_cases,
-        resampling_period=30.0/365,
+        resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
         aggregate_sex=False,
         aggregate_time="sum",
@@ -135,7 +135,7 @@ def make_sim(n_agents=10_000):
 
 sim = make_sim()
 sim.run()
-sim.analyzers[0].plot()
-sim.analyzers[1].plot()
-sim.analyzers[2].plot()
+sim.analyzers[0].plot_waterfall()
+#sim.analyzers[1].plot()
+#sim.analyzers[2].plot()
 plt.show()
