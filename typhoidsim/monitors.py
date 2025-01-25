@@ -415,7 +415,7 @@ class histograms_by_age_sex_monitor(Monitor):
                     ax.bar(xticks, res[tidx, :], **plot_kw, label=f"t={timevec[tidx]:.4f}", alpha=0.2)
 
                 title = getattr(res, 'label', key)
-                if self.nags:
+                if self.nags == 1:
                     ax.set_xlim([-0.5, 0.5])
                 ax.set_title(title)
                 ax.set_xticks(xticks, labels=xticklabels)
@@ -446,6 +446,10 @@ class histograms_by_age_sex_monitor(Monitor):
         textbox. This is an edge case that can happen for a simulation with very few agents, and a very narrow
         age group.
         """
+        if self.nags == 1:
+            print("Waterfall plot not available for a single age group.")
+            return
+
         from scipy.stats import gaussian_kde
 
         # Configuration
@@ -496,7 +500,7 @@ class histograms_by_age_sex_monitor(Monitor):
                         ax.fill_between(self.age_bin_centers, y_scaling * idx, kde_data, color='#2f72de', alpha=0.3)
                         ax.bar(self.age_bin_centers, data_ti, bottom=y_scaling * idx, color='#2f72de', alpha=0.3, edgecolor="white")
                         ax.plot(self.age_bin_centers, kde_data, color='black', alpha=0.7)
-                    except:
+                    except Exception as e:
                         pass
 
                 # Labels and annotations
