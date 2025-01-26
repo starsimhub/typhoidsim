@@ -92,7 +92,8 @@ def make_sim_with_histogram_monitor():
         age_bins=age_bin_edges,
         age_bin_labels=age_bin_labels,
         to_record=to_record,
-        resampling_period=None,
+        aggregate_time="mean",
+        resampling_period=1.0,
         aggregate_sex=agg_sex,
         record_from=pars["start"],
         name=m4_name)
@@ -133,12 +134,9 @@ def test_by_age_counts():
     sim.run()
 
     age_bin_edges = [0, 2, 5, 10, 15, 20, 40, 60, ty.max_age]
-    n_alive =  np.reshape(np.histogram(init_ages,
-                                       bins=age_bin_edges)[0],
-                          (1, -1))
+    n_alive =  np.reshape(np.histogram(init_ages, bins=age_bin_edges)[0],(1, -1))
 
     flat = sim.results.flatten()
-
     m4_name = "monitor_people"
     quantity = "_b_n_alive"
     m4_alive = flat[f"{m4_name}{quantity}"]
