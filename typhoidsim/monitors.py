@@ -149,8 +149,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
         if self.aggregate_time is None or self.aggregate_time == "subsample":
             self.sampling_fn = self._default_sampling
-            self.ntpts = len(self.timevec_)
-            self.stock_ntpts = len(self.timevec_)
+            self.ntpts = len(self.timepoints)
+            self.stock_ntpts = len(self.timepoints)
         else:
             self.sampling_fn = self._aggregate_sampling
             self.ntpts = len(self.timevec_) # number of time points in the final result arrays

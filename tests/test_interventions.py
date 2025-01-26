@@ -204,6 +204,8 @@ def make_sim_with_acute_screening(screen_coverage=1.0, test_sensitivity=1.0):
         age_bins=age_bin_edges,
         age_bin_labels=age_bin_labels,
         to_record=to_record,
+        resampling_period=1/12.0,
+        aggregate_time="sum",
         aggregate_sex=True,
         record_from=2000.0)
 
