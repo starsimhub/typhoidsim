@@ -99,7 +99,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.resampling_period = resampling_period
         self.tidx = 0
         # Attributes that will be set later
-        self.monitor_step = None  # number of "dt" that fit in one resampling period
+        self.monitor_step_size = None  # number of "dt" that fit in one resampling period
         self.monitor_period = None
         self.ntpts = None  # Number of timepoints to record
         self.nags  = None  # Number of age groups to record
@@ -131,11 +131,11 @@ class histograms_by_age_sex_monitor(Monitor):
 
         if self.aggregate_time in set(aggregation_functions):
             # integer number of timesteps we need to aggregate to downsample result arrays
-            self.monitor_step = round(self.resampling_period / self.t.dt) # CK: TODO: use time units
+            self.monitor_step_size = round(self.resampling_period / self.t.dt) # CK: TODO: use time units
             self.monitor_period = self.resampling_period
             self.agg_func = aggregation_functions.get(self.aggregate_time)
         else:
-            self.monitor_step = 1.0
+            self.monitor_step_size = 1.0
             self.monitor_period = self.t.dt  # CK: TODO: use time units
 
         self.start_point = sc.findnearest(sim.timevec - self.record_from, 0.0)
@@ -294,7 +294,7 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def _default_sampling(self, sim):
-        if sim.ti % self.monitor_step == 0:
+        if sim.ti % self.monitor_step_size == 0:
             self.count_fn(sim)
             self.tidx += 1
         return
@@ -307,8 +307,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
     def aggregate_time_fn(self, vals):
         """ Aggregate time"""
-        remainder = self.stock_ntpts % self.monitor_step
-        reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step, self.nags)
+        remainder = self.stock_ntpts % self.monitor_step_size
+        reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step_size, self.nags)
         if remainder != 0:
             downsampled_main = self.agg_func(reshaped_data, axis=1)
             if downsampled_main.shape[0] == self.ntpts:
