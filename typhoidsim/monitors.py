@@ -103,7 +103,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.monitor_period = None
         self.ntpts = None  # Number of timepoints to record
         self.nags  = None  # Number of age groups to record
-        self.timevec_ = None  # This monitor timevec
+        self.timevec_results = None  # This monitor timevec
         self.record = None
         self.agg_func = None
         self.sampling_fn = None
@@ -141,20 +141,23 @@ class histograms_by_age_sex_monitor(Monitor):
         self.start_point = sc.findnearest(sim.timevec - self.record_from, 0.0)
         self.end_point = sc.findnearest(sim.timevec - self.record_until, 0.0)
         self.timepoints = sc.inclusiverange(self.start_point, self.end_point - 1).astype(int)  # TODO: when integrating with self.t, check if -1 (minus 1 timestep) still needed.
-
-        # Output year vector
-        self.timevec_ = sc.inclusiverange(sim.timevec[self.timepoints[0]],
-                                          sim.timevec[self.timepoints[-1]],
-                                          self.monitor_period) # CK: TODO: use time units
+        self.stock_ntpts = len(self.timepoints) # number of time points for the internal stock arrays  # CK: TODO: use time units
 
         if self.aggregate_time is None or self.aggregate_time == "subsample":
             self.sampling_fn = self._default_sampling
-            self.ntpts = len(self.timepoints)
-            self.stock_ntpts = len(self.timepoints)
         else:
             self.sampling_fn = self._aggregate_sampling
-            self.ntpts = len(self.timevec_) # number of time points in the final result arrays
-            self.stock_ntpts = len(self.timepoints)  # number of time points for the internal stock arrays  # CK: TODO: use time units
+
+        (ntpts, remainder) = divmod(self.stock_ntpts, self.monitor_step_size)
+
+        self.ntpts = ntpts if not remainder else ntpts+1
+
+        # Output year vector
+        if not remainder:
+            self.timevec_results = sc.inclusiverange(sim.timevec[self.timepoints[0]], sim.timevec[-1], self.monitor_period) # CK: TODO: use time units
+        else:
+            self.timevec_results = sim.timevec[self.timepoints[::self.monitor_step_size]]
+
 
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
@@ -209,7 +212,6 @@ class histograms_by_age_sex_monitor(Monitor):
                                   dtype=res_dtype,
                                   shape=(self.ntpts, self.nags),
                                   scale=True,
-                                  timevec=self.timevec_,
                                   label=f"{sex}_{reslbl}"), ]
         # Configure the monitor
         self.configure_recording_functions()
@@ -309,14 +311,18 @@ class histograms_by_age_sex_monitor(Monitor):
         """ Aggregate time"""
         remainder = self.stock_ntpts % self.monitor_step_size
         reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step_size, self.nags)
-        if remainder != 0:
+        if not remainder:
+            #  monitor
+            arr = self.agg_func(reshaped_data, axis=1)
+        else:
             downsampled_main = self.agg_func(reshaped_data, axis=1)
             if downsampled_main.shape[0] == self.ntpts:
-                return downsampled_main
-            downsampled_remainder = self.agg_func(vals[-remainder:], axis=0)
-            arr = np.vstack([downsampled_main, downsampled_remainder[None, :]])
-        else:
-            arr = self.agg_func(reshaped_data, axis=1)
+                arr = downsampled_main
+            else:
+                # We have remainder data to handle
+                remainder_data = vals[self.stock_ntpts - remainder:].reshape(-1, remainder, self.nags)
+                downsampled_remainder = self.agg_func(remainder_data, axis=1)
+                arr = np.vstack([downsampled_main, downsampled_remainder])
         return arr
 
     def report(self, vals):
@@ -334,7 +340,7 @@ class histograms_by_age_sex_monitor(Monitor):
         for stock_name in self.stocks:
             self.results[stock_name][:] = self.report(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
             # Repalce timevec with correct timevec for these results
-            self.results.timevec = self.timevec_
+            self.results.timevec = self.timevec_results
         super().finalize_results()
         return
 
@@ -379,7 +385,7 @@ class histograms_by_age_sex_monitor(Monitor):
         plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
 
         # Time vector
-        timevec = self.timevec_
+        timevec = self.timevec_results
 
         if t_index is None:
             n_tpts = np.min([len(timevec), 7])
@@ -469,7 +475,7 @@ class histograms_by_age_sex_monitor(Monitor):
         t_indices = np.linspace(0, self.ntpts-1, n_tpts, dtype=int)
 
         # Time vector
-        timevec = self.timevec_
+        timevec = self.timevec_results
         y_scaling = plot_kw['y_scaling']
 
         # Do the plotting
