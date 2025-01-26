@@ -201,6 +201,7 @@ class histograms_by_age_sex_monitor(Monitor):
                                               dtype=res_dtype,
                                               shape=(self.stock_ntpts, self.nags),
                                               scale=False,
+                                              timevec=sim.timevec[self.timepoints],
                                               label=f"{sex}_{reslbl}"), ]
 
                     self.results += [
@@ -287,8 +288,7 @@ class histograms_by_age_sex_monitor(Monitor):
                 b_uids = ((vals == ti) & living_folks).uids
             else:
                 b_uids = (vals & living_folks).uids
-            b_vals = self.scaling * \
-                     np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
+            b_vals = self.scaling * np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
             stockname = self.attrname_to_stockname[attrname]
             self.record_fn(b_vals, stockname)
         return
@@ -333,6 +333,7 @@ class histograms_by_age_sex_monitor(Monitor):
     def finalize_results(self):
         for stock_name in self.stocks:
             self.results[stock_name][:] = self.report(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
+            # Repalce timevec with correct timevec for these results
             self.results.timevec = self.timevec_
         super().finalize_results()
         return
