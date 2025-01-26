@@ -15,7 +15,7 @@ def make_sim(n_agents=10_000):
     # Define the parameters
     pars = sc.objdict(
         start=2000,        # Starting year
-        dur=10.0,       # Number of days to simulate
+        dur=0.5,       # Number of days to simulate
         pop_scale=None,    #
         n_agents=n_agents, #
         dt=1.0/365.0,      # Timestep of 1 day, expressed in years
@@ -50,8 +50,8 @@ def make_sim(n_agents=10_000):
         prob=0.4,
         dose_interval=5.0,  # interval between receiving first dose and booster
         booster_prob=0.0,
-        start_year=2001.0,
-        end_year=2001.0+0.125,
+        start_year=2000.0,
+        end_year=2000.0+0.125,
         prob_type="interval",
         debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 2.0,
@@ -64,8 +64,8 @@ def make_sim(n_agents=10_000):
         prob=0.8,
         dose_interval=5.0,  # interval between receiving first dose and booster
         booster_prob=0.0,
-        start_year=2004.0,
-        end_year=2006.0,
+        start_year=2000.0,
+        end_year=2000.5,
         prob_type="interval",
         debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 5.0,
@@ -81,15 +81,16 @@ def make_sim(n_agents=10_000):
 
 
     monitor_cases = ty.histograms_by_age_sex_monitor(
-        age_bins=age_bin_edges,
-        age_bin_labels=age_bin_labels,
+        # age_bins=age_bin_edges,
+        # age_bin_labels=age_bin_labels,
         to_record=record_cases,
         resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
-        aggregate_sex=True,
+        aggregate_sex=False,
         aggregate_time="sum",
         # Sum over the resampling period
         record_from=2000.0,
+        record_until=2000.5,
         name="monitor_cases")
 
     monitor_cases_vax = ty.histogram_by_vaccination_status(
@@ -135,7 +136,3 @@ def make_sim(n_agents=10_000):
 
 sim = make_sim()
 sim.run()
-sim.analyzers[0].plot_waterfall()
-#sim.analyzers[1].plot()
-#sim.analyzers[2].plot()
-plt.show()
