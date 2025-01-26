@@ -224,6 +224,8 @@ def box_exponential(x, start, box_duration, decay_time_constant):
     x_offset = x - start
     vals = sc.promotetoarray(x)
     vals = np.where((x_offset >= 0.0) & (x_offset < box_duration), 1.0, vals)
-    vals = np.where(x_offset >= box_duration, np.exp(-((x - (start + box_duration)) / decay_time_constant)), vals)
+    x_vals = (x - (start + box_duration))
+    # If decay time constant is 0, then the exponent should be infinity (instant decay)
+    vals = np.where(x_offset >= box_duration, np.exp(-(sc.safedivide(x_vals, decay_time_constant, default=np.inf))), vals)
     vals = np.where(vals < 0, 0.0, vals)
     return vals
