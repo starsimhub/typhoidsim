@@ -154,7 +154,8 @@ class histograms_by_age_sex_monitor(Monitor):
 
         # Output year vector
         if not remainder:
-            self.timevec_results = sc.inclusiverange(sim.timevec[self.timepoints[0]], sim.timevec[-1], self.monitor_period) # CK: TODO: use time units
+            self.timevec_results = sc.inclusiverange(sim.timevec[self.timepoints[0]],
+                                                     sim.timevec[self.timepoints[-1]], self.monitor_period) # CK: TODO: use time units
         else:
             self.timevec_results = sim.timevec[self.timepoints[::self.monitor_step_size]]
 
@@ -212,6 +213,7 @@ class histograms_by_age_sex_monitor(Monitor):
                                   dtype=res_dtype,
                                   shape=(self.ntpts, self.nags),
                                   scale=True,
+                                  timevec=self.timevec_results,
                                   label=f"{sex}_{reslbl}"), ]
         # Configure the monitor
         self.configure_recording_functions()
