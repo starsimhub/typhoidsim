@@ -16,7 +16,8 @@ from . import utils as tyu
 
 
 __all__ = ['Calibration220', 'CalibComponent220', 'compute_gof', 'euclidean', 'beta_binomial',
-           'weighted_euclidean', 'normalized_median_absolute_error', 'nll_beta', 'nll_gamma']
+           'weighted_euclidean', 'normalized_median_absolute_error', 'nll_beta', 'nll_gamma',
+           'calib_to_df']
 
 
 def compute_gof(expected, predicted, normalize=True, use_frac=False, use_squared=False,
@@ -649,6 +650,29 @@ class Calibration220(sc.prettyobj):
             dfs.append(df)
         dfs = pd.concat(dfs)
         return dfs
+
+def calib_to_df(calib_object):
+    if self.after_msim is None:
+        print("Please run .check_fit()")
+        return
+    dfs = []
+    for component in self.components:
+        sim_df = []
+        for sim in self.after_msim.sims:
+            df1 = component.extract_fn(sim)
+            df1["source_data"] = "predicted"
+            df1["rand_seed"] = int(sim.pars["rand_seed"])
+            df1["component_name"] = component.name
+            sim_df.append(df1)
+        sim_df = pd.concat(sim_df)
+        exp_df = component.expected
+        exp_df["source_data"] = "expected"
+        exp_df["component_name"] = component.name
+        df = pd.concat([sim_df, exp_df])
+        df.reset_index(inplace=True)
+        dfs.append(df)
+    dfs = pd.concat(dfs)
+    return dfs
 
 
 class CalibComponent220(sc.prettyobj):
