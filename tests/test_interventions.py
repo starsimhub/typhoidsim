@@ -168,11 +168,15 @@ def run_sim_with_wash(efficacy):
 
 def make_sim_with_acute_screening(screen_coverage=1.0, test_sensitivity=1.0):
 
-    def acute_eligibility(sim, **kwargs):
-        """ Select individuals who just became acute and have not been screened"""
-        # By default only test acute and people can be tested more than once
-        acute_uids = ((sim.people.typhoid.ti_acute == sim.ti) & ~sim.interventions.routine_acute_screening.screened).uids
-        return acute_uids
+    def new_acute_eligibility(sim, **kwargs):
+        """
+        Select individuals who just became acute
+        If and individual becomes acute more than once in their lifetime,
+        they can be tested multiple times
+        """
+        # By default only test people who just became acute
+        new_acute_uids = (sim.people.typhoid.ti_acute == sim.ti).uids
+        return new_acute_uids
 
     # Define the parameters
     pars = sc.objdict(
@@ -190,15 +194,15 @@ def make_sim_with_acute_screening(screen_coverage=1.0, test_sensitivity=1.0):
     screen_all_acute = ty.routine_acute_screening(product=blood_test,
                                                   prob=screen_coverage,
                                                   annual_prob=False,
-                                                  eligibility=acute_eligibility)  # Screen 30% of all eligible population at each time step
+                                                  eligibility=new_acute_eligibility)  # Screen X% of all eligible population at each time step
 
     age_bin_edges = [0, ty.max_age]
     age_bin_labels = ['all']
 
     to_record = dict(
         ti_acute=dict(path=("diseases", "typhoid"), label="acute"),
-        ti_positive=dict(path=("interventions", "routine_acute_screening"), label="tested_positive"),
-        ti_screened=dict(path=("interventions", "routine_acute_screening"), label="screened"))
+        ti_screened=dict(path=("interventions", "routine_acute_screening"), label="screened"),
+        ti_positive=dict(path=("interventions", "routine_acute_screening"), label="tested_positive"))
 
     monitor_cases = ty.histograms_by_age_sex_monitor(
         age_bins=age_bin_edges,
