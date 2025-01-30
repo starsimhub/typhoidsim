@@ -264,7 +264,7 @@ class base_screening(BaseTest):
         super().__init__(**kwargs)
         self.eligibility_kwargs = sc.mergedicts(eligibility_kwargs)  # Converts None to {}
         self.coverage_dist = ss.bernoulli(p=self.prob)
-        self.ti_positive = ss.FloatArr('ti_positive')
+        self.ti_positive = ss.FloatArr('ti_positive')  # store when a person tested positive
         self.validate_eligibility()
         self.outcomes = ss.uids()
         return
@@ -308,6 +308,7 @@ class base_screening(BaseTest):
 
         # ADMINISTER PRODUCT
         if len(tested_uids):
+            # Outcomes has the uids of eligible people, who were selected for a test, and tested positive
             self.outcomes = self.product.administer(sim.people, tested_uids)  # Actually administer the diagnostic, and get the uids of those who tested positive
         return tested_uids
 
