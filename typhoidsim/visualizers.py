@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import sciris as sc
 
 from .networks import CommunityNet
+from .calibration import calib_to_df
 
 __all__ = ["plot_age_histogram", "plot_age_mixing", "plot_sim", "plot_calib"]
 
@@ -111,7 +112,7 @@ def plot_calib(calib, fig=None, style='fancy', fig_kw=None, plot_kw=None, timeve
         print("Please run calib.check_fit()")
         return
 
-    df = calib.to_df()
+    df = calib_to_df(calib)
 
     # Configuration
     n_cols = np.ceil(np.sqrt(df["t"].nunique()))  # Number of columns of axes
