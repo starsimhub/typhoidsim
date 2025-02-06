@@ -169,6 +169,8 @@ class Typhoid(ss.Disease):
             ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),
             ss.FloatArr("rel_trans", default=1.0, label="Relative transmissibility"),
 
+            ss.FloatArr("eff_sus", default=0.0, label="Effective susceptibility"),     # Track effective susceptibility to infection, the combination of rel_sus, susceptibility and (1-aqcuired_immunity)
+
             # States that track timing of events
             ss.FloatArr("ti_infected", label="Time of infection"),
             ss.FloatArr("ti_susceptible", label="Start of susceptible state"),
@@ -767,6 +769,8 @@ class Typhoid(ss.Disease):
         Handle transmission of pathogens and who becomes infected,
         includes all transmission routes. This method is called by the Sim object.
         """
+        # NOTE: mostly for tracking purposes at the moment
+        self.eff_sus[:] = self.rel_sus * self.susceptibility * (1.0 - self.immunity_acquired)
         self.make_new_cases_sequential()
         return
 
@@ -900,7 +904,7 @@ class Typhoid(ss.Disease):
 
         # Determine who gets infected from environment. Multiply by rel_sus, as many interventions will target this parameter
         # This means an agent can become unsusceptible because of an external factor.
-        susc = self.susceptible.asnew(self.susceptible * self.rel_sus)
+        susc = self.susceptible.asnew(self.susceptible * self.rel_sus * self.susceptibility * (1.0-self.immunity_acquired))
         susc_uids = (susc).uids
 
         # EXPOSURE: Increase cfu doses in susceptible people by exposing them to the environment
@@ -947,12 +951,13 @@ class Typhoid(ss.Disease):
         """
         # Evoke an immunity-like response
         p_resp = module.drc(module.cfu_dose_per_exposure[uids])
-        p_infc = 1.0 - (1.0 - module.rel_sus[uids] * module.susceptibility[uids] * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time
+        effective_susceptibility = module.rel_sus[uids] * module.susceptibility[uids] * (1.0 - module.immunity_acquired[uids])  # effective susceptibility due to relative changes (interventions), naturally acquired immunity and vaccine-acquired immunity
+        p_infc = 1.0 - (1.0 -  effective_susceptibility * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time
         return np.array(p_infc)
 
     @staticmethod
     def infection_prob_function_contact(module, sim, uids):
-        p_infc = module.rel_sus[uids] * module.susceptibility[uids] * module.p_resp[uids]
+        p_infc = module.rel_sus[uids] * module.susceptibility[uids] * (1.0 - module.immunity_acquired[uids]) * module.p_resp[uids]
         return np.array(p_infc)
 
     @staticmethod

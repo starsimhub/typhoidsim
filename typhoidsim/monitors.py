@@ -22,7 +22,8 @@ import typhoidsim
 import typhoidsim.defaults as tyd
 import typhoidsim.utils as tyu
 
-__all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor", "histogram_by_vaccination_status"]
+__all__ = ["states_consistency_monitor", "histograms_by_age_sex_monitor", "histogram_by_vaccination_status",
+           "track_individuals_monitor"]
 
 
 class Monitor(ss.Analyzer):
@@ -44,6 +45,127 @@ class Monitor(ss.Analyzer):
 
     def to_df(self):
         raise NotImplementedError(tyd.sorry_mssg)
+
+
+class track_individuals_monitor(Monitor):
+    """
+    A class used to record a certain state of a group of agents at each time
+    step. This monitor is meant to be used for debugging purposes and with
+    a population that does not change size, though agents could age.
+    """
+
+    def __init__(self, to_record=None, eligibility=None, eligibility_kwargs=None, name=None, **kwargs):
+        super().__init__()
+        self.to_record = to_record
+        self.eligibility = eligibility
+        self.eligibility_kwargs = eligibility_kwargs
+        self.validate_records()
+        self.validate_eligibility()
+        return
+
+    def init_pre(self, sim):
+        super().init_pre(sim)
+        return
+
+    def init_results(self):
+        super().init_results()
+        results = [ss.Result(state, shape=(self.sim.t.npts, self.sim.pars["n_agents"]),
+                             dtype=float, label=f"{state}") for state in self.to_record.keys()]
+        self.define_results(*results)
+        return
+
+    def validate_records(self):
+        if self.to_record is None:
+            states_of_interest = ["rel_sus"]
+            self.to_record = {state: dict(path=("diseases", "typhoid")) for state in
+                              states_of_interest}
+        return
+
+    def validate_eligibility(self):
+        import functools
+        if self.eligibility is None and self.eligibility_kwargs is None:
+            self.eligibility = self.default_eligibility
+
+        if callable(self.eligibility):
+            self.eligibility_kwargs = sc.mergedicts(self.eligibility_kwargs)
+            self.eligibility = functools.partial(self.eligibility, **self.eligibility_kwargs)
+        return
+
+    @staticmethod
+    def default_eligibility(sim, **kwargs):
+        # By default only track properties of people alive
+        is_alive = sim.people.alive
+        return is_alive
+
+    def check_eligibility(self):
+        if callable(self.eligibility):
+            return self.eligibility(self.sim)
+        else:  # Assume self.eligibility is an array of uids
+            return self.eligibility
+
+    def step(self):
+        sim = self.sim
+        ti = sim.ti
+        is_eligible = self.check_eligibility()
+        for attrname, specs in sorted(self.to_record.items()):
+            attrpath = specs["path"]
+            vals = tyu.get_attr_vals(sim, attrpath, attrname)
+            self.results[attrname][ti, (is_eligible).uids] = vals[(is_eligible).uids]
+            self.results[attrname][ti, (~is_eligible).uids] = np.nan
+        return
+
+
+    def plot_ridge(self, uids=None, num_agents=32, keys=None, y_scaling=1.0, style='fancy', fig_kw=None, plot_kw=None):
+        """
+        Plot each individual's timeseries of the given state.
+        Individual traces are vertically stacked.
+
+        Args:
+            key (str): the results key to plot (by default, all, and can be a lot of figs, be warned)
+            max_timepoints (int, optional): The maximum number of timepoints to plot, defaults to 16.
+            style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
+            fig_kw (dict): passed to ``plt.subplots()``
+            plot_kw (dict): passed to ``plt.plot()``
+
+        Returns:
+            a list of figures
+        """
+        figs = []
+
+        from scipy.stats import gaussian_kde
+
+        # Configuration
+        flat = self.results.flatten()
+        n_cols = 1  # Number of columns of axes
+        default_figsize = np.array([8, 6])
+        figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,1.5)  # Scale the default figure size based on the number of rows and columns
+        figsize = default_figsize * figsize_factor
+        fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
+        plot_kw = sc.mergedicts({'lw': 2, 'y_scaling': 0.9}, plot_kw)
+
+        if uids is None:
+            uids = ss.uids(np.arange(num_agents))
+
+        y_offsets = y_scaling * np.arange(len(uids))
+        # Do the plotting
+        with sc.options.with_style(style):
+            if keys is not None:
+                flat = {k: v for k, v in flat.items() if k.startswith(key)}
+            for key, res in flat.items():
+                fig, ax = sc.getrowscols(n=1, nrows=1, make=True, **fig_kw)
+                ax.plot(res.timevec, res[:, uids]+y_offsets, color=[0.3, 0.3, 0.3])
+                # Labels and annotations
+                ax.set_xlim([res.timevec[0], res.timevec[-1]])
+                ax.set_xlabel('Time')
+                # Set the y-axis (time) labels
+                #ax.set_yticks(y_scaling * np.arange(n_agents))
+                #ax.set_yticklabels(yticklbls)
+                #ax.set_ylabel('Y')
+                title = getattr(res, 'label', key)
+                ax.set_title(title)
+                sc.figlayout(fig=fig)
+                figs.append(fig)
+        return figs
 
 
 class histograms_by_age_sex_monitor(Monitor):

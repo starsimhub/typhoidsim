@@ -560,7 +560,7 @@ class behavioral_change(WASH):
         return
 
     def step(self):
-        if self.sim.t.now('year') == self.start:
+        if  (self.sim.t.now('year') >= self.start) and (self.sim.t.now('year') < (self.start + self.sim.t.dt/2)):
             efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
             val = self._get_target_baseline()
@@ -894,8 +894,8 @@ class vaccination_with_waning(RoutineDelivery):
         # variable is used in transmission dynamics
         # immunity_acquired is defined to provide a mechanism for immunity waning dynamics to exist.
         # This is also a value between 0-1. 1: perfectly immune/invulnerable; 0: no immunity, and it
-        # is often conflated with, or referred to as, vaccine efficacy and vaccine efficacy waning
-        sim.diseases.typhoid.rel_sus[vaccinated_uids] = 1.0 - sim.diseases.typhoid.immunity_acquired[vaccinated_uids]
+        # is often referred to as, vaccine efficacy and vaccine efficacy waning
+        # sim.diseases.typhoid.susceptibility[vaccinated_uids] = (1.0 - sim.diseases.typhoid.immunity_acquired[vaccinated_uids])
 
         # Update results
         ti_sim = sim.ti

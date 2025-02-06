@@ -294,3 +294,10 @@ def promotetoiterable(axs):
     if not sc.isiterable(axs):
         axs = [axs]
     return axs
+
+
+def minmax_scaler_2d(arr):
+    min_val = np.nanmin(arr, axis=0)
+    max_val = np.nanmax(arr, axis=0)
+    scaled_arr = (arr - min_val) / (max_val - min_val)
+    return scaled_arr
