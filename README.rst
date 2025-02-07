@@ -13,7 +13,7 @@ Installation
 There are a few version of typhoidsim:
   - 1. legacy `typhoidsim v0.11.7 <https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.11.7-starsim-1.0.3>`_ , which exclusively works with `starsim 1.0.3 <https://pypi.org/project/starsim/1.0.3/>`_.
   - 2. legacy `typhoidsim v0.26.9 <https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.26.9-starsim-2.2.0>`_ , which exclusively works with `starsim 2.2.0 <https://pypi.org/project/starsim/2.2.0/>`_.
-  - 3. typhoidsim from the `main <https://github.com/starsimhub/typhoidsim>`_ branch, which works with the bleeding edge `starsim rc2.3 <https://github.com/starsimhub/starsim/tree/rc2.3_calib>`_.
+  - 3. typhoidsim from the `main <https://github.com/starsimhub/typhoidsim>`_ branch, which works with the bleeding edge `starsim rc2.3 <https://github.com/starsimhub/starsim/tree/rc2.3_calib_betafix>`_.
 
 To install the legacy version, that runs with starsim 1.0.3, first clone the specific branch
   - ``git clone --single-branch --branch legacy/main-v0.11.7-starsim-1.0.3 origin``
@@ -30,7 +30,7 @@ And then run
 
 
 !!! Install the correct version of starsim for the main branch, current as of 2025-01-07
-   - ``pip install git+https://github.com/starsimhub/starsim.git@rc2.3_calib``
+   - ``pip install git+https://github.com/starsimhub/starsim.git@rc2.3_calib_betafix``
 
 
 

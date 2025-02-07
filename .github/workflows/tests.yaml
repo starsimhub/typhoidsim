@@ -22,7 +22,7 @@ jobs:
       - name: Install typhoidsim
         run: pip install -e .
       - name: Install starsim-rc
-        run: pip install git+https://github.com/starsimhub/starsim.git@rc2.3_calib
+        run: pip install git+https://github.com/starsimhub/starsim.git@rc2.3_calib_betafix
       - name: Install tests
         working-directory: ./tests
         run: pip install -r requirements.txt
