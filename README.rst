@@ -14,15 +14,23 @@ There are two main versions of typhoidsim:
   - the legacy `typhoidsim v0.11.7 <https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.11.7-starsim-1.0.3>`_ , which exclusively works with `starsim 1.0.3 <https://pypi.org/project/starsim/1.0.3/>`_.
   - typhoidsim from the main branch, which works with `starsim 2.2.0 <https://pypi.org/project/starsim/2.2.0/>`_ or above.
 
-To install the legacy version first clone the specific branch
+To install the legacy version, that runs with starsim 1.0.3, first clone the specific branch
   - ``git clone --single-branch --branch legacy/main-v0.11.7-starsim-1.0.3 origin``
 
+
+To install the legacy version, that runs with starsim 2.2.0, first clone the specific branch
+  - ``git clone --single-branch --branch legacy/main-v0.26.9-starsim-2.2.0 origin``
 
 Make sure you're inside the typhoidsim repository:
    - ``cd typhoidsim``
 
 And then run
    - ``pip install -e .`` (don't forget the dot at the end!).
+
+
+!!! Install the correct version of starsim for the main branch, current as of 2025-01-07
+   - ``pip install git+https://github.com/starsimhub/starsim.git@rc2.3_calib``
+
 
 
 More detailed instructions can be found `here <https://github.com/starsimhub/typhoidsim/issues/87>`_.
