@@ -42,12 +42,18 @@ def parse_update_sim_pars(sim, calib_pars):
     """
     typhoid = sim.pars.diseases  # There is only one disease in the sim
     # Capture any parameters that need special handling here
-    for k, par in calib_pars.items():
-        v = par['value']
-        if k == 'init_prev':
-            typhoid.pars.init_prev = ss.bernoulli(v)
+    for par_name, par_attrs in calib_pars.items():
+        if par_name in ["rand_seed"]:
+            # We need to handle the seed separetly because it
+            # seems branch rc2.3_calib does not have the fixes introduced here
+            # https://github.com/starsimhub/starsim/pull/783
+            sim.pars["rand_seed"] = par_attrs
         else:
-            raise NotImplementedError(f'Parameter {k} not recognized')
+            v = par_attrs['value']
+            if par_name == 'init_prev':
+                typhoid.pars.init_prev = ss.bernoulli(v)
+            else:
+                raise NotImplementedError(f'Parameter {par_name} not recognized')
 
     return sim
 
@@ -66,7 +72,7 @@ def test_calibration(do_plot=False):
     # Make the sim and data
     sim = instantiate_sim()
 
-    infectious = ty.CalibComponent220(
+    infectious = ss.BetaBinomial(
         name='Infectious',
 
         # "expected" data generated from a simulation with pars
@@ -84,13 +90,12 @@ def test_calibration(do_plot=False):
         }, index=pd.Index(sim.results.timevec, name='t')),
 
         conform='prevalent',
-        nll_fn='beta',
 
         weight=1,
     )
 
     # Make the calibration
-    calib = ty.Calibration220(
+    calib = ss.Calibration(
         calib_pars=calib_pars,
         sim=sim,
         build_fn=parse_update_sim_pars,  # If None, uses default builder, Calibration.translate_pars
@@ -117,8 +122,7 @@ def test_calibration(do_plot=False):
             '✗ Calibration did not improve fit, but this sometimes happens stochastically and is not necessarily an error')
 
     if do_plot:
-        calib.plot_sims()
-        calib.plot_trend()
+        calib.plot_optuna(methods="plot_optimization_history")
 
     return sim, calib
 
