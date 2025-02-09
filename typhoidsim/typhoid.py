@@ -96,11 +96,13 @@ class Typhoid(ss.Disease):
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Infectiousness parameters
-            tai=40_000.0,  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
+            tai_std = 1_000,
+            tai_mean = 40_000,
+            tai=ss.normal(loc=self.tai_mean, scale=self.tai_std),  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
             tpri=0.5,      # Typhoid relative (to acute) prepatent infectiousness
             tsri=1.0,      # Typhoid relative (to acute) subclinic infectiousness
             tcri=0.241,    # Typhoid relative (to acute) chronic infectiousness
-            tppi=0.98,     # Decrease in susceptibility per infection (exponential decrease)
+            tppi=ss.constant(v=0.98),     # Decrease in susceptibility per infection (exponential decrease)
             drc_alpha=0.175,  # parameter in the Dose Response Curve to environmental exposure
             drc_n50=1.11e6,   # parameter in the Dose Response Curve to environmental exposure
 
@@ -114,7 +116,7 @@ class Typhoid(ss.Disease):
                 exposure2contact_rate=1.0,  # Rate determining the daily number of exposures for the contact route
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),  # The probabilities will be updated for each agent based on the interaction with their contacts
                 # Multiroute transmission
-                p_route=ss.uniform()  # NOTE: currently unused, but stub for transmission route selection. See: https://github.com/starsimhub/typhoidsim/issues/102
+                p_route=ss.uniform(),  # NOTE: currently unused, but stub for transmission route selection. See: https://github.com/starsimhub/typhoidsim/issues/102
             ),
 
             beta=None, # NOTE: Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
@@ -159,6 +161,10 @@ class Typhoid(ss.Disease):
             ss.FloatArr("n_infections", 0.0, label="Number of Infections"),        # number of infections over the lifespan of this agent
             ss.FloatArr("susceptibility", default=1.0, label="Susceptibility Level"),  # blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
             ss.FloatArr("immunity_acquired", default=0.0, label="Acquired Immunity Level"),  # Acquired/evoked immune protection against infection due to vaccinations, a value between 0 and 1
+
+            # Track parameters
+            ss.FloatArr("tai", default=self.pars.tai, label="Typhoid Acute Infectiousness"),   # track individual value of TAI
+            ss.FloatArr("tppi", default=self.pars.tppi, label="Typhoid Protection Per Infection"),
 
             # Track some probabilities; some are not  used now but will become important in multi-route transmission
             ss.FloatArr("p_resp", default=0.0, label="Probability of response to infection"),  # The probability of having a response to pathogens, usually a term involved in determining p_infc
@@ -453,33 +459,33 @@ class Typhoid(ss.Disease):
         # but we may want to incorporate a mechanism
         # to wane naturally acquired immunity.
         self.n_infections[susc2prep] = self.n_infections[susc2prep] + 1.0
-        self.infectiousness[susc2prep] = self.pars.tai * self.pars.tpri
+        self.infectiousness[susc2prep] = self.tai[susc2prep] * self.pars.tpri
 
     def progress_to_diseased(self, ti):
         # Progress prepatent -> acute
         prep2acute = (self.prepatent & (self.ti_acute <= ti)).uids
         self.acute[prep2acute] = True
         self.prepatent[prep2acute] = False
-        self.infectiousness[prep2acute] = self.pars.tai
+        self.infectiousness[prep2acute] = self.tai[prep2acute]
 
         # Progress prepatent -> subclinical
         prep2subcl = (self.prepatent & (self.ti_subclinical <= ti)).uids
         self.subclinical[prep2subcl] = True
         self.prepatent[prep2subcl] = False
-        self.infectiousness[prep2subcl] = self.pars.tai * self.pars.tsri
+        self.infectiousness[prep2subcl] = self.tai[prep2subcl] * self.pars.tsri
 
     def progress_to_chronic(self, ti):
         # Progress acute -> chronic
         acu2chro = (self.acute & (self.ti_chronic <= ti)).uids
         self.chronic[acu2chro] = True
         self.acute[acu2chro] = False
-        self.infectiousness[acu2chro] = self.pars.tai * self.pars.tcri
+        self.infectiousness[acu2chro] = self.tai[acu2chro] * self.pars.tcri
 
         # Progress subclinical -> chronic
         sub2chro = (self.subclinical & (self.ti_chronic <= ti)).uids
         self.chronic[sub2chro] = True
         self.subclinical[sub2chro] = False
-        self.infectiousness[sub2chro] = self.pars.tai * self.pars.tcri
+        self.infectiousness[sub2chro] = self.tai[sub2chro] * self.pars.tcri
 
     def progress_to_dead(self, ti):
         # Trigger deaths
@@ -566,6 +572,43 @@ class Typhoid(ss.Disease):
         dur_chro = p.dur_chro_dist.rvs(uids) * tyd.days_per_week  # duration in in days
         dur_chro = dur_chro * tyd.day2year        # duration in years
         return sc.randround(dur_chro / dt)        # duration in integer number of timesteps
+
+
+    def get_tai_vals(self, uids):
+        """
+        Value of typhoid individual infectiousness
+        """
+        p = self.pars
+        # TODO: we may need clipping if tai is defined as a normal distribution
+        # to avoid having negative values
+        tai_vals = p.tai.rvs(uids)
+        return tai_vals
+
+    @staticmethod
+    def tai_mean(module, sim, uids):
+        """
+        Make an array of values for the mean of a normal distribution.
+        Any function with the same signature can be passed as the values to
+        the parameters of a distribution.
+        """
+        if uids is None:
+            mu = []
+        else:
+            mu = module.pars.tai_mean * np.ones(len(uids))
+        return np.array(mu)
+
+    @staticmethod
+    def tai_std(module, sim, uids):
+        """
+        Make an array of values for the std of a normal distribution
+        Any function with the same signature can be passed as the values to
+        the parameters of a distribution.
+        """
+        if uids is None:
+            std = []
+        else:
+            std = module.pars.tai_std * np.ones(len(uids))
+        return np.array(std)
 
     @staticmethod
     def prepatent_mean_dur_function(module, sim, uids):
@@ -693,6 +736,10 @@ class Typhoid(ss.Disease):
         """
         p = self.pars
         ti = self.ti
+
+        # Set value of parameters who are distributions
+        self.tai[uids] = self.get_tai_vals(uids)
+        self.tppi[uids] = p.tppi.rvs(uids)
 
         # Set value of states associated to being infected, and record events
         self.ti_prepatent[uids] = ti
@@ -836,7 +883,7 @@ class Typhoid(ss.Disease):
                 #beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.t.dt)  # This is equal to 1, but needs to be here for starsim networks
 
                 # EXPOSURE/TRANSMISSION/INFECTION PROB Exposure encompasses exposure frequency per unit of time
-                self.p_resp[trg] = (self.infectiousness[src] / self.pars.tai) * rel_trans[src] * ((self.pars.transmission.exposure2contact_rate / tyd.day2year) * dt)
+                self.p_resp[trg] = (self.infectiousness[src] / self.tai[src]) * rel_trans[src] * ((self.pars.transmission.exposure2contact_rate / tyd.day2year) * dt)
 
                 # INFECTION OUTCOME: Decide who gets infected/
                 # self.pars.transmission.ppl2ppl_p_inf will calculate p_infc = rel_sus[trg] * susceptibility[trg] * self.p_resp[trg]
@@ -1011,7 +1058,7 @@ class Typhoid(ss.Disease):
         The more infections, the lower the number.
         """
         # TPPI: Typhoid Protection Per Infection
-        self.susceptibility[uids] = (1.0 - self.pars.tppi)**self.n_infections[uids]
+        self.susceptibility[uids] = (1.0 - self.tppi[uids])**self.n_infections[uids]
         # NOTE: We could add a mechanisms for immunity waning here
         return
 
