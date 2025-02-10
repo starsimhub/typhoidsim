@@ -96,8 +96,8 @@ class Typhoid(ss.Disease):
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Infectiousness parameters
-            tai_std = 1_000,
-            tai_mean = 40_000,
+            tai_std=1_000,    # TODO: this should be part of the typhoid module parameters. if the distribution for TAI changes, so will the parameters. The users should pass a distribution with any parmetrisation needed to set the distribution parameters.
+            tai_mean=40_000,  # TODO: same as above
             tai=ss.normal(loc=self.tai_mean, scale=self.tai_std),  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
             tpri=0.5,      # Typhoid relative (to acute) prepatent infectiousness
             tsri=1.0,      # Typhoid relative (to acute) subclinic infectiousness
@@ -117,6 +117,7 @@ class Typhoid(ss.Disease):
                 ppl2ppl_p_inf=ss.bernoulli(p=self.infection_prob_function_contact),  # The probabilities will be updated for each agent based on the interaction with their contacts
                 # Multiroute transmission
                 p_route=ss.uniform(),  # NOTE: currently unused, but stub for transmission route selection. See: https://github.com/starsimhub/typhoidsim/issues/102
+                teer=ss.constant(v=2.0),  # distribution of the parameter lambda
             ),
 
             beta=None, # NOTE: Typhoid does not have/ does not use beta, but starsim's networks expect this parameter to exist.
@@ -956,6 +957,10 @@ class Typhoid(ss.Disease):
 
         # EXPOSURE: Increase cfu doses in susceptible people by exposing them to the environment
         # NOTE: left exposure amount and n_exposures for interpretability, they should be identical
+        # TODO: check that we need to redraw the value every day
+        teer = trans_pars.teer.rvs(susc_uids.size)
+        # update lambda, now one value per agent
+        environment.pars.transmission.env2ppl_exposure_rate.pars.lam = teer
         self.exposure_amount[susc_uids] = ((environment.pars.transmission.env2ppl_exposure_rate.rvs(susc_uids.size) / tyd.day2year) * dt)  # exposure amount expressed in (n_exposures * volume) on the time interval "dt"
         self.n_exposures[susc_uids] = self.exposure_amount[susc_uids] / environment.pars.volume  # env volume=1. Units of n_exposures [counts] =  (counts * volume) / volume
 
