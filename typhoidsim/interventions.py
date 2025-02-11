@@ -814,6 +814,23 @@ class vaccination_with_waning(RoutineDelivery):
         self.t_to_booster2 = ss.FloatArr('t_to_booster2', default=np.nan)  # time until needing the booster
         self.n_doses = ss.FloatArr('n_doses')                                  # number of doses received by each agent
         self.debug = debug
+        
+        # Validate inputs
+        # error if only booster2 info given and not booster1
+        if(self.booster1_interval == None) and (self.booster2_interval != None):
+            raise ValueError("booster2 should only be implemented if booster1 is also implemented. Please provide value for booster1_interval")
+
+        # error if booster1/booster2 prob>0 but interval is None
+        if(self.booster1_interval == None) and (self.booster1_prob > 0):
+            raise ValueError(f"Booster 1 coverage {booster1_prob} is non-zero, but no booster interval `booster1_interval` was provided.")
+
+        if(self.booster2_interval == None) and (self.booster2_prob > 0):
+            raise ValueError(f"Booster 2 coverage {booster2_prob} is non-zero, but no booster interval `booster2_interval` was provided.")
+        
+        # booster1_interval must be shorter than booster2_interval if both exist
+        if (self.booster1_interval != None) and (self.booster2_interval != None) and (self.booster1_interval >= self.booster2_interval):
+            raise ValueError(f"Time to first booster {booster1_interval} should be less than time to second booster {booster2_interval}")
+
         return
 
     def init_pre(self, sim):
