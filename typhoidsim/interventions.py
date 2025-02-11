@@ -887,7 +887,7 @@ class vaccination_with_waning(RoutineDelivery):
                 is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster1 <= 0.0) # For boosters we do not filter by age
                 self.coverage_dist.set(p=booster1_prob)
                 new_booster_uids = self.coverage_dist.filter(is_eligible_booster)
-                self.ti_vaccinated[new_accept_uids] = sim.ti
+                self.ti_vaccinated[new_booster_uids] = sim.ti
                 self.t_vaccinated[new_booster_uids] = sim_year
                 self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
                 self.t_to_booster1[is_eligible_booster] = np.inf # reset time for those eligible for booster, regardless of receipt
@@ -896,10 +896,10 @@ class vaccination_with_waning(RoutineDelivery):
             # Select eligible for second booster
             booster2_prob = self.booster2_prob[ti_rel]
             if booster2_prob > 0.0:
-                is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster2 <= 0.0) # For boosters we do not filter by age - and second booster only conditional on receipt of first routine dose, not first booster
+                is_eligible_booster = (self.vaccinated) & (self.n_doses >= 1) & (self.t_to_booster2 <= 0.0) # For boosters we do not filter by age - and second booster only conditional on receipt of first routine dose, not first booster
                 self.coverage_dist.set(p=booster2_prob)
                 new_booster_uids = self.coverage_dist.filter(is_eligible_booster)
-                self.ti_vaccinated[new_accept_uids] = sim.ti
+                self.ti_vaccinated[new_booster_uids] = sim.ti
                 self.t_vaccinated[new_booster_uids] = sim_year
                 self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
                 self.t_to_booster2[is_eligible_booster] = np.inf # reset time for those eligible for booster, regardless of receipt
