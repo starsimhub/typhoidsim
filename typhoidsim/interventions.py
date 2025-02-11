@@ -862,7 +862,8 @@ class vaccination_with_waning(RoutineDelivery):
         vaccinated_uids = self.vaccinated.uids
 
         if sim.ti in self.timepoints:
-            self.t_to_booster[self.t_to_booster > 0.0] -= self.sim.t.dt
+            self.t_to_booster1[self.t_to_booster1 > 0.0] -= self.sim.t.dt
+            self.t_to_booster2[self.t_to_booster2 > 0.0] -= self.sim.t.dt
             ti_rel = sc.findinds(self.timepoints, sim.ti)[0] # ti relative to the start of the intervention
             prob = self.prob[ti_rel]  # Get the proportion of people who will be tested this timestep
             is_eligible = self.check_eligibility()  # Check eligibility by age for first dose
