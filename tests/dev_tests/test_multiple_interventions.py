@@ -40,7 +40,8 @@ sanitation = ty.behavioral_change(efficacy=0.5, start_year=2000.0+180.0/365)
 campaign_vax_2_5_yo = ty.vaccination_with_waning(
     start_year=pars["start"],
     prob=0.66,
-    booster_prob=0.0,
+    booster1_prob=0.0,
+    booster2_prob=0.0,
     prob_type="annual",
     debug=True,
     # only use for this example to keep track of each individual's acquired immunity level over time
