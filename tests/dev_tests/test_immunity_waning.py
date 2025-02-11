@@ -15,7 +15,7 @@ def make_sim(n_agents=10_000):
     # Define the parameters
     pars = sc.objdict(
         start=2000,        # Starting year
-        dur=0.5,       # Number of days to simulate
+        dur=0.5,           # Number of years to simulate
         pop_scale=None,    #
         n_agents=n_agents, #
         dt=1.0/365.0,      # Timestep of 1 day, expressed in years
@@ -48,8 +48,8 @@ def make_sim(n_agents=10_000):
 
     campaign_vax_2_5_yo = ty.vaccination_with_waning(
         prob=0.4,
-        dose_interval=5.0,  # interval between receiving first dose and booster
-        booster_prob=0.0,
+        booster1_interval=5.0,  # interval between receiving first dose and first booster
+        booster1_prob=0.0,
         start_year=2000.0,
         end_year=2000.0+0.125,
         prob_type="interval",
@@ -62,8 +62,8 @@ def make_sim(n_agents=10_000):
 
     campaign_vax_5_10_yo = ty.vaccination_with_waning(
         prob=0.8,
-        dose_interval=5.0,  # interval between receiving first dose and booster
-        booster_prob=0.0,
+        booster1_interval=5.0,  # interval between receiving first dose and first booster
+        booster1_prob=0.0,
         start_year=2000.0,
         end_year=2000.5,
         prob_type="interval",
