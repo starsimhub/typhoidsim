@@ -789,31 +789,37 @@ class vaccination_with_waning(RoutineDelivery):
 
     Args:
          prob           (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
-         booster_prob   (float)     : conditional probability of receiving a boster dose given that an individual has received their first dose
-         dose_interval  (float)     : the interval of time in years between an individual receiving their first dose and their booster
+         booster1_prob   (float)    : conditional probability of receiving first booster dose given that an individual has received their first routine dose
+         booster2_prob   (float)    : conditional probability of receiving second booster dose given that an individual has received their first routine dose
+         booster1_interval (float)  : the interval of time in years between an individual receiving their routine dose and their first booster
+         booster2_interval (float)  : the interval of time in years between an individual receiving their routine dose and their second booster
          label          (str)       : the name of vaccination strategy
          kwargs         (dict)      : passed to Intervention()
     """
-    def __init__(self, *args, booster_prob=0.0, dose_interval=None, label=None, debug=False, **kwargs):
+    def __init__(self, *args, booster1_prob=0.0, booster2_prob=0.0, booster1_interval=None, booster2_interval=None, label=None, debug=False, **kwargs):
         # **kwargs: years=None, start_year=None, end_year=None, prob=None, prob_type=None,
         super().__init__(*args, **kwargs) # CK: TODO: refactor with define_pars
         self.label = label
-        self.booster_prob = sc.toarray(booster_prob)
-        self.dose_interval = dose_interval  # TODO SOON: ss.years(dose_interval) # number of years betweem 1st dose and booster dose
+        self.booster1_prob = sc.toarray(booster1_prob)
+        self.booster2_prob = sc.toarray(booster2_prob)
+        self.booster1_interval = booster1_interval  # TODO SOON: ss.years(booster1_interval) # number of years betweem 1st dose and 1st booster dose
+        self.booster2_interval = booster2_interval  # TODO SOON: ss.years(booster1_interval) # number of years betweem 1st dose and 1st booster dose
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder
         self.eligibility = self.age_eligibility
         self.vaccinated = ss.BoolArr('vaccinated')                             # keep track of who has been vaccinated
         self.ti_vaccinated = ss.FloatArr('ti_vaccinated')                      # Keep track of when the agent received their last vaccine in timesteps
         self.t_vaccinated = ss.FloatArr('t_vaccinated', default=np.nan)  # time (year) of most recent vaccination
         self.a_vaccinated = ss.FloatArr('a_vaccinated', default=np.nan)  # age at vaccination
-        self.t_to_booster = ss.FloatArr('t_to_booster', default=np.nan)  # time until needing the booster
+        self.t_to_booster1 = ss.FloatArr('t_to_booster1', default=np.nan)  # time until needing the booster
+        self.t_to_booster2 = ss.FloatArr('t_to_booster2', default=np.nan)  # time until needing the booster
         self.n_doses = ss.FloatArr('n_doses')                                  # number of doses received by each agent
         self.debug = debug
         return
 
     def init_pre(self, sim):
         super().init_pre(sim)
-        self.booster_prob = self.booster_prob * np.ones(shape=len(self.prob))
+        self.booster1_prob = self.booster1_prob * np.ones(shape=len(self.prob))
+        self.booster2_prob = self.booster2_prob * np.ones(shape=len(self.prob))
         return
 
     def init_results(self):
@@ -871,20 +877,33 @@ class vaccination_with_waning(RoutineDelivery):
                 self.t_vaccinated[new_accept_uids] = sim_year
                 self.a_vaccinated[new_accept_uids] = sim.people.age[new_accept_uids]
                 self.n_doses[new_accept_uids] = 1
-                self.t_to_booster[new_accept_uids] = self.dose_interval   # set the timer to get the booster
+                self.t_to_booster1[new_accept_uids] = self.booster1_interval   # set the timer to get the booster
+                self.t_to_booster2[new_accept_uids] = self.booster2_interval   # set the timer to get the booster
 
             # Select eligible for a booster
-            booster_prob = self.booster_prob[ti_rel]
-            if booster_prob > 0.0:
-                is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster <= 0.0) # For boosters we do not filter by age
-                self.coverage_dist.set(p=booster_prob)
+            booster1_prob = self.booster1_prob[ti_rel]
+            if booster1_prob > 0.0:
+                is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster1 <= 0.0) # For boosters we do not filter by age
+                self.coverage_dist.set(p=booster1_prob)
                 new_booster_uids = self.coverage_dist.filter(is_eligible_booster)
                 self.ti_vaccinated[new_accept_uids] = sim.ti
                 self.t_vaccinated[new_booster_uids] = sim_year
                 self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
-                self.t_to_booster[is_eligible_booster] = np.inf # reset time for those eligible for booster, regardless of receipt
+                self.t_to_booster1[is_eligible_booster] = np.inf # reset time for those eligible for booster, regardless of receipt
                 self.n_doses[new_booster_uids] += 1
 
+            # Select eligible for second booster
+            booster2_prob = self.booster2_prob[ti_rel]
+            if booster2_prob > 0.0:
+                is_eligible_booster = (self.vaccinated) & (self.n_doses == 1) & (self.t_to_booster2 <= 0.0) # For boosters we do not filter by age - and second booster only conditional on receipt of first routine dose, not first booster
+                self.coverage_dist.set(p=booster2_prob)
+                new_booster_uids = self.coverage_dist.filter(is_eligible_booster)
+                self.ti_vaccinated[new_accept_uids] = sim.ti
+                self.t_vaccinated[new_booster_uids] = sim_year
+                self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
+                self.t_to_booster2[is_eligible_booster] = np.inf # reset time for those eligible for booster, regardless of receipt
+                self.n_doses[new_booster_uids] += 1
+                
             vaccinated_uids =  self.vaccinated.uids
 
         # Update immunity_acquired
