@@ -8,12 +8,12 @@ import sciris as sc
 import starsim as ss
 import typhoidsim as ty
 
-def make_sim(n_agents=10_000):
+def make_sim(n_agents=5_000):
 
     # Define the parameters
     pars = sc.objdict(
         start=2000,        # Starting year
-        dur=12.0,          # Number of years to simulate
+        dur=1.0,          # Number of years to simulate
         total_pop=50e6,    # Total population size
         pop_scale=None,    #
         n_agents=n_agents, #
@@ -37,9 +37,9 @@ def make_sim(n_agents=10_000):
     campaign_vax_2_5_yo = ty.vaccination_with_waning(
         start_year=2000.0,
         prob=0.66,
-        booster1_interval=5.0,  # interval between receiving first dose and first booster
+        booster1_interval=0.33,  # interval between receiving first dose and first booster
         booster1_prob=1.0,
-        booster2_interval=10.0,  # interval between receiving first dose and second booster
+        booster2_interval=0.66,  # interval between receiving first dose and second booster
         booster2_prob=1.0,        prob_type="annual",
         debug=True,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 0.0,
