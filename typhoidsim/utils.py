@@ -263,7 +263,7 @@ def generate_unique_filename(root_str="typhoidsim"):
     """
     if root_str is None:
         root_str = ""
-    now = sc.now(dateformat="%Y-%m-%d_%H-%M-%s")
+    now = sc.now(dateformat="%Y-%m-%d_%H-%M-%S")
     u_id = sc.uuid(which="hex")  # Creates a length-6 hex string
     filename = root_str + "_" + now + u_id
     return filename
