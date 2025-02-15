@@ -729,6 +729,10 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
         for intervention_name in sim.interventions:
             if hasattr(sim.interventions[intervention_name], "vaccinated"):
                 self.vax_interventions.append(intervention_name)
+        if len(self.vax_interventions):
+            return
+        raise ValueError("No vaccination interventions found")
+
 
     def _count_individual_sexes(self, sim):
         ti = sim.ti
