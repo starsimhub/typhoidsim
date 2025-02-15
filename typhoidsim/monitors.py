@@ -12,12 +12,13 @@ perform additional calculations and be used as "components" or "steps" in
 an optimization process.
 """
 
+import operator
+
 import numpy as np
 import pandas as pd
 
 import sciris as sc
 import starsim as ss
-import typhoidsim
 
 import typhoidsim.defaults as tyd
 import typhoidsim.utils as tyu
@@ -607,6 +608,7 @@ class histograms_by_age_sex_monitor(Monitor):
         with sc.options.with_style(style):
             if key is not None:
                 flat = {k: v for k, v in flat.items() if k.startswith(key)}
+                flat = {k: v for k, v in flat.items() if k.startswith(key)}
 
             # Get the figure
             if fig is None:
@@ -720,6 +722,7 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
         self.vax_interventions = None
         self.vax_state_a = ss.BoolArr('vax_state_a', default=False)
         self.vax_state_b = ss.BoolArr('vax_state_b', default=False)
+        self.operator = [operator.and_, operator.or_][track_vaccinated]
         return
 
     def init_pre(self, sim):
@@ -731,31 +734,26 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
                 self.vax_interventions.append(intervention_name)
         if len(self.vax_interventions):
             return
-        raise ValueError("No vaccination interventions found")
-
+        raise ValueError("No vaccination interventions found.")
 
     def _count_individual_sexes(self, sim):
         ti = sim.ti
-        eligible_males = sim.people.alive & sim.people.male
-        eligible_females = sim.people.alive & sim.people.female
+        living_males   = sim.people.alive & sim.people.male
+        living_females = sim.people.alive & sim.people.female
 
-        self.vax_state_a[eligible_males.uids] = False  # Reset tracking state to False
-        self.vax_state_b[eligible_females.uids] = False  # Reset tracking state to False
+        self.vax_state_a[living_males.uids]   = [True, False][self.track_vaccinated]  # Reset tracking state to False if tracking vaccinated, True if tracking unvaccinated
+        self.vax_state_b[living_females.uids] = [True, False][self.track_vaccinated]  # Reset tracking state to False
 
         for vax_interv in self.vax_interventions:
-            # Find if agent has received any vaccination across all possible vax interventions
-            self.vax_state_a[:] = self.vax_state_a[:] | \
-                                  [~sim.interventions[vax_interv].vaccinated,
-                                    sim.interventions[vax_interv].vaccinated][self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
+            # track_vaccinated = True, finds whether an agent has received "any" vaccination across all possible vax interventions, or
+            # track_vaccinated = False, find wheter an agent has remained unvaccinated across "all" vax interventions
+            vax_status = [~sim.interventions[vax_interv].vaccinated, sim.interventions[vax_interv].vaccinated][self.track_vaccinated]
+            # Finds whether an agent has received "any" vaccination across all possible vax interventions
+            self.vax_state_a[:] = self.operator(self.vax_state_a[:], vax_status)
+            self.vax_state_b[:] = self.operator(self.vax_state_b[:], vax_status)
 
-            self.vax_state_b[:] = self.vax_state_b[:] | \
-                                  [~sim.interventions[vax_interv].vaccinated,
-                                   sim.interventions[vax_interv].vaccinated][
-                                      self.track_vaccinated]  # If False tracks unvaccinated, if True tracks vaccinated
-
-        eligible_males = eligible_males & self.vax_state_a
-        eligible_females = eligible_females & self.vax_state_b
-
+        eligible_males   = living_males & self.vax_state_a
+        eligible_females = living_females & self.vax_state_b
 
         for attrname, specs in sorted(self.to_record.items()):
             attrpath = specs["path"]
@@ -766,10 +764,8 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
             else:
                 f_uids = (vals & eligible_females).uids
                 m_uids = (vals & eligible_males).uids
-            f_vals = self.scaling * \
-                     np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
-            m_vals = self.scaling * \
-                     np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
+            f_vals = self.scaling * np.histogram(sim.people.age[f_uids], bins=self.age_bins)[0]
+            m_vals = self.scaling * np.histogram(sim.people.age[m_uids], bins=self.age_bins)[0]
 
             stockname = self.attrname_to_stockname[attrname]
             self.record_fn(f_vals, m_vals, stockname)
@@ -777,13 +773,18 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
 
     def _count_aggregated_sexes(self, sim):
         ti = sim.ti
-        eligible_folks = sim.people.alive
-        self.vax_state_a[:] = False  # Reset tracking state to False
+        living_folks = sim.people.alive
+        self.vax_state_a[living_folks] = [True, False][self.track_vaccinated]  # Reset tracking
         for vax_interv in self.vax_interventions:
-            # Find if agent has received any vaccination across all possible vax interventions
-            vax_status  = [~sim.interventions[vax_interv].vaccinated, sim.interventions[vax_interv].vaccinated][self.track_vaccinated]
-            self.vax_state_a[:] = self.vax_state_a[:] | vax_status # union of all interventions (an agent could have received two vaccines, but we count them once)
-        eligible_folks = eligible_folks & self.vax_state_a
+            # track_vaccinated = True, finds whether an agent has received "any" vaccination across all possible vax interventions, or
+            # track_vaccinated = False, find wheter an agent has remained unvaccinated across "all" vax interventions
+            vax_status = [~sim.interventions[vax_interv].vaccinated, sim.interventions[vax_interv].vaccinated][self.track_vaccinated]
+            # union of all interventions (an agent could have received two vaccines, but we count them once)
+            # intersection of all interventions (to count unvaccinated)
+            self.vax_state_a[:] = self.operator(self.vax_state_a[:], vax_status)
+
+        # The ones who are alive and meet the criteria to be tracked
+        eligible_folks = living_folks & self.vax_state_a
 
         for attrname, specs in sorted(self.to_record.items()):
             attrpath = specs["path"]
@@ -792,8 +793,7 @@ class histogram_by_vaccination_status(histograms_by_age_sex_monitor):
                 b_uids = ((vals == ti) & eligible_folks).uids
             else:
                 b_uids = (vals & eligible_folks).uids
-            b_vals = self.scaling * \
-                     np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
+            b_vals = self.scaling * np.histogram(sim.people.age[b_uids], bins=self.age_bins)[0]
             stockname = self.attrname_to_stockname[attrname]
             self.record_fn(b_vals, stockname)
         return
