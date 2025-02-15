@@ -39,7 +39,8 @@ dependencies = [
     "networkx",
     "matplotlib",
     "seaborn",
-    "optuna"
+    "optuna",
+    "numexpr"
 ]
 
 [project.optional-dependencies]
