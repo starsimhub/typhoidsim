@@ -257,7 +257,7 @@ class histograms_by_age_sex_monitor(Monitor):
             self.monitor_period = self.resampling_period
             self.agg_func = aggregation_functions.get(self.aggregate_time)
         else:
-            self.monitor_step_size = 1.0
+            self.monitor_step_size = 1
             self.monitor_period = self.t.dt  # CK: TODO: use time units
 
         self.start_point = sc.findnearest(sim.timevec - self.record_from, 0.0)
@@ -476,12 +476,14 @@ class histograms_by_age_sex_monitor(Monitor):
             if res_name in ["timevec"]:
                 continue
             for ab_idx in range(res_value.shape[1]):
-                data = {"label": res_name,
-                        "x": res_value[:, ab_idx],
-                        "age_bin_lb": self.age_bins[ab_idx],    # Lower bound
-                        "age_bin_ub": self.age_bins[ab_idx+1],  # Upper bound
-                        "age_bin_label": self.age_bin_labels[ab_idx],
+                x = res_value[:, ab_idx]
+                data = {"label": pd.Series([res_name] * len(x)),
+                        "x": x,
+                        "age_bin_lb": pd.Series([self.age_bins[ab_idx]] * len(x)),   # Lower bound
+                        "age_bin_ub": pd.Series([self.age_bins[ab_idx+1]] * len(x)),  # Upper bound
+                        "age_bin_label": pd.Series([self.age_bin_labels[ab_idx]] * len(x)),
                         "time": res_value.timevec}
+                breakpoint()
                 dfs.append(pd.DataFrame(data))
         df = pd.concat(dfs, axis=0)
         return df
