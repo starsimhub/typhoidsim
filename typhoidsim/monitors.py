@@ -275,7 +275,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.ntpts = ntpts if not remainder else ntpts+1
 
         # Output year vector
-        if not remainder:
+        if not remainder and self.monitor_step_size != 1:
             self.timevec_results = sc.inclusiverange(sim.timevec[self.timepoints[0]],
                                                      sim.timevec[self.timepoints[-1]], self.monitor_period) # CK: TODO: use time units
         else:
@@ -483,7 +483,6 @@ class histograms_by_age_sex_monitor(Monitor):
                         "age_bin_ub": pd.Series([self.age_bins[ab_idx+1]] * len(x)),  # Upper bound
                         "age_bin_label": pd.Series([self.age_bin_labels[ab_idx]] * len(x)),
                         "time": res_value.timevec}
-                breakpoint()
                 dfs.append(pd.DataFrame(data))
         df = pd.concat(dfs, axis=0)
         return df
