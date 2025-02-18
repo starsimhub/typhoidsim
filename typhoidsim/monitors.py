@@ -264,7 +264,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.start_point = sc.findnearest(sim.timevec - self.record_from, 0.0)
         self.end_point = sc.findnearest(sim.timevec - self.record_until, 0.0)
         self.timepoints = sc.inclusiverange(self.start_point, self.end_point - 1).astype(int)  # TODO: when integrating with self.t, check if -1 (minus 1 timestep) still needed.
-        self.stock_ntpts = len(self.timepoints) # number of time points for the internal stock arrays  # CK: TODO: use time units
+        self.stock_ntpts = len(self.timepoints)  # number of time points for the internal stock arrays  # CK: TODO: use time units
 
         if self.aggregate_time is None or self.aggregate_time == "subsample":
             self.sampling_fn = self._default_sampling
@@ -276,12 +276,10 @@ class histograms_by_age_sex_monitor(Monitor):
         self.ntpts = ntpts if not remainder else ntpts+1
 
         # Output year vector
-        if not remainder and self.monitor_step_size != 1:
-            self.timevec_results = sc.inclusiverange(sim.timevec[self.timepoints[0]],
-                                                     sim.timevec[self.timepoints[-1]], self.monitor_period) # CK: TODO: use time units
-        else:
-            self.timevec_results = sim.timevec[self.timepoints[::self.monitor_step_size]]
+        self.timevec_results = sc.inclusiverange(sim.timevec[self.timepoints[0]], sim.timevec[self.timepoints[-1]], self.monitor_period) # CK: TODO: use time units
 
+        if self.ntpts != len(self.timevec_results):
+            self.timevec_results = sim.timevec[self.timepoints[::self.monitor_step_size]]
 
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
