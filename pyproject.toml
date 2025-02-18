@@ -33,7 +33,7 @@ dependencies = [
     "numpy>=1.24.0",
     "pandas>=2.0.0",
     "sciris>=3.2.0",
-    "starsim", # can't really specify version because we need rc2.3, but the version on that branch is still 2.2.1
+    "starsim>=2.3",
     "numba",
     "scipy",
     "networkx",
