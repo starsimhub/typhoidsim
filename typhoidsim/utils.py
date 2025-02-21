@@ -332,13 +332,3 @@ def minmax_scaler_2d(arr):
     max_val = np.nanmax(arr, axis=0)
     scaled_arr = (arr - min_val) / (max_val - min_val)
     return scaled_arr
-
-
-def scrub_sim_references():
-    """
-    Scrub references to sim within a sim object's analyzers and interventions.
-    Lots of references to sim coming from distribution objects. Not sure how this
-    scrubing will affect continuation.
-    """
-
-    return

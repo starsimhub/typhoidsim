@@ -79,30 +79,33 @@ def test_continuation_saved():
     plt.show()
     return
 
-y_full_size = []
-y_shrunk_size = []
-n_agents_lst = []
-dur_lst = []
-for n_agents in [1e4, 2e4, 5e4]:
-    for dur in np.logspace(0, 1.75 , base=10, num=5):
-        sim = make_sim(n_agents=int(n_agents), dur=dur, add_monitor=True)
-        sim.run()
-        n_agents_lst.append(int(n_agents))
-        dur_lst.append(np.round(dur, decimals=2))
-        full_size = sc.checkmem(sim, descend=0).bytesize[0]/1e6
-        y_full_size.append(sc.checkmem(sim, descend=0).bytesize[0]/1e6)
-        sim.shrink()
-        y_shrunk_size.append(sc.checkmem(sim, descend=0).bytesize[0]/1e6)
+
+def test_memory_size():
+    y_full_size = []
+    y_shrunk_size = []
+    n_agents_lst = []
+    dur_lst = []
+    for n_agents in [1e4, 2e4, 5e4]:
+        for dur in np.logspace(0, 1.75 , base=10, num=5):
+            sim = make_sim(n_agents=int(n_agents), dur=dur, add_monitor=True)
+            sim.run()
+            n_agents_lst.append(int(n_agents))
+            dur_lst.append(np.round(dur, decimals=2))
+            full_size = sc.checkmem(sim, descend=0).bytesize[0]/1e6
+            y_full_size.append(sc.checkmem(sim, descend=0).bytesize[0]/1e6)
+            sim.shrink()
+            y_shrunk_size.append(sc.checkmem(sim, descend=0).bytesize[0]/1e6)
 
 
-data = {"n_agents": n_agents_lst, "dur": dur_lst, "size_full": y_full_size, "size_shrunk": y_shrunk_size}
-df = pd.DataFrame(data)
-branch = "refactored_monitor"
-df.to_csv(f"test_sim_size_{branch}")
-tb_full = pd.pivot_table(df, values="size_full", columns="n_agents", index=["dur"])
-tb_shrunk = pd.pivot_table(df, values="size_shrunk", columns="n_agents", index=["dur"])
+    data = {"n_agents": n_agents_lst, "dur": dur_lst, "size_full": y_full_size, "size_shrunk": y_shrunk_size}
+    df = pd.DataFrame(data)
+    branch = "refactored_monitor"
+    df.to_csv(f"test_sim_size_{branch}")
+    tb_full = pd.pivot_table(df, values="size_full", columns="n_agents", index=["dur"])
+    tb_shrunk = pd.pivot_table(df, values="size_shrunk", columns="n_agents", index=["dur"])
+    sns.heatmap(tb_shrunk, annot=True, cbar_kws={'label': 'size [MB]'})
+    plt.show()
 
-sns.heatmap(tb_shrunk, annot=True, cbar_kws={'label': 'size [MB]'})
-plt.show()
 
+test_memory_size()
 test_continuation_saved()

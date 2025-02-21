@@ -181,7 +181,7 @@ def make_sim_with_acute_screening(screen_coverage=1.0, test_sensitivity=1.0):
     # Define the parameters
     pars = sc.objdict(
         start=2000,
-        dur=1.0,
+        dur=2.0,
         dt=1.0/365.0,
         n_agents=10_000,
         rand_seed=2,
@@ -211,7 +211,8 @@ def make_sim_with_acute_screening(screen_coverage=1.0, test_sensitivity=1.0):
         resampling_period=1/12.0,
         aggregate_time="sum",
         aggregate_sex=True,
-        record_from=2000.0)
+        record_from=2000.0,
+        record_until=2001.0+1.0/365.0)
 
     sim = ss.Sim(
         pars=pars,
