@@ -1,7 +1,11 @@
-import numpy as np
 import sciris as sc
 import starsim as ss
 import typhoidsim as ty
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import seaborn as sns
 
 
 def make_sim(n_agents=1_000, dur=1.0, add_monitor=False):
@@ -34,12 +38,13 @@ def make_sim(n_agents=1_000, dur=1.0, add_monitor=False):
     monitors = []
     if add_monitor:
         record_n = dict(alive=dict(path=("people",)))
-
+        monitor_age_bin_edges = [0, 2, 5, 10, 15, 125]
         monitor_population = ty.histograms_by_age_sex_monitor(
             to_record=record_n,
-            resampling_period=1.0/12.0,
+            age_bins=monitor_age_bin_edges,
+            resampling_period=0.333,
             aggregate_sex=True,
-            aggregate_time="median",
+            aggregate_time="mean",
             scaling=1.0,
             record_from=pars["start"],
             record_until=pars["start"] + pars["dur"],
@@ -65,12 +70,11 @@ def test_continuation_saved():
     base_sim.save("base_sim.pkl.gz")
     sim = sc.loadobj("base_sim.pkl.gz")
 
-    sim.analyzers["monitor_population"].scaling = 2020.0
+    sim.analyzers["monitor_population"].scaling = 0.5
     sim.label = f"continuation"
 
     sim.run()
     sc.toc()
-    import matplotlib.pyplot as plt
     sim.plot()
     plt.show()
     return
@@ -91,10 +95,6 @@ for n_agents in [1e4, 2e4, 5e4]:
         y_shrunk_size.append(sc.checkmem(sim, descend=0).bytesize[0]/1e6)
 
 
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
-
 data = {"n_agents": n_agents_lst, "dur": dur_lst, "size_full": y_full_size, "size_shrunk": y_shrunk_size}
 df = pd.DataFrame(data)
 branch = "refactored_monitor"
@@ -105,4 +105,4 @@ tb_shrunk = pd.pivot_table(df, values="size_shrunk", columns="n_agents", index=[
 sns.heatmap(tb_shrunk, annot=True, cbar_kws={'label': 'size [MB]'})
 plt.show()
 
-#test_continuation_saved()
+test_continuation_saved()
