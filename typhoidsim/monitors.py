@@ -280,23 +280,25 @@ class histograms_by_age_sex_monitor(Monitor):
             self.agg_func = aggregation_functions.get("subsample")
             self.buffer_ntpts = 1
 
+        # [record_from, record_until)
         self.start_point = sc.findnearest(sim.timevec - self.record_from, 0.0)
-        self.end_point   = sc.findnearest(sim.timevec - self.record_until, 0.0)-1
-        self.obs_timepoints = sc.inclusiverange(self.start_point, self.end_point).astype(int)  # TODO: when integrating with self.t, check if -1 (minus 1 timestep) still needed.
+        self.end_point   = sc.findnearest(sim.timevec - (self.record_until-sim.t.dt), 0.0)
+
+        self.obs_timepoints = sc.inclusiverange(self.start_point, self.end_point).astype(int)
         obs_n_steps = len(self.obs_timepoints)
         self.sampling_fn = self._aggregate_sampling
 
         (ntpts, remainder) = divmod(obs_n_steps, self.monitor_step_size)
-        # The first sample of the monitors accurs at record from + resampling period
-        self.timevec_results = sim.timevec[self.obs_timepoints[self.monitor_step_size:-1:self.monitor_step_size]]
+        self.timevec_results = sim.timevec[self.obs_timepoints[0::self.monitor_step_size]]
         self.ntpts = ntpts
-
         if self.aggregate_time is None or self.aggregate_time == "subsample" or self.monitor_step_size == 1:
             self.sampling_fn = self._subsampling
             self.ntpts = ntpts
             self.timevec_results = np.concat([sim.timevec[self.obs_timepoints[0:1]], self.timevec_results, sim.timevec[self.obs_timepoints[-2:-1]]])
         else:
             self.sampling_fn = self._aggregate_sampling
+            if len(self.timevec_results) < self.ntpts:
+                self.ntpts -= 1
 
         # Age
         self.nags = len(self.age_bins) - 1  # Number of age groups
@@ -447,16 +449,20 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def _aggregate_sampling(self, sim):
-        if self.tidx < self.monitor_step_size:  # assumes `tidx` starts from 0
+
+        # Count the last observation point and aggregate
+        if self.tidx == self.monitor_step_size-1:
             self.count_fn(sim)
-            self.tidx += 1
-        else:
             # Aggregate and reset
             for stock_name in self.buffers:
                 self.results[stock_name][self.res_tidx, :] = self.report(self.buffers[stock_name][:])
                 self.buffers[stock_name][:] = np.nan
             self.tidx = 0
             self.res_tidx += 1
+        # Count
+        else:
+            self.count_fn(sim)
+            self.tidx += 1
         return
 
     def _identity(self, vals, **kwargs):
