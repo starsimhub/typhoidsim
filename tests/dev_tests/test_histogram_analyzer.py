@@ -55,6 +55,6 @@ sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, networks=network,
              interventions=screen_all, analyzers=[monitor_cases, monitor_population])
 sim.run()
 sim.plot()
-#sim.analyzers[0].plot()
-#sim.analyzers[0].plot_waterfall()
+sim.analyzers[0].plot()
+sim.analyzers[0].plot_waterfall()
 plt.show()

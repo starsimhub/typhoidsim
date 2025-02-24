@@ -15,7 +15,7 @@ def make_sim(n_agents=10_000):
     # Define the parameters
     pars = sc.objdict(
         start=2000,        # Starting year
-        dur=5,           # Number of years to simulate
+        dur=2,           # Number of years to simulate
         pop_scale=None,    #
         n_agents=n_agents, #
         dt=1.0/365.0,      # Timestep of 1 day, expressed in years
@@ -84,7 +84,7 @@ def make_sim(n_agents=10_000):
         # age_bins=age_bin_edges,
         # age_bin_labels=age_bin_labels,
         to_record=record_cases,
-        resampling_period=1.0/12,
+        resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
         aggregate_sex=True,
         aggregate_time="sum",
@@ -97,7 +97,7 @@ def make_sim(n_agents=10_000):
         age_bins=age_bin_edges,
         age_bin_labels=age_bin_labels,
         to_record=record_cases,
-        resampling_period=1.0/12,
+        resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
         aggregate_sex=True,
         aggregate_time="sum",
@@ -110,7 +110,7 @@ def make_sim(n_agents=10_000):
         age_bins=age_bin_edges,
         age_bin_labels=age_bin_labels,
         to_record=record_cases,
-        resampling_period=1.0/12,
+        resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
         aggregate_sex=True,
         aggregate_time="sum",
