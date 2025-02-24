@@ -293,8 +293,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.ntpts = ntpts
         if self.aggregate_time is None or self.aggregate_time == "subsample" or self.monitor_step_size == 1:
             self.sampling_fn = self._subsampling
-            self.ntpts = ntpts
-            self.timevec_results = np.concat([sim.timevec[self.obs_timepoints[0:1]], self.timevec_results, sim.timevec[self.obs_timepoints[-2:-1]]])
+            self.ntpts = ntpts+1
         else:
             self.sampling_fn = self._aggregate_sampling
             if len(self.timevec_results) < self.ntpts:
