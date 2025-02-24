@@ -133,7 +133,7 @@ def test_vaccinated_counts():
     (1.0/365, 7.0/365),   # weekly
     (1.0/365, 15.0/365),  # fortnightly
     (1.0/365, 30.41/365)])
-def test_histogram_monitor(dt, rs):
+def test_histogram_monitor_aggregate_resampling(dt, rs):
     pars = sc.objdict(
         start=2000,
         dur=1.0,
@@ -171,6 +171,52 @@ def test_histogram_monitor(dt, rs):
     return
 
 
+@pytest.mark.parametrize("dt,rs", [
+    (1.0/365, 0.2),
+    (1.0/365, 1.0),
+    (1.0/365, 1.0/52),
+    (1.0/365, 1.0/12),    # monthly
+    (1.0/365, 7.0/365),   # weekly
+    (1.0/365, 15.0/365),  # fortnightly
+    (1.0/365, 30.41/365)])
+def test_histogram_monitor_subsampling(dt, rs):
+    pars = sc.objdict(
+        start=2000,
+        dur=1.0,
+        dt=dt,
+        verbose=0,
+        rand_seed=2,
+    )
+
+    ppl = ss.People(1_000)
+    typhoid = ty.Typhoid(pars={"init_prev": ss.bernoulli(p=0.05), "p_death": 0.0})
+    random_p2p = ss.RandomNet({'n_contacts': 5})
+    to_record = dict(alive=dict(path=("people",)))
+
+    m1_name = "monitor_people"
+    agg_sex = True
+    monitor_people = ty.histograms_by_age_sex_monitor(
+        to_record=to_record,
+        resampling_period=rs,
+        aggregate_sex=agg_sex,
+        aggregate_time="subsample",
+        # Sum over the resampling period
+        record_from=pars["start"],
+        name=m1_name)
+
+    sim = ss.Sim(pars=pars,
+                 people=ppl,
+                 diseases=typhoid,
+                 networks=random_p2p,
+                 analyzers=[monitor_people],
+                 use_aging=False)
+
+    sim.run()
+
+    assert sim.complete
+    return
+
+
 def test_by_age_counts():
     sim = make_sim_with_histogram_monitor()
     sim.init()
@@ -191,4 +237,5 @@ def test_by_age_counts():
 if __name__ == "__main__":
     test_vaccinated_counts()
     test_by_age_counts()
-    test_histogram_monitor()
+    test_histogram_monitor_aggregate_resampling(1.0/365, 7.0/365)
+    test_histogram_monitor_subsampling(1.0/365, 7.0/365)
