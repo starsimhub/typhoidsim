@@ -298,8 +298,12 @@ class histograms_by_age_sex_monitor(Monitor):
             self.sampling_fn = self._aggregate_sampling
             if len(self.timevec_results) < self.ntpts:
                 self.ntpts -= 1
+            elif len(self.timevec_results) > self.ntpts:
+                self.timevec_results = self.timevec_results[1:]
+            else:
+                pass
 
-        # Age
+                # Age
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
         if self.age_bin_labels is None:
@@ -346,7 +350,6 @@ class histograms_by_age_sex_monitor(Monitor):
                                               shape=(self.buffer_ntpts, self.nags),
                                               scale=False,
                                               label=f"{sex}_{reslbl}"), ]
-
                     self.results += [
                         ss.Result(f"{sex}_{attrlbl}",
                                   dtype=res_dtype,
