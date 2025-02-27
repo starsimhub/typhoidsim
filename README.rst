@@ -2,7 +2,7 @@ Typhoidsim
 =======
 
 Typhodisim implements an agent-based disease model of Typhoid fever (caused by S. Typhi).
-This package is part of the `Starsim <https://github.com/starsimhub>`_ family. Currently, typhoidsim needs **v1.0.3** of the Starsim framework to run.
+This package is part of the `Starsim <https://github.com/starsimhub>`_ family. Currently, typhoidsim needs **v2.3.0** of the Starsim framework to run.
 
 
 Installation

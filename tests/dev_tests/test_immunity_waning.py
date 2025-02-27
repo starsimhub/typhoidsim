@@ -15,7 +15,7 @@ def make_sim(n_agents=10_000):
     # Define the parameters
     pars = sc.objdict(
         start=2000,        # Starting year
-        dur=0.5,           # Number of years to simulate
+        dur=2,           # Number of years to simulate
         pop_scale=None,    #
         n_agents=n_agents, #
         dt=1.0/365.0,      # Timestep of 1 day, expressed in years
@@ -86,11 +86,10 @@ def make_sim(n_agents=10_000):
         to_record=record_cases,
         resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
-        aggregate_sex=False,
+        aggregate_sex=True,
         aggregate_time="sum",
         # Sum over the resampling period
         record_from=2000.0,
-        record_until=2000.5,
         name="monitor_cases")
 
     monitor_cases_vax = ty.histogram_by_vaccination_status(
@@ -100,7 +99,7 @@ def make_sim(n_agents=10_000):
         to_record=record_cases,
         resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
-        aggregate_sex=False,
+        aggregate_sex=True,
         aggregate_time="sum",
         # Sum over the resampling period
         record_from=2000.0,
@@ -113,7 +112,7 @@ def make_sim(n_agents=10_000):
         to_record=record_cases,
         resampling_period=1.0,
         # Record data on a montly basis, so we can aggregate later
-        aggregate_sex=False,
+        aggregate_sex=True,
         aggregate_time="sum",
         # Sum over the resampling period
         record_from=2000.0,
@@ -136,3 +135,5 @@ def make_sim(n_agents=10_000):
 
 sim = make_sim()
 sim.run()
+sim.plot()
+plt.show()

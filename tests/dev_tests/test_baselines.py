@@ -26,6 +26,7 @@ ppl = ss.People(10_000)
 network = ss.RandomNet({'n_contacts': 5})
 
 sim = ss.Sim(
+    people=ppl,
     pars=pars,
     networks=network,
     diseases=typhoid,

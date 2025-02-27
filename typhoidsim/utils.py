@@ -17,6 +17,7 @@ __all__ += ['get_attr_vals']
 __all__ += ['digitize_ages_1yr']
 __all__ += ['test_cpu_performance']
 __all__ += ['generate_unique_filename', 'to_df', 'promotetoiterable', 'generate_age_bin_labels']
+__all__ += ['load_age_dist_un', 'get_age_distribution_un']
 
 
 @nb.njit(cache=True)
@@ -195,6 +196,36 @@ def process_gallstone_data(df, coi="prob"):
                             columns='sex',
                             values=coi).fillna(0).to_numpy()
     return arr
+
+
+def get_age_distribution_un(loc_type="Low-and-middle-income countries"):
+    """
+    Parse age distribution data from UN sources.
+
+    Args:
+        loc_type (chr): which country grouping to extract distribution from
+        Options: Low-and-Lower-middle-income countries, Low-and-middle-income countries,
+        Low-income countries, Lower-middle-income countries. Default "Low-and-middle-income countries"
+    Returns:
+        df (pd.DataFrame): A dataframe (with columns age and value) that
+            specifies the age distribution for this population.
+    """
+    match loc_type:
+        case "Low-and-Lower-middle-income countries" | "Low-and-middle-income countries" | "Low-income countries" | "Lower-middle-income countries":
+            df = load_age_dist_un()
+            df = df[df["Location"]==loc_type]
+        case _:
+            raise ValueError(f"Do not have population distribution data for locations {loc_type}. Note locations are case-specific")
+    return df
+
+
+def load_age_dist_un(csv_file='un_pop_dist_bylocation.csv'):
+    """
+    Load UN population age distribution that can be used in place of Pakistan demographics
+    """
+    data_home = get_data_home()  # Assumes we have placed the file in typhoidsim/data directory
+    un_data = pd.read_csv(data_home + "/" + csv_file)
+    return un_data
 
 
 def test_cpu_performance():

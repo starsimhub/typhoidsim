@@ -116,7 +116,7 @@ class track_individuals_monitor(Monitor):
         return
 
 
-    def plot_ridge(self, uids=None, num_agents=32, keys=None, y_scaling=1.0, style='fancy', fig_kw=None, plot_kw=None):
+    def plot_ridge(self, uids=None, num_agents=32, key=None, y_scaling=1.0, style='fancy', fig_kw=None, plot_kw=None):
         """
         Plot each individual's timeseries of the given state.
         Individual traces are vertically stacked.
@@ -150,7 +150,7 @@ class track_individuals_monitor(Monitor):
         y_offsets = y_scaling * np.arange(len(uids))
         # Do the plotting
         with sc.options.with_style(style):
-            if keys is not None:
+            if key is not None:
                 flat = {k: v for k, v in flat.items() if k.startswith(key)}
             for key, res in flat.items():
                 fig, ax = sc.getrowscols(n=1, nrows=1, make=True, **fig_kw)
@@ -221,6 +221,7 @@ class histograms_by_age_sex_monitor(Monitor):
         self.aggregate_time = aggregate_time
         self.resampling_period = resampling_period
         self.tidx = 0
+        self.res_tidx = 0
         # Attributes that will be set later
         self.monitor_step_size = None  # number of "dt" that fit in one resampling period
         self.monitor_period = None
@@ -231,8 +232,8 @@ class histograms_by_age_sex_monitor(Monitor):
         self.agg_func = None
         self.sampling_fn = None
         self._apply = None
-        self.stock_ntpts = None
-        self.stocks = ss.Results(self.name)
+        self.buffer_ntpts = None
+        self.buffers = ss.Results(self.name)
         return
 
     def init_pre(self, sim):
@@ -241,46 +242,64 @@ class histograms_by_age_sex_monitor(Monitor):
         self.set_observation_interval(sim)
 
         aggregation_functions = {
-            "mean": np.mean,
-            "min": np.min,
-            "max": np.max,
-            "median": np.median,
-            "sum": np.sum,
-            "subsample": None
+            "mean": np.nanmean,
+            "min": np.nanmin,
+            "max": np.nanmax,
+            "median": np.nanmedian,
+            "sum": np.nansum,
+            "subsample": self._identity
         }
+
+        # Checks and parameter validation
+        if self.resampling_period and self.resampling_period < self.t.dt:
+            raise ValueError(f"This monitor cannot upsample. The requested resampling period {self.resampling_period} is"
+                             f"smaller than the simulation time step {self.t.dt}")
+
         if self.resampling_period and not self.aggregate_time:
             raise ValueError("Provided a resampling period, but didn't specify how to aggregate over time. "
                              f"Available aggregation methods are: {list(aggregation_functions.keys())}")
 
-        if self.aggregate_time in set(aggregation_functions):
+        if self.resampling_period and (self.resampling_period == self.t.dt) and self.aggregate_time:
+            warnmsg = f"Resampling period is identical to simulation time step. Aggregation will not be performed."
+            ss.warn(warnmsg)
+            # Internally treat this as subsampling
+            self.aggregate_time = "subsample"
+
+        if self.resampling_period and self.aggregate_time in set(aggregation_functions):
             # integer number of timesteps we need to aggregate to downsample result arrays
             self.monitor_step_size = round(self.resampling_period / self.t.dt) # CK: TODO: use time units
             self.monitor_period = self.resampling_period
             self.agg_func = aggregation_functions.get(self.aggregate_time)
-        else:
+            if self.aggregate_time in ["subsample"]:
+                self.buffer_ntpts = 1
+            else:
+                self.buffer_ntpts = self.monitor_step_size
+        else:  # Assume no time aggregation
             self.monitor_step_size = 1
             self.monitor_period = self.t.dt  # CK: TODO: use time units
+            self.agg_func = aggregation_functions.get("subsample")
+            self.buffer_ntpts = 1
 
+        # [record_from, record_until)
         self.start_point = sc.findnearest(sim.timevec - self.record_from, 0.0)
-        self.end_point = sc.findnearest(sim.timevec - self.record_until, 0.0)
-        self.timepoints = sc.inclusiverange(self.start_point, self.end_point - 1).astype(int)  # TODO: when integrating with self.t, check if -1 (minus 1 timestep) still needed.
-        self.stock_ntpts = len(self.timepoints)  # number of time points for the internal stock arrays  # CK: TODO: use time units
+        self.end_point   = sc.findnearest(sim.timevec - (self.record_until-sim.t.dt), 0.0)
 
-        if self.aggregate_time is None or self.aggregate_time == "subsample":
-            self.sampling_fn = self._default_sampling
+        self.obs_timepoints = sc.inclusiverange(self.start_point, self.end_point).astype(int)
+        obs_n_steps = len(self.obs_timepoints)
+        self.sampling_fn = self._aggregate_sampling
+
+        (ntpts, remainder) = divmod(obs_n_steps, self.monitor_step_size)
+        self.timevec_results = sim.timevec[self.obs_timepoints[0::self.monitor_step_size]]
+        self.ntpts = ntpts
+        if self.aggregate_time is None or self.aggregate_time == "subsample" or self.monitor_step_size == 1:
+            self.sampling_fn = self._subsampling
+            self.ntpts = ntpts+1
         else:
             self.sampling_fn = self._aggregate_sampling
+            if len(self.timevec_results) < self.ntpts:
+                self.ntpts -= 1
 
-        (ntpts, remainder) = divmod(self.stock_ntpts, self.monitor_step_size)
-
-        self.ntpts = ntpts if not remainder else ntpts+1
-
-        # Output year vector
-        self.timevec_results = sc.inclusiverange(sim.timevec[self.timepoints[0]], sim.timevec[self.timepoints[-1]], self.monitor_period) # CK: TODO: use time units
-
-        if self.ntpts != len(self.timevec_results):
-            self.timevec_results = sim.timevec[self.timepoints[::self.monitor_step_size]]
-
+        # Age
         self.nags = len(self.age_bins) - 1  # Number of age groups
 
         if self.age_bin_labels is None:
@@ -322,17 +341,17 @@ class histograms_by_age_sex_monitor(Monitor):
                 else:
                     sexes = ["f", "m"]
                 for sex in sexes:
-                    self.stocks += [ss.Result(f"{sex}_{attrlbl}",
+                    self.buffers += [ss.Result(f"{sex}_{attrlbl}",
                                               dtype=res_dtype,
-                                              shape=(self.stock_ntpts, self.nags),
+                                              shape=(self.buffer_ntpts, self.nags),
                                               scale=False,
-                                              timevec=sim.timevec[self.timepoints],
                                               label=f"{sex}_{reslbl}"), ]
 
                     self.results += [
                         ss.Result(f"{sex}_{attrlbl}",
                                   dtype=res_dtype,
                                   shape=(self.ntpts, self.nags),
+                                  values=np.zeros((self.ntpts, self.nags))*np.nan,
                                   scale=True,
                                   timevec=self.timevec_results,
                                   label=f"{sex}_{reslbl}"), ]
@@ -370,12 +389,12 @@ class histograms_by_age_sex_monitor(Monitor):
         return
 
     def _record_fm(self, f_vals, m_vals, stock_name):
-        self.stocks[f"m_{stock_name}"][self.tidx, :] = m_vals
-        self.stocks[f"f_{stock_name}"][self.tidx, :] = f_vals
+        self.buffers[f"m_{stock_name}"][self.tidx, :] = m_vals
+        self.buffers[f"f_{stock_name}"][self.tidx, :] = f_vals
         return
 
     def _record_b(self, b_vals, stock_name):
-        self.stocks[f"b_{stock_name}"][self.tidx, :] = b_vals
+        self.buffers[f"b_{stock_name}"][self.tidx, :] = b_vals
         return
 
     def _count_individual_sexes(self, sim):
@@ -418,34 +437,39 @@ class histograms_by_age_sex_monitor(Monitor):
             self.record_fn(b_vals, stockname)
         return
 
-    def _default_sampling(self, sim):
-        if sim.ti % self.monitor_step_size == 0:
+    def _subsampling(self, sim):
+        # Subsamples
+        if (sim.ti % self.monitor_step_size) == 0:
+            self.count_fn(sim)
+            for stock_name in self.buffers:
+                self.results[stock_name][self.res_tidx, :] = self.report(self.buffers[stock_name][:])
+                self.buffers[stock_name][:] = np.nan
+            self.res_tidx += 1
+        return
+
+    def _aggregate_sampling(self, sim):
+
+        # Count the last observation point and aggregate
+        if self.tidx == self.monitor_step_size-1:
+            self.count_fn(sim)
+            # Aggregate and reset
+            for stock_name in self.buffers:
+                self.results[stock_name][self.res_tidx, :] = self.report(self.buffers[stock_name][:])
+                self.buffers[stock_name][:] = np.nan
+            self.tidx = 0
+            self.res_tidx += 1
+        # Count
+        else:
             self.count_fn(sim)
             self.tidx += 1
         return
 
-    def _aggregate_sampling(self, sim):
-        # Stores everything, then aggregates at the end
-        self.count_fn(sim)
-        self.tidx += 1
-        return
+    def _identity(self, vals, **kwargs):
+        """ Essentially identity"""
+        return vals
 
     def aggregate_time_fn(self, vals):
-        """ Aggregate time"""
-        remainder = self.stock_ntpts % self.monitor_step_size
-        reshaped_data = vals[:self.stock_ntpts - remainder].reshape(-1, self.monitor_step_size, self.nags)
-        if not remainder:
-            #  monitor
-            arr = self.agg_func(reshaped_data, axis=1)
-        else:
-            downsampled_main = self.agg_func(reshaped_data, axis=1)
-            if downsampled_main.shape[0] == self.ntpts:
-                arr = downsampled_main
-            else:
-                # We have remainder data to handle
-                remainder_data = vals[self.stock_ntpts - remainder:].reshape(-1, remainder, self.nags)
-                downsampled_remainder = self.agg_func(remainder_data, axis=1)
-                arr = np.vstack([downsampled_main, downsampled_remainder])
+        arr = self.agg_func(vals, axis=0)
         return arr
 
     def report(self, vals):
@@ -455,15 +479,12 @@ class histograms_by_age_sex_monitor(Monitor):
 
     def step(self):
         sim = self.sim
-        if sim.ti in self.timepoints:
+        if sim.ti in self.obs_timepoints:
             self.sampling_fn(self.sim)
         return
 
     def finalize_results(self):
-        for stock_name in self.stocks:
-            self.results[stock_name][:] = self.report(self.stocks[stock_name][:]) if self.agg_func is not None else self.stocks[stock_name][:]
-            # Repalce timevec with correct timevec for these results
-            self.results.timevec = self.timevec_results
+        self.results.timevec = self.timevec_results
         super().finalize_results()
         return
 
