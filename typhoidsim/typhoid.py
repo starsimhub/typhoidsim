@@ -35,8 +35,8 @@ class Typhoid(ss.Disease):
             init_prev=ss.bernoulli(p=0.005),
 
             # Initial susceptibility (assumed state of the population, not everyone is naive)
-            init_seroprev = ss.bernoulli(p=0.0), # % of people who were previously infected
-            init_prior_infc = ss.poisson(lam=self.prior_infections_by_age),
+            init_seroprev=ss.bernoulli(p=0.0), #  % of people who were previously infected
+            init_prior_infc=ss.poisson(lam=self.prior_infections_by_age),
 
             # NATURAL HISTORY PARAMETERS
             # From never exposed/invulnerable to susceptible
@@ -96,9 +96,7 @@ class Typhoid(ss.Disease):
 
             # IMMUNE SYSTEM-WITHIN HOST PARAMETERS
             # Infectiousness parameters
-            tai_std=1_000,    # TODO: this should be part of the typhoid module parameters. if the distribution for TAI changes, so will the parameters. The users should pass a distribution with any parmetrisation needed to set the distribution parameters.
-            tai_mean=40_000,  # TODO: same as above
-            tai=ss.normal(loc=self.tai_mean, scale=self.tai_std),  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
+            tai=ss.constant(v=40_000),  # Typhoid acute infectiousness, represents number of colony-forming units of S. typhi, for an average human that has 3500 mL of blood, this is about 11 CFU/mL
             tpri=0.5,      # Typhoid relative (to acute) prepatent infectiousness
             tsri=1.0,      # Typhoid relative (to acute) subclinic infectiousness
             tcri=0.241,    # Typhoid relative (to acute) chronic infectiousness
