@@ -18,7 +18,7 @@ def imm_decay_by_age_default(age_bins=None, vals=None):
     """
     Args:
         age_bins (list | np.array): List of age values defining bins. Length n.
-        vals (list | np.array): List of values for each age bin. Length n-1
+        vals (list | np.array): List of immunity decay values, expressed in days,  for each age bin. Length n-1
 
     Returns:
         callable: a function that takes as input the age of the agent (single float or array) and
@@ -33,7 +33,7 @@ def imm_ve0_by_age_default(age_bins=None, vals=None):
     """
     Args:
         age_bins (list | np.array): List of age values defining bins. Length n.
-        vals (list | np.array): List of values for each age bin. Length n-1
+        vals (list | np.array): List of values of VE0, values between 0 and 1, for each age bin. Length n-1
 
     Returns:
         callable: a function that takes as input the age of the agent (single float or array) and
@@ -48,7 +48,7 @@ def imm_constant_dur_by_age_default(age_bins=None, vals=None):
     """
     Args:
         age_bins (list | np.array): List of age values defining bins. Length n.
-        vals (list | np.array): List of values for each age bin. Length n-1
+        vals (list | np.array): List of values of constant immunity duration, expressed in days, for each age bin. Length n-1
 
     Returns:
         callable: a function that takes as input the age of the agent (single float or array) and
