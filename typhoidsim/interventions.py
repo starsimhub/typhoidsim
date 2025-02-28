@@ -630,7 +630,7 @@ class RoutineDelivery(ss.Intervention):
         age_pars (dict): a dictionary with keys 'min_age' and 'max_age' to determine the age group who is eligible.
         prob (float, array-like, optional): The coverage probability. Promoted to be an array if not already.
         prob_type (str, optional): whether the probability/coverage represents an annual, per time step
-         or per intervention duration probability. Default is per "timestep" (if prob_type=None, or prob_type="timestep"").
+         or per intervention duration probability. Default is per "timestep" (if prob_type=None, or prob_type="timestep").
 
          Available prob_types: ["annual", "timestep", "interval", "age_based"]
 
@@ -662,7 +662,7 @@ class RoutineDelivery(ss.Intervention):
         self.end_year = end_year
         self.age_pars = ss.Pars(age_pars)
         self.prob = sc.promotetoarray(prob)
-        self.prob_type = prob_type if prob_type is not None else "timestep" # Determines the period over which the probability/coverage has been defined
+        self.prob_type = prob_type if prob_type is not None else "timestep"  # Determines the period over which the probability/coverage has been defined
         self.coverage_dist = ss.bernoulli(p=0)  # Placeholder - initialize delivery
         self._dt = None
         self._timevec = None
@@ -775,18 +775,18 @@ class RoutineDelivery(ss.Intervention):
 
 class vaccination_with_waning(RoutineDelivery):
     """
-
     An intervention that handles a vaccination with waning.
-    NOTE: this case is a bit special because it agreggates vaccine protection and the immune
-    system. Immunity waning could be handled in the disease, or there could be a module that is
-    called immune_system and it could have different responses depending on a product.
+
+    NOTE: this case is a bit special because it agreggates vaccine protection
+    and the immune system. Immunity waning could be handled in the disease, or
+    there could be a module that is called immune_system and it could have
+    different responses depending on a product.
 
     This intervention does not use a product (ss.Product)
 
-    The "vaccine" administered here does not do much, it's essentially like an impulse
-    stimulus that triggeres and immune evoked response. What's commonly understood as
-    vaccine efficacy (VE) is defined in typhoid parameters under the name
-    immunity_max_acq_response -- a value between 0 and 1.
+    The "vaccine" administered here induces immune-evoked impulse response,
+    that is modelled with a box-exponential model (ie, immunity can be constant
+    at ve0 for a duration and then it wanes exponentially).
 
     Args:
          prob              (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
@@ -824,8 +824,8 @@ class vaccination_with_waning(RoutineDelivery):
         self.t_to_booster2 = ss.FloatArr('t_to_booster2', default=np.nan)  # time until needing the booster
         self.n_doses = ss.FloatArr('n_doses')                                  # number of doses received by each agent
 
-        self.imm_decay_dist = imm_decay                # Decay time constant, in days, one value per age bin of interest
-        self.imm_ve0_dist = imm_ve0                    # Maximum protection at t=0 of receiving a vaccine
+        self.imm_decay_dist = imm_decay  # Decay time constant, in days, one value per age bin of interest
+        self.imm_ve0_dist = imm_ve0  # Maximum protection at t=0 of receiving a vaccine
         self.imm_constant_dur_dist = imm_constant_dur  # Duration at constant level of immunity ve0 before waning starts
         self.imm_draw_fn = self.imm_draw_from_constant if imm_draw_fn is None else imm_draw_fn
 
@@ -835,22 +835,29 @@ class vaccination_with_waning(RoutineDelivery):
 
         # Debug - track more things
         self.debug = debug
-        
+
         # Validate inputs
         # error if only booster2 info given and not booster1
-        if(self.booster1_interval == None) and (self.booster2_interval != None):
-            raise ValueError("booster2 should only be implemented if booster1 is also implemented. Please provide value for booster1_interval")
+        if (self.booster1_interval == None) and (
+                self.booster2_interval != None):
+            raise ValueError(
+                "booster2 should only be implemented if booster1 is also implemented. Please provide value for booster1_interval")
 
         # error if booster1/booster2 prob>0 but interval is None
-        if(self.booster1_interval == None) and (self.booster1_prob > 0):
-            raise ValueError(f"Booster 1 coverage {booster1_prob} is non-zero, but no booster interval `booster1_interval` was provided.")
+        if (self.booster1_interval == None) and (self.booster1_prob > 0):
+            raise ValueError(
+                f"Booster 1 coverage {booster1_prob} is non-zero, but no booster interval `booster1_interval` was provided.")
 
-        if(self.booster2_interval == None) and (self.booster2_prob > 0):
-            raise ValueError(f"Booster 2 coverage {booster2_prob} is non-zero, but no booster interval `booster2_interval` was provided.")
-        
+        if (self.booster2_interval == None) and (self.booster2_prob > 0):
+            raise ValueError(
+                f"Booster 2 coverage {booster2_prob} is non-zero, but no booster interval `booster2_interval` was provided.")
+
         # booster1_interval must be shorter than booster2_interval if both exist
-        if (self.booster1_interval != None) and (self.booster2_interval != None) and (self.booster1_interval >= self.booster2_interval):
-            raise ValueError(f"Time to first booster {booster1_interval} should be less than time to second booster {booster2_interval}")
+        if (self.booster1_interval != None) and (
+                self.booster2_interval != None) and (
+                self.booster1_interval >= self.booster2_interval):
+            raise ValueError(
+                f"Time to first booster {booster1_interval} should be less than time to second booster {booster2_interval}")
 
         return
 
@@ -863,17 +870,22 @@ class vaccination_with_waning(RoutineDelivery):
     def init_results(self):
         super().init_results()
         self.define_results(
-            ss.Result('cum_doses', shape=(self.sim.t.npts,), dtype=float, label="Cumulative Number of Doses"),
-            ss.Result('new_doses', shape=(self.sim.t.npts,), dtype=float, label="New Doses Delivered"))
+            ss.Result('cum_doses', shape=(self.sim.t.npts,), dtype=float,
+                      label="Cumulative Number of Doses"),
+            ss.Result('new_doses', shape=(self.sim.t.npts,), dtype=float,
+                      label="New Doses Delivered"))
 
         # Mostly to test that we're counting things correctly. Meant to be used with vital dynamics disabled,
         # especially births, as we're setting the size to be that of the population at t=start of sim
         if self.debug:
-            self.results += ss.Result('immunity', shape=(self.sim.t.npts, self.sim.pars["n_agents"]), dtype=float, label="Acquired Immunity")
+            self.results += ss.Result('immunity', shape=(
+            self.sim.t.npts, self.sim.pars["n_agents"]), dtype=float,
+                                      label="Acquired Immunity")
         return
 
     def age_eligibility(self, sim):
-        is_eligible = (sim.people.age >= self.age_pars.min_age) & (sim.people.age < self.age_pars.max_age)
+        is_eligible = (sim.people.age >= self.age_pars.min_age) & (
+                    sim.people.age < self.age_pars.max_age)
         return is_eligible
 
     def step_acquired_immunity(self, sim, uids):

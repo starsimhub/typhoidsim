@@ -23,8 +23,6 @@ def make_sim(n_agents=10_000):
         rand_seed=2,       # Set a non-default seed
     )
 
-
-
     # Who
     ppl = ss.People(pars["n_agents"])
 
@@ -33,16 +31,7 @@ def make_sim(n_agents=10_000):
         ss.Deaths(death_rate=10)  # Needed to use debug=True with the vax intervention, tracks immunity level of of every agent
     ]
 
-    typhoid = ty.Typhoid(pars={"init_prev":ss.bernoulli(p=0.05),
-                               "immunity_age_bins": [0.75, 2.0, 5.0, 15.0, 125.0],
-                               # Define age bins to represent different immunity waning dynamics for each agent based on their age when receive a vaccination
-                               "immunity_fixed_dur": [940.4, 240.91, 0.0, 0.0],
-                               # Duration of fixed immunity in days, one value per age bin of interest
-                               "immunity_decay": [505.27, 505.27, 505.27, 505.27],
-                               # Decay time constant, in days, one value per age bin of interest
-                               "immunity_max_acq_response":[0.0, 0.9, 0.3, 0.3],
-                               # Maximum protection at t=0 of receiving a vaccine
-                               })
+    typhoid = ty.Typhoid(pars={"init_prev": ss.bernoulli(p=0.05),})
 
     network = ss.RandomNet({'n_contacts': 5})
 
@@ -53,6 +42,8 @@ def make_sim(n_agents=10_000):
         start_year=2000.0,
         end_year=2000.0+0.125,
         prob_type="interval",
+        imm_ve0=ss.constant(v=ty.imm_ve0_by_age_default(age_bins=[0.75, 2.0, 5.0, 15.0, 125.0],
+                                                        vals=[0.0, 0.9, 0.3, 0.3])),
         debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 2.0,
                   'max_age': 5.0},
@@ -67,6 +58,8 @@ def make_sim(n_agents=10_000):
         start_year=2000.0,
         end_year=2000.5,
         prob_type="interval",
+        imm_ve0=ss.constant(v=ty.imm_ve0_by_age_default(age_bins=[0.75, 2.0, 5.0, 15.0, 125.0],
+                                                        vals=[0.0, 0.9, 0.3, 0.3])),
         debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 5.0,
                   'max_age': 10.0},
