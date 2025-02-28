@@ -27,24 +27,24 @@ def make_sim(n_agents=10_000):
     ppl = ss.People(pars["n_agents"])
 
     demographics = [
-        ss.Births(birth_rate=10),
-        ss.Deaths(death_rate=10)  # Needed to use debug=True with the vax intervention, tracks immunity level of of every agent
+        ss.Births(birth_rate=0),
+        ss.Deaths(death_rate=0)  # Needed to use debug=True with the vax intervention, tracks immunity level of of every agent
     ]
 
-    typhoid = ty.Typhoid(pars={"init_prev": ss.bernoulli(p=0.05),})
+    typhoid = ty.Typhoid(pars={"init_prev": ss.bernoulli(p=0.05), "p_death":0})
 
     network = ss.RandomNet({'n_contacts': 5})
 
     campaign_vax_2_5_yo = ty.vaccination_with_waning(
         prob=0.4,
-        booster1_interval=5.0,  # interval between receiving first dose and first booster
-        booster1_prob=0.0,
+        booster1_interval=1.0,  # interval between receiving first dose and first booster
+        booster1_prob=0.5,
         start_year=2000.0,
-        end_year=2000.0+0.125,
+        end_year=2002.0,
         prob_type="interval",
         imm_ve0=ss.constant(v=ty.imm_ve0_by_age_default(age_bins=[0.75, 2.0, 5.0, 15.0, 125.0],
-                                                        vals=[0.0, 0.9, 0.3, 0.3])),
-        debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
+                                                        vals=[1.0, 0.9, 0.3, 0.3])),
+        debug=True,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 2.0,
                   'max_age': 5.0},
         name = "campaign_1"
@@ -53,14 +53,14 @@ def make_sim(n_agents=10_000):
 
     campaign_vax_5_10_yo = ty.vaccination_with_waning(
         prob=0.8,
-        booster1_interval=5.0,  # interval between receiving first dose and first booster
-        booster1_prob=0.0,
+        booster1_interval=1.0,  # interval between receiving first dose and first booster
+        booster1_prob=0.5,
         start_year=2000.0,
-        end_year=2000.5,
+        end_year=2002.0,
         prob_type="interval",
         imm_ve0=ss.constant(v=ty.imm_ve0_by_age_default(age_bins=[0.75, 2.0, 5.0, 15.0, 125.0],
-                                                        vals=[0.0, 0.9, 0.3, 0.3])),
-        debug=False,  # only use for this example to keep track of each individual's acquired immunity level over time
+                                                        vals=[1.0, 0.9, 0.3, 0.3])),
+        debug=True,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 5.0,
                   'max_age': 10.0},
         name="campaign_2"
@@ -111,8 +111,6 @@ def make_sim(n_agents=10_000):
         record_from=2000.0,
         name="monitor_unvax")
 
-
-    #
     sim = ss.Sim(
         pars=pars,
         demographics=demographics,
@@ -128,5 +126,5 @@ def make_sim(n_agents=10_000):
 
 sim = make_sim()
 sim.run()
-sim.plot()
+plt.plot(sim.results.campaign_1.immunity[:, 0:100])
 plt.show()
