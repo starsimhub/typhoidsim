@@ -11,6 +11,7 @@ from .patterns import Pattern
 from .defaults import days_per_year
 from . import utils_math as tyum
 from .products import typhoid_test
+from . import immunity as tyi
 
 
 # Interventions
@@ -788,15 +789,24 @@ class vaccination_with_waning(RoutineDelivery):
     immunity_max_acq_response -- a value between 0 and 1.
 
     Args:
-         prob           (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
-         booster1_prob   (float)    : conditional probability of receiving first booster dose given that an individual has received their first routine dose
-         booster2_prob   (float)    : conditional probability of receiving second booster dose given that an individual has received their first routine dose
-         booster1_interval (float)  : the interval of time in years between an individual receiving their routine dose and their first booster
-         booster2_interval (float)  : the interval of time in years between an individual receiving their routine dose and their second booster
-         label          (str)       : the name of vaccination strategy
-         kwargs         (dict)      : passed to Intervention()
+         prob              (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
+         booster1_prob     (float)     : conditional probability of receiving first booster dose given that an individual has received their first routine dose
+         booster2_prob     (float)     : conditional probability of receiving second booster dose given that an individual has received their first routine dose
+         booster1_interval (float)     : the interval of time in years between an individual receiving their routine dose and their first booster
+         booster2_interval (float)     : the interval of time in years between an individual receiving their routine dose and their second booster
+         imm_decay         (ss.Dist)   : a starsim Distribution that will return the approrpriate value of immunity decay (time constant)
+         imm_ve0           (ss.Dist)   : a starsim Distribution that will return the appropriate value of immunity ve0 (maximum acquired immune response at time of vaccination)
+         imm_constant_dur  (ss.Dist)   : a starsim Distribution that will return the appropriate value of duration at constant ve0, after which acquired immunity starts waning
+         imm_draw_fn       (callable)  : a function that tells the intervention how to get the right parameters from from the ss.Dist parameters imm_decay, imm_ve0, imm_constant_dur
+         label             (str)       : the name of vaccination strategy
+         kwargs            (dict)      : passed to Intervention()
     """
-    def __init__(self, *args, booster1_prob=0.0, booster2_prob=0.0, booster1_interval=None, booster2_interval=None, label=None, debug=False, **kwargs):
+    def __init__(self, *args, booster1_prob=0.0, booster2_prob=0.0, booster1_interval=None, booster2_interval=None,
+                 imm_decay=ss.constant(v=tyi.imm_decay_by_age_default()),
+                 imm_ve0=ss.constant(v=tyi.imm_ve0_by_age_default()),
+                 imm_constant_dur=ss.constant(v=tyi.imm_constant_dur_by_age_default()),
+                 imm_draw_fn=None,
+                 label=None, debug=False, **kwargs):
         # **kwargs: years=None, start_year=None, end_year=None, prob=None, prob_type=None,
         super().__init__(*args, **kwargs) # CK: TODO: refactor with define_pars
         self.label = label
@@ -813,6 +823,17 @@ class vaccination_with_waning(RoutineDelivery):
         self.t_to_booster1 = ss.FloatArr('t_to_booster1', default=np.nan)  # time until needing the booster
         self.t_to_booster2 = ss.FloatArr('t_to_booster2', default=np.nan)  # time until needing the booster
         self.n_doses = ss.FloatArr('n_doses')                                  # number of doses received by each agent
+
+        self.imm_decay_dist = imm_decay                # Decay time constant, in days, one value per age bin of interest
+        self.imm_ve0_dist = imm_ve0                    # Maximum protection at t=0 of receiving a vaccine
+        self.imm_constant_dur_dist = imm_constant_dur  # Duration at constant level of immunity ve0 before waning starts
+        self.imm_draw_fn = self.imm_draw_from_constant if imm_draw_fn is None else imm_draw_fn
+
+        # self.imm_constant_dur = ss.FloatArr("imm_constant_dur", default=np.nan, label="Duration at Constant Level of Acquired Immunity"),  # Duration of constant immunity in days, assuming the model is a box-exponential model
+        # self.imm_decay = ss.FloatArr("imm_decay", default=np.nan, label="Acquired Immunity Decay Time Constant (in days)"),                # Decay time constant, in days, one value per age bin of interest
+        # self.imm_ve0 = ss.FloatArr("imm_max_response", default=np.nan, label="Maximum Acquired Immunity Response at Vaccination (VE0)"),   # Maximum protection at t=0 of receiving a vaccine
+
+        # Debug - track more things
         self.debug = debug
         
         # Validate inputs
@@ -862,12 +883,14 @@ class vaccination_with_waning(RoutineDelivery):
         time with an exponential decay.
         """
         module = sim.diseases.typhoid
-        t_vaccinated = self.t_vaccinated[uids] # Time, in calendar years, when the individual received the vaccine. t_0 in the waning equation.
-        a_vaccinated = self.a_vaccinated[uids]
-        max_immunity = module.imm_peak(a_vaccinated)
-        fixed_immunity = module.imm_fixed_dur(a_vaccinated)
-        decay = module.imm_waning_time(a_vaccinated)
-        module.immunity_acquired[uids] = np.clip(max_immunity * tyum.box_exponential(sim.t.now('year'), t_vaccinated, fixed_immunity, decay), a_min=0.0, a_max=1.0)
+        t_vaccinated = self.t_vaccinated[uids]    # Time, in calendar years, when the individual received the vaccine. t_0 in the waning equation.
+        a_vaccinated = self.a_vaccinated[uids]    # Age at vaccination
+
+        # Age-dependent immunity parameters
+        ve0 = self.imm_ve0_dist.pars.v(a_vaccinated)
+        constant_ve0_dur = self.imm_constant_dur_dist.pars.v(a_vaccinated)
+        decay = self.imm_decay_dist.pars.v(a_vaccinated)
+        module.immunity_acquired[uids] = np.clip(ve0 * tyum.box_exponential(sim.t.now('year'), t_vaccinated, constant_ve0_dur, decay), a_min=0.0, a_max=1.0)
         return
 
     def step(self):
@@ -922,7 +945,7 @@ class vaccination_with_waning(RoutineDelivery):
                 self.t_to_booster2[is_eligible_booster] = np.inf # reset time for those eligible for booster, regardless of receipt
                 self.n_doses[new_booster_uids] += 1
                 
-            vaccinated_uids =  self.vaccinated.uids
+            vaccinated_uids = self.vaccinated.uids
 
         # Update immunity_acquired
         self.step_acquired_immunity(sim, vaccinated_uids)
@@ -943,3 +966,6 @@ class vaccination_with_waning(RoutineDelivery):
             ti_sim = sim.ti
             self.results["immunity"][ti_sim, :] = sim.diseases.typhoid.immunity_acquired[:]
         return self.vaccinated.uids
+
+    def imm_draw_from_constant(self):
+        pass
