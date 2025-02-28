@@ -23,7 +23,6 @@ def make_sim_with_histogram_monitor():
         rand_seed=2,
     )
 
-
     ppl = ss.People(10_000)
     typhoid = ty.Typhoid(pars={"init_prev": ss.bernoulli(p=0.05), "p_death":0.0})
     random_p2p = ss.RandomNet({'n_contacts': 5})
@@ -46,7 +45,7 @@ def make_sim_with_histogram_monitor():
     to_record = dict(ti_infected=dict(path=("diseases", "typhoid"), label="infected"),
                      alive=dict(path=("people",)))
 
-    m1_name="monitor_cases"
+    m1_name = "monitor_cases"
     agg_sex = True
     monitor_cases = ty.histograms_by_age_sex_monitor(
         age_bins=age_bin_edges,
@@ -59,7 +58,7 @@ def make_sim_with_histogram_monitor():
         record_from=pars["start"],
         name=m1_name)
 
-    m2_name="monitor_cases_vax"
+    m2_name = "monitor_cases_vax"
     monitor_cases_vax = ty.histogram_by_vaccination_status(
         track_vaccinated=True,
         age_bins=age_bin_edges,
@@ -72,7 +71,7 @@ def make_sim_with_histogram_monitor():
         record_from=pars["start"],
         name=m2_name)
 
-    m3_name="monitor_cases_unvax"
+    m3_name = "monitor_cases_unvax"
     monitor_cases_unvax = ty.histogram_by_vaccination_status(
         track_vaccinated=False,   # tracks unvaccinated
         age_bins=age_bin_edges,
@@ -85,7 +84,7 @@ def make_sim_with_histogram_monitor():
         record_from=pars["start"],
         name=m3_name)
 
-    m4_name="monitor_people"
+    m4_name = "monitor_people"
     monitor_people = ty.histograms_by_age_sex_monitor(
         age_bins=age_bin_edges,
         age_bin_labels=age_bin_labels,

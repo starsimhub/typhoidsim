@@ -152,7 +152,6 @@ def run_sim_with_wash(efficacy):
     )
     typhoid = ty.Typhoid()
     environment = ty.EnvironmentalPool()
-    sanitation_efficacy = ty.Pattern("efficacy", pars={'efficacy': 0.5})
     sanitation = ty.behavioral_change(efficacy=efficacy)
     sim = ss.Sim(
         pars=pars,
