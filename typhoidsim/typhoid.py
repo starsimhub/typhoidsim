@@ -6,7 +6,6 @@ import numpy as np
 
 import sciris as sc
 import starsim as ss
-import typhoidsim
 
 import typhoidsim.utils as tyu
 import typhoidsim.defaults as tyd
@@ -35,7 +34,7 @@ class Typhoid(ss.Disease):
             init_prev=ss.bernoulli(p=0.005),
 
             # Initial susceptibility (assumed state of the population, not everyone is naive)
-            init_seroprev=ss.bernoulli(p=0.0), #  % of people who were previously infected
+            init_seroprev=ss.bernoulli(p=0.0),  # % of people who were previously infected
             init_prior_infc=ss.poisson(lam=self.prior_infections_by_age),
 
             # NATURAL HISTORY PARAMETERS
@@ -57,12 +56,6 @@ class Typhoid(ss.Disease):
 
             cfu_lo_me=5_050_000.0,   # Threshold CFU value to determine whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose'  (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
             cfu_me_hi=55_000_000.0,  # Threshold CFU value to determine whether  to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
-
-            # NOTE: still undecided whether these pars should be here, or as part of interventions/vaccination_with_waning
-            immunity_age_bins = [0.75, 2.0, 5.0, 15.0, 125.0],                # Age at vaccination bins
-            immunity_fixed_dur= [940.4, 240.9, 0.0, 0.0],           # Duration of fixed immunity in days, one value per age bin of interest
-            immunity_decay    = [505.27, 505.27, 505.27, 505.27],   # Decay time constant, in days, one value per age bin of interest
-            immunity_max_acq_response = [1.0, 1.0, 1.0, 1.0],       # Maximum protection at t=0 of receiving a vaccine
 
             # Infected/Diseased stage, (acute and subclinical)
             p_acute=ss.bernoulli(p=0.16),  # Prob of becoming acute
@@ -126,17 +119,6 @@ class Typhoid(ss.Disease):
         # Parametrisation of prepatent duration distribution parameters (ie, mean and std are functions of CFU dose)
         self.partial_prep_dur_mean, self.partial_prep_dur_std = self.prepare_partial_prep_funs()
 
-        # Parameterisation of immunity waning parameters with respect to age
-        self.pars.immunity_age_bins = sc.promotetoarray(self.pars.immunity_age_bins)
-        self.pars.immunity_fixed_dur = sc.promotetoarray(self.pars.immunity_fixed_dur)
-        self.pars.immunity_decay = sc.promotetoarray(self.pars.immunity_decay)
-        self.pars.immunity_max_acq_response = sc.promotetoarray(self.pars.immunity_max_acq_response)
-
-        self.imm_fixed_dur   =  stratify_parameter_by_age(self.pars.immunity_age_bins, self.pars.immunity_fixed_dur/typhoidsim.days_per_year)
-        self.imm_waning_time =  stratify_parameter_by_age(self.pars.immunity_age_bins, self.pars.immunity_decay/typhoidsim.days_per_year)
-        self.imm_peak        =  stratify_parameter_by_age(self.pars.immunity_age_bins, self.pars.immunity_max_acq_response)
-
-
         # Boolean states
         self.define_states(
             # Infection life cycle states
@@ -152,16 +134,16 @@ class Typhoid(ss.Disease):
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
-            ss.FloatArr("n_exposures", default=0.0, label="Number of Exposures"),      # average number of exposures from a given source/route over the interval of one timestep (usually 1 day)
-            ss.FloatArr("exposure_amount", default=0.0, label="Number of Exposures"),  # average (number of exposures * volume) from a given source/route over the interval of one timestep (usually 1 day)
+            ss.FloatArr("n_exposures", default=0.0, label="Number of Exposures"),            # average number of exposures from a given source/route over the interval of one timestep (usually 1 day)
+            ss.FloatArr("exposure_amount", default=0.0, label="Number of Exposures"),        # average (number of exposures * volume) from a given source/route over the interval of one timestep (usually 1 day)
             ss.FloatArr("cfu_dose_per_exposure", default=0.0, label="Single environmental exposure amount (CFUs)"),
-            ss.FloatArr("cfu_dose", default=0.0, label="Exposure amount (CFUs)"),      # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
-            ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),            # average number of CFUs during different stages of the disease (infected phase, within host).
-            ss.FloatArr("n_infections", 0.0, label="Number of Infections"),        # number of infections over the lifespan of this agent
-            ss.FloatArr("susceptibility", default=1.0, label="Susceptibility Level"),  # blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
+            ss.FloatArr("cfu_dose", default=0.0, label="Exposure amount (CFUs)"),            # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
+            ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),                      # average number of CFUs during different stages of the disease (infected phase, within host).
+            ss.FloatArr("n_infections", 0.0, label="Number of Infections"),                  # number of infections over the lifespan of this agent
+            ss.FloatArr("susceptibility", default=1.0, label="Susceptibility Level"),        # blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
             ss.FloatArr("immunity_acquired", default=0.0, label="Acquired Immunity Level"),  # Acquired/evoked immune protection against infection due to vaccinations, a value between 0 and 1
 
-            # Track parameters
+            # Track agent attributes
             ss.FloatArr("tai", default=self.pars.tai, label="Typhoid Acute Infectiousness"),   # track individual value of TAI
             ss.FloatArr("tppi", default=self.pars.tppi, label="Typhoid Protection Per Infection"),
 
@@ -173,7 +155,6 @@ class Typhoid(ss.Disease):
 
             ss.FloatArr("rel_sus", default=1.0, label="Relative susceptibility"),
             ss.FloatArr("rel_trans", default=1.0, label="Relative transmissibility"),
-
             ss.FloatArr("eff_sus", default=0.0, label="Effective susceptibility"),     # Track effective susceptibility to infection, the combination of rel_sus, susceptibility and (1-aqcuired_immunity)
 
             # States that track timing of events
@@ -254,7 +235,7 @@ class Typhoid(ss.Disease):
         # Of the people who are susceptible now, select those who we assume were infected before t=0
         prior_cases = self.pars.init_seroprev.filter((self.susceptible).uids)
         self.n_infections[prior_cases] = self.pars.init_prior_infc.rvs(prior_cases)
-        self.susceptibility[prior_cases] = self.update_immunity(prior_cases)
+        self.susceptibility[prior_cases] = self.update_susceptibility(prior_cases)
         self.n_infections_historical = 0.0
 
         if len(prior_cases):
@@ -513,7 +494,7 @@ class Typhoid(ss.Disease):
         rec2suc = (self.recovered & (self.ti_susceptible <= ti)).uids
         self.susceptible[rec2suc] = True
         self.recovered[rec2suc] = False
-        self.update_immunity(rec2suc)
+        self.update_susceptibility(rec2suc)
 
     # Methods that handle durations/duration pars that are dependent on other variables/states
     def get_prepatent_duration_by_exposure(self, uids):
@@ -990,7 +971,6 @@ class Typhoid(ss.Disease):
         environment.sv.cfu_conc[ti] = current_level / environment.pars.volume
         environment.sv.cfu_conc_buffer[(ti+1) % environment.buffer_isteps] = environment.sv.cfu_conc[ti]
         return new_cases
-
     @staticmethod
     def infection_prob_function_env(module, sim, uids):
         """
@@ -1002,7 +982,7 @@ class Typhoid(ss.Disease):
         # Evoke an immunity-like response
         p_resp = module.drc(module.cfu_dose_per_exposure[uids])
         effective_susceptibility = module.rel_sus[uids] * module.susceptibility[uids] * (1.0 - module.immunity_acquired[uids])  # effective susceptibility due to relative changes (interventions), naturally acquired immunity and vaccine-acquired immunity
-        p_infc = 1.0 - (1.0 -  effective_susceptibility * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time
+        p_infc = 1.0 - (1.0 - effective_susceptibility * p_resp) ** module.n_exposures[uids]  # total number of n_exposures per unit of time
         return np.array(p_infc)
 
     @staticmethod
@@ -1054,8 +1034,7 @@ class Typhoid(ss.Disease):
             lam_arr = tyum.sigmoid(sim.people.age[uids], tyd.max_age, 1.0)
         return lam_arr
 
-
-    def update_immunity(self, uids):
+    def update_susceptibility(self, uids):
         """
         Susceptibility die to acquired immunity following infection.
         The more infections, the lower the number.
@@ -1146,63 +1125,10 @@ def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
     _6y = 6.0  # age in years
 
     # Detect whether people have reached/crossed their 'age' anniversaries
-    became_6m = _detect_age_anniversary(sim, _6m)
-    became_3y = _detect_age_anniversary(sim, _3y)
-    became_6y = _detect_age_anniversary(sim, _6y)
+    became_6m = tyu.detect_age_anniversary(sim, _6m)
+    became_3y = tyu.detect_age_anniversary(sim, _3y)
+    became_6y = tyu.detect_age_anniversary(sim, _6y)
     p_sus[became_6m] = module.pars.p_unexp2sus_6m(uids[became_6m]).astype(float)
     p_sus[became_3y] = module.pars.p_unexp2sus_3y(uids[became_3y]).astype(float)
     p_sus[became_6y] = module.pars.p_unexp2sus_3y(uids[became_6y]).astype(float)
     return p_sus
-
-
-def _detect_age_anniversary(sim, age_anniversary):
-    """
-    Detect people who crossed a specific age_anniversary, does not
-    have to be birthday necessarily.
-
-    Returns Boolean array
-    """
-    reached_anniv = (((sim.people.age - sim.t.dt) < age_anniversary) &
-                      (sim.people.age >= age_anniversary))
-    return reached_anniv
-
-
-def _detect_birthday(sim):
-
-    """
-    Detect who had their birthdays. Assumes the time step dt is less than
-    or equal to 1.
-
-    Returns Boolean array
-    """
-    prev_int_age = sim.people.age - sim.t.dt
-    current_int_age = sim.people.age
-    had_bday = (current_int_age.astype(int) - prev_int_age.astype(int)) == 1
-    return had_bday
-
-
-def stratify_parameter_by_age(age_bin_edges, par_bin_values):
-    """
-    Returns a callable that, given an age, returns the value of a parameter
-    assigned to the age bin the given age falls into.
-
-    Args:
-        age_bin_edges (np.ndarray): The edges of the age bins. Should be in
-            ascending order.
-        par_bin_values (np.ndarray): The parameter values assigned to each age bin.
-            Should be the of length age_bin_edges - 1.
-
-    Returns:
-        age_bin_function (callable): A function that takes an age
-            and returns the parameter value for the bin that the age falls into.
-
-    age_bin_edges = np.array([0, 2, 5, 120])
-    par_bin_values = np.array([904.4, 240.9, 0.0])
-    age_stratified_parameter = stratify_parameter_by_age(age_bin_edges, par_bin_values)
-    age_stratified_parameter(25)  # should return 0.0
-    """
-    def age_stratified_parameter(age):
-        bin_index = tyu.digitize_ages(age, age_bin_edges)
-        return par_bin_values[bin_index]
-
-    return age_stratified_parameter

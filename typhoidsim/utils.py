@@ -14,7 +14,7 @@ from . import settings as tys
 # Specify all externally visible things this file defines
 __all__ = ['get_data_home', 'load_dataset', 'get_dataset_names']
 __all__ += ['get_attr_vals']
-__all__ += ['digitize_ages_1yr']
+__all__ += ['digitize_ages_1yr', 'stratify_parameter_by_age', 'detect_age_anniversary']
 __all__ += ['test_cpu_performance']
 __all__ += ['generate_unique_filename', 'to_df', 'promotetoiterable', 'generate_age_bin_labels']
 __all__ += ['load_age_dist_un', 'get_age_distribution_un']
@@ -38,6 +38,49 @@ def digitize_ages(ages, age_group_lb):
     This function returns the 0-based indices of the age bins passed in age_group_lb
     """
     return np.digitize(ages, age_group_lb) - 1  # returns 0-based indices of the group
+
+
+def stratify_parameter_by_age(age_bin_edges, par_bin_values):
+    """
+    Returns a callable that, given an age, returns the value of a parameter
+    assigned to the age bin the given age falls into.
+
+    Args:
+        age_bin_edges (np.ndarray): The edges of the age bins. Should be in
+            ascending order.
+        par_bin_values (np.ndarray): The parameter values assigned to each age bin.
+            Should be the of length age_bin_edges - 1.
+
+    Returns:
+        age_bin_function (callable): A function that takes an age
+            and returns the parameter value for the bin that the age falls into.
+
+    age_bin_edges = np.array([0, 2, 5, 120])
+    par_bin_values = np.array([904.4, 240.9, 0.0])
+    age_stratified_parameter = stratify_parameter_by_age(age_bin_edges, par_bin_values)
+    age_stratified_parameter(25)  # should return 0.0
+    """
+    def age_stratified_parameter(age):
+        bin_index = digitize_ages(age, age_bin_edges)
+        return par_bin_values[bin_index]
+
+    return age_stratified_parameter
+
+
+def detect_age_anniversary(sim, age_anniversary):
+    """
+    Detect people who crossed a specific age_anniversary, does not
+    have to be birthday necessarily.
+
+    Args:
+        sim (starsim.Sim object): the current simulation object
+        age_anniversary (float):  the age we wish to detect
+
+    Returns:
+         reached_anniv (Boolean array):
+    """
+    reached_anniv = (((sim.people.age - sim.t.dt) < age_anniversary) & (sim.people.age >= age_anniversary))
+    return reached_anniv
 
 
 def get_attr_vals(sim, attr_path, attr_name):
