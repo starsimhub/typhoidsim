@@ -6,7 +6,7 @@ import starsim as ss
 import scipy.stats as sps
 
 
-__all__ = ['truncnorm', 'gausshyper', 'gompertz']
+__all__ = ['truncnorm', 'gausshyper', 'gompertz', 'beta']
 
 
 class truncnorm(ss.Dist):
@@ -69,6 +69,26 @@ class gompertz(ss.Dist):
     """
     def __init__(self, c=1.0, loc=0.0, scale=1.0, **kwargs):
         super().__init__(distname='gompertz', dist=sps.gompertz, c=c,
+                         loc=loc, scale=scale, **kwargs)
+        return
+
+    def make_rvs(self):
+        """ Use SciPy rather than NumPy to include the scale parameter """
+        rvs = self.dist.rvs(self._size)
+        return rvs
+
+
+class beta(ss.Dist):
+    """
+    A beta continuous random variable.
+    Args:
+        c (float):
+        loc (float):
+        scale (float):
+    """
+
+    def __init__(self, a=1.0, b=1.0, loc=0.0, scale=1.0, **kwargs):
+        super().__init__(distname='beta', dist=sps.beta, a=a, b=b,
                          loc=loc, scale=scale, **kwargs)
         return
 
