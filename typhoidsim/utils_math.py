@@ -7,7 +7,7 @@ import numpy as np
 import sciris as sc
 
 # Specify all externally visible things this file defines
-__all__ = ['sigmoid', 'gompertz', 'gompertz_dfun', 'double_sigmoid_exp', 'double_sigmoid_tanh',
+__all__ = ['sigmoid', 'gompertz_fun', 'gompertz_dfun', 'double_sigmoid_exp', 'double_sigmoid_tanh',
            'asym_trapezoidal', 'box_exponential']
 
 
@@ -98,7 +98,7 @@ def double_sigmoid_tanh(x, l1, l2, l3, x_12, x_23, s=1.0):
     return y
 
 
-def gompertz(x, a, b, c):
+def gompertz_fun(x, a, b, c):
     """
     Compute the Gompertz function for a given set of parameters.
     This function is used for describing mortality and ageing-like processes.
