@@ -11,10 +11,10 @@ from . import defaults as tyd
 from . import utils as tyu
 
 # Specify all externally visible things this file defines
-__all__ = ['imm_decay_by_age_default', 'imm_constant_dur_by_age_default', 'imm_ve0_by_age_default']
+__all__ = ['imm_decay_by_age', 'imm_constant_dur_by_age', 'imm_ve0_by_age']
 
 
-def imm_decay_by_age_default(age_bins=None, vals=None):
+def imm_decay_by_age(age_bins=None, vals=None):
     """
     Args:
         age_bins (list | np.array): List of age values defining bins. Length n.
@@ -29,7 +29,7 @@ def imm_decay_by_age_default(age_bins=None, vals=None):
     return tyu.stratify_parameter_by_age(age_bins, vals / tyd.days_per_year)
 
 
-def imm_ve0_by_age_default(age_bins=None, vals=None):
+def imm_ve0_by_age(age_bins=None, vals=None):
     """
     Args:
         age_bins (list | np.array): List of age values defining bins. Length n.
@@ -44,7 +44,7 @@ def imm_ve0_by_age_default(age_bins=None, vals=None):
     return tyu.stratify_parameter_by_age(age_bins, vals)
 
 
-def imm_constant_dur_by_age_default(age_bins=None, vals=None):
+def imm_constant_dur_by_age(age_bins=None, vals=None):
     """
     Args:
         age_bins (list | np.array): List of age values defining bins. Length n.

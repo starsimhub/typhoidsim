@@ -42,7 +42,7 @@ def make_sim(n_agents=10_000):
         start_year=2000.0,
         end_year=2002.0,
         prob_type="interval",
-        imm_ve0=ss.constant(v=ty.imm_ve0_by_age_default(age_bins=[0.75, 2.0, 5.0, 15.0, 125.0],
+        imm_ve0=ss.constant(v=ty.imm_ve0_by_age(age_bins=[0.75, 2.0, 5.0, 15.0, 125.0],
                                                         vals=[1.0, 0.9, 0.3, 0.3])),
         debug=True,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 2.0,
@@ -58,7 +58,7 @@ def make_sim(n_agents=10_000):
         start_year=2000.0,
         end_year=2002.0,
         prob_type="interval",
-        imm_ve0=ss.constant(v=ty.imm_ve0_by_age_default(age_bins=[0.75, 2.0, 5.0, 15.0, 125.0],
+        imm_ve0=ss.constant(v=ty.imm_ve0_by_age(age_bins=[0.75, 2.0, 5.0, 15.0, 125.0],
                                                         vals=[1.0, 0.9, 0.3, 0.3])),
         debug=True,  # only use for this example to keep track of each individual's acquired immunity level over time
         age_pars={'min_age': 5.0,

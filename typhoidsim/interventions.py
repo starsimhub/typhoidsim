@@ -802,9 +802,9 @@ class vaccination_with_waning(RoutineDelivery):
          kwargs            (dict)      : passed to Intervention()
     """
     def __init__(self, *args, booster1_prob=0.0, booster2_prob=0.0, booster1_interval=None, booster2_interval=None,
-                 imm_decay=ss.constant(v=tyi.imm_decay_by_age_default()),
-                 imm_ve0=ss.constant(v=tyi.imm_ve0_by_age_default()),
-                 imm_constant_dur=ss.constant(v=tyi.imm_constant_dur_by_age_default()),
+                 imm_decay=ss.constant(v=tyi.imm_decay_by_age()),
+                 imm_ve0=ss.constant(v=tyi.imm_ve0_by_age()),
+                 imm_constant_dur=ss.constant(v=tyi.imm_constant_dur_by_age()),
                  imm_draw_fn=None,
                  label=None, debug=False, **kwargs):
         # **kwargs: years=None, start_year=None, end_year=None, prob=None, prob_type=None,
