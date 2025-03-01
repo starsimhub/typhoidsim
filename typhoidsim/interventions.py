@@ -806,6 +806,7 @@ class vaccination_with_waning(RoutineDelivery):
                  imm_ve0=ss.constant(v=tyi.imm_ve0_by_age()),
                  imm_constant_dur=ss.constant(v=tyi.imm_constant_dur_by_age()),
                  imm_draw_fn=None,
+                 imm_draw_fn_kwargs=None,
                  label=None, debug=False, **kwargs):
         # **kwargs: years=None, start_year=None, end_year=None, prob=None, prob_type=None,
         super().__init__(*args, **kwargs) # CK: TODO: refactor with define_pars
@@ -832,6 +833,7 @@ class vaccination_with_waning(RoutineDelivery):
         self.imm_ve0_dist = imm_ve0      # Maximum protection at t=0 of receiving a vaccine
         self.imm_constant_dur_dist = imm_constant_dur  # Duration at constant level of immunity ve0 before waning starts
         self.imm_draw_fn = self.imm_draw_from_constant if imm_draw_fn is None else imm_draw_fn
+        self.imm_draw_fn_kwargs = {} if imm_draw_fn_kwargs is None else imm_draw_fn_kwargs
 
         # Debug - track more things
         self.debug = debug
@@ -905,7 +907,7 @@ class vaccination_with_waning(RoutineDelivery):
                                                  a_min=0.0, a_max=1.0)
         return
 
-    def imm_draw_from_constant(self, uids):
+    def imm_draw_from_constant(self, uids, **kwargs):
         """ Draw the correct values dependent on the agent's age at vaccination"""
         self.imm_ve0[uids] = self.imm_ve0_dist.pars.v(self.a_vaccinated[uids])
         self.imm_constant_dur[uids] = self.imm_constant_dur_dist.pars.v(self.a_vaccinated[uids])
