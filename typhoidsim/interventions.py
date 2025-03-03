@@ -930,7 +930,7 @@ class vaccination_with_waning(RoutineDelivery):
                 self.n_doses[new_accept_uids] = 1
                 self.t_to_booster1[new_accept_uids] = self.booster1_interval   # set the timer to get the booster
                 self.t_to_booster2[new_accept_uids] = self.booster2_interval   # set the timer to get the booster
-                self.imm_draw_fn(new_accept_uids)
+                self.imm_draw_fn(self, new_accept_uids)
 
             # Select eligible for a booster
             booster1_prob = self.booster1_prob[ti_rel]
@@ -943,7 +943,7 @@ class vaccination_with_waning(RoutineDelivery):
                 self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
                 self.t_to_booster1[is_eligible_booster] = np.inf # reset time for those eligible for booster, regardless of receipt
                 self.n_doses[new_booster_uids] += 1
-                self.imm_draw_fn(new_booster_uids)
+                self.imm_draw_fn(self, new_booster_uids)
 
             # Select eligible for second booster
             booster2_prob = self.booster2_prob[ti_rel]
@@ -956,7 +956,7 @@ class vaccination_with_waning(RoutineDelivery):
                 self.a_vaccinated[new_booster_uids] = sim.people.age[new_booster_uids]
                 self.t_to_booster2[is_eligible_booster] = np.inf # reset time for those eligible for booster, regardless of receipt
                 self.n_doses[new_booster_uids] += 1
-                self.imm_draw_fn(new_booster_uids)
+                self.imm_draw_fn(self, new_booster_uids)
                 
             vaccinated_uids = self.vaccinated.uids
 
