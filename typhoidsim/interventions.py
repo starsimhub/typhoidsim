@@ -10,7 +10,6 @@ import functools
 from .patterns import Pattern
 from .defaults import days_per_year
 from . import utils_math as tyum
-from .products import typhoid_test
 from . import immunity as tyi
 
 
@@ -832,7 +831,7 @@ class vaccination_with_waning(RoutineDelivery):
         self.imm_decay_dist = imm_decay  # Decay time constant, in days, one value per age bin of interest
         self.imm_ve0_dist = imm_ve0      # Maximum protection at t=0 of receiving a vaccine
         self.imm_constant_dur_dist = imm_constant_dur  # Duration at constant level of immunity ve0 before waning starts
-        self.imm_draw_fn = self.imm_draw_from_constant if imm_draw_fn is None else imm_draw_fn
+        self.imm_draw_fn = tyi.imm_draw_fn_constant if imm_draw_fn is None else imm_draw_fn
         self.imm_draw_fn_kwargs = {} if imm_draw_fn_kwargs is None else imm_draw_fn_kwargs
 
         # Debug - track more things
@@ -905,13 +904,6 @@ class vaccination_with_waning(RoutineDelivery):
         module.immunity_acquired[uids] = np.clip(ve0 * tyum.box_exponential(np.float32(sim.t.now('year')), t_vaccinated,
                                                                             constant_ve0_dur, decay),
                                                  a_min=0.0, a_max=1.0)
-        return
-
-    def imm_draw_from_constant(self, uids, **kwargs):
-        """ Draw the correct values dependent on the agent's age at vaccination"""
-        self.imm_ve0[uids] = self.imm_ve0_dist.pars.v(self.a_vaccinated[uids])
-        self.imm_constant_dur[uids] = self.imm_constant_dur_dist.pars.v(self.a_vaccinated[uids])
-        self.imm_decay[uids] = self.imm_decay_dist.pars.v(self.a_vaccinated[uids])
         return
 
     def step(self):
