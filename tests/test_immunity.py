@@ -7,7 +7,7 @@ import typhoidsim as ty
 def test_imm_decay_by_age():
     # Test for valid inputs
     age_bins = [0.75, 2.0, 5.0, 15.0, 125.0]
-    vals = [505.27, 505.27, 505.27, 505.27]
+    vals = [505.27, 505.27, 505.27, 505.27]/ty.days_per_year
     default_function = ty.imm_decay_by_age(age_bins=age_bins, vals=vals)
     assert callable(default_function)
 

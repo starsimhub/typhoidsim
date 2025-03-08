@@ -83,7 +83,7 @@ def make_sim_non_default_with_constant_dist(n_agents=5_000):
         booster2_interval=0.66,  # interval between receiving first dose and second booster
         booster2_prob=1.0,
         # We can now use different age bins for each parameter
-        imm_decay=ss.constant(v=ty.imm_decay_by_age(age_bins=[0, 5, 10, 15], vals=[300.0, 200.0, 100.0])),
+        imm_decay=ss.constant(v=ty.imm_decay_by_age(age_bins=[0, 5, 10, 15], vals=[300.0, 200.0, 100.0])/ty.days_per_year),
         imm_ve0=ss.constant(v=ty.imm_ve0_by_age(age_bins=[0, 2, 5, 15], vals=[1.0, 0.7, 0.5])),
         prob_type="annual",
         debug=True,  # only use for this example to keep track of each individual's acquired immunity level over time
