@@ -825,7 +825,7 @@ class vaccination_with_waning(RoutineDelivery):
         self.t_to_booster2 = ss.FloatArr('t_to_booster2', default=np.nan)      # time until needing the booster
         self.n_doses = ss.FloatArr('n_doses')                                  # number of doses received by each agent
         self.imm_ve0 = ss.FloatArr('imm_ve0', default=0.0)                     # Maximum protection at t=0 of receiving a vaccine
-        self.imm_constant_dur = ss.FloatArr('imm_constant_dur', default=0.0)   # Duration of constant immunity in days, assuming the model is a box-exponential model
+        self.imm_constant_dur = ss.FloatArr('imm_constant_dur', default=0.0)   # Duration of constant immunity in years, assuming the model is a box-exponential model
         self.imm_decay = ss.FloatArr('imm_decay', default=np.inf)              # Decay time constant (avg duration), in years, one value per age bin of interest
 
         self.imm_decay_dist = imm_decay  # Decay time constant (avg duration), in years, one value per age bin of interest

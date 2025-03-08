@@ -55,7 +55,7 @@ def imm_constant_dur_by_age(age_bins=None, vals=None):
          returns the appropriate value.
     """
     age_bins = sc.promotetoarray(age_bins) if age_bins is not None else np.array([0.75, 2.0, 5.0, 15.0, 125.0])  # Age at vaccination bins
-    vals = sc.promotetoarray(vals) if vals is not None else np.array([940.4, 240.9, 0.0, 0.0])/tyd.days_per_year  # Duration of constant immunity in days, one value per age bin of interest, assuming a box exponential model of immunity dynamics
+    vals = sc.promotetoarray(vals) if vals is not None else np.array([940.4, 240.9, 0.0, 0.0])/tyd.days_per_year  # Duration of constant immunity in years, one value per age bin of interest, assuming a box exponential model of immunity dynamics
     return tyu.stratify_parameter_by_age(age_bins, vals)
 
 
