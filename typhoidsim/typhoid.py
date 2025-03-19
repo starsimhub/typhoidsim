@@ -235,8 +235,7 @@ class Typhoid(ss.Disease):
         # Of the people who are susceptible now, select those who we assume were infected before t=0
         prior_cases = self.pars.init_seroprev.filter((self.susceptible).uids)
         self.n_infections[prior_cases] = self.pars.init_prior_infc.rvs(prior_cases)
-        # TODO: figure out why update_susceptibility does not work here?
-        self.susceptibility[prior_cases] = (1.0 - self.tppi[prior_cases])**self.n_infections[prior_cases] # self.update_susceptibility(prior_cases)
+        self.update_susceptibility(prior_cases)
         self.n_infections_historical = 0.0
 
         if len(prior_cases):
