@@ -158,6 +158,7 @@ class Typhoid(ss.Disease):
             ss.FloatArr("eff_sus", default=0.0, label="Effective susceptibility"),     # Track effective susceptibility to infection, the combination of rel_sus, susceptibility and (1-aqcuired_immunity)
 
             # States that track timing of events
+            ss.FloatArr("ti_firstinfected", label="Time of first infection"),
             ss.FloatArr("ti_infected", label="Time of infection"),
             ss.FloatArr("ti_susceptible", label="Start of susceptible state"),
             ss.FloatArr("ti_prepatent", label="Start of prepatent stage"),
@@ -724,6 +725,7 @@ class Typhoid(ss.Disease):
         # Set value of states associated to being infected, and record events
         self.ti_prepatent[uids] = ti
         self.ti_infected[uids] = ti
+        self.ti_firstinfected[uids[self.n_infections[uids]==0]] = ti
         self.prepatent[uids] = True
 
         # Durations returned by functions are in units of "number of timesteps"
