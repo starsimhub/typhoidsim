@@ -121,9 +121,16 @@ class CommunityNet(ss.DynamicNetwork):
                     p2 = uids[idx1[pairs[:, 1]]]
                 else:
                     # Between groups: random pairings
-                    p1 = uids[np.random.choice(idx1, size=n_edges)]
-                    p2 = uids[np.random.choice(idx2, size=n_edges)]
-    
+                    p1 = np.random.choice(idx1, size=n_edges)
+                    p2 = np.random.choice(idx2, size=n_edges)
+                    
+                    # filter out any repeat edges
+                    pairs = np.stack([p1, p2], axis=1)
+                    pairs_unique = np.unique(pairs, axis=0)
+                    
+                    p1 = uids[pairs_unique[:, 0]]
+                    p2 = uids[pairs_unique[:, 1]]
+                     
                 p1_list.append(p1)
                 p2_list.append(p2)
         return np.concatenate(p1_list), np.concatenate(p2_list)
@@ -213,7 +220,7 @@ class CommunityNet(ss.DynamicNetwork):
         ax.set_ylabel('Age of contact (years)')
         return fig
 
-
+        
 class HouseholdNet(ss.DynamicNetwork):
     """
     [WIP]: Microstructured connectivity between agents. Households can change in size
