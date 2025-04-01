@@ -30,7 +30,6 @@ class CommunityNet(ss.DynamicNetwork):
             self.pars.age_mixing = tyi.get_age_mix_distribution(self.pars.location)
 
         # Get and track some useful variables
-        self.contact_rate_num_by_ag_gr, self.age_mix_matrix_probs = self.get_contact_rates()
         self.num_age_groups = len(self.pars.age_mixing['age_lb'])
 
         self.define_states(
@@ -40,21 +39,6 @@ class CommunityNet(ss.DynamicNetwork):
         self.age_group_size = None
 
         return
-
-    def get_contact_rates(self):
-        """
-        Get average number of total number of contacts per day, per age group
-        (num age groups x 1), and a matrix of the average proportion of
-        contacts per day of each age group (num age groups x num age groups).
-        """
-        contact_rate_matrix = self.pars.age_mixing['matrix']  # in average contacts per day
-        # Transform number of daily contacts into proportion of contacts in each age bin
-        total_rate = contact_rate_matrix.sum(axis=1)
-        total_rate[total_rate == 0.0] = 1.0  # avoid division by zero
-        contact_rate_probs = contact_rate_matrix / total_rate.reshape(-1, 1)
-        # Get integer number of contacts per age group
-        contact_rate_num = sc.randround(contact_rate_matrix.sum(axis=1))
-        return contact_rate_num, contact_rate_probs
 
     def init_pre(self, sim):
         super().init_pre(sim)
