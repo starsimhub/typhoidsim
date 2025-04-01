@@ -107,8 +107,7 @@ class CommunityNet(ss.DynamicNetwork):
         born_age_group = self.age_group[born.uids]
 
         # Total (integer) number of average contacts **per day** for each available age group
-        # TODO: this does not have to be stochastic, could be fixed
-        n_contacts_by_age_grp = sc.randround(self.contact_rate_num_by_ag_gr)
+        n_contacts_by_age_grp = np.round(self.contact_rate_num_by_ag_gr).astype(int)
 
         # Get the total number of contacts each person will have in one time step (1 day)
         # TODO: There could be a dispersion parameter, such that each person within one age group
