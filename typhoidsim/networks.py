@@ -34,7 +34,7 @@ class CommunityNet(ss.DynamicNetwork):
         self.num_age_groups = len(self.pars.age_mixing['age_lb'])
 
         self.define_states(
-            ss.Arr('age_group', default=0, dtype=ss_int_, label='Age group')
+            ss.Arr('age_group', default=0, dtype=ss_int_, nan=-999, label='Age group')
         )
         # Store the size of each age group
         self.age_group_size = None
