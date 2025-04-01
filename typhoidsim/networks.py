@@ -79,8 +79,7 @@ class CommunityNet(ss.DynamicNetwork):
             if len(idx1) == 0:
                 continue
     
-            for ag2 in range(ag1, self.num_age_groups):
-                # for the remaining age groups (that haven't been sampled as egos),
+            for ag2 in range(self.num_age_groups):
                 # pull out the individuals of the contact age group
                 idx2 = ag_indices[ag2]
                 if len(idx2) == 0:
