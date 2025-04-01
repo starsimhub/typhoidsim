@@ -80,41 +80,60 @@ class CommunityNet(ss.DynamicNetwork):
                                           weights=np.ones(len(born.uids))/len(born.uids))
         return
 
-    def get_contacts(self, born, n_contacts):
-        """ Generate contacts based on age mixing """
-        available_uids = born.uids
+    def get_contacts(self, born):
+        uids = born.uids
+        ag = self.age_group[uids]
+    
+        # get index for each person by age group
+        ag_indices = [np.where(ag == i)[0] for i in range(self.num_age_groups)]
+        
+        p1_list, p2_list = [], []
+    
+        for ag1 in range(self.num_age_groups):
+            # pull out individuals of selected age group
+            idx1 = ag_indices[ag1]
+            if len(idx1) == 0:
+                continue
+    
+            for ag2 in range(ag1, self.num_age_groups):
+                # for the remaining age groups (that haven't been sampled as egos),
+                # pull out the individuals of the contact age group
+                idx2 = ag_indices[ag2]
+                if len(idx2) == 0:
+                    continue
+    
+                # given the mixing rate for these two age groups, and the number of people
+                # in the ego age group, how many contacts in total should be drawn between
+                # these groups?
+                n_edges = np.round(self.pars.age_mixing['matrix'][ag1, ag2] * len(idx1)).astype(int)
 
-        # Get all possible connections in the networks (upper triangle)
-        idx1, idx2 = np.triu_indices(n=len(available_uids), k=1)
-
-        # Weight age-group probabilities by the propoportion of each age group in this specific population
-        probs = self.age_mix_matrix_probs * self.age_group_size.reshape(-1, 1)
-
-        edge_probs = probs[self.age_group[available_uids[idx1]],
-                           self.age_group[available_uids[idx2]]]
-        connected = np.random.rand(len(edge_probs)) <= edge_probs
-
-        source = idx1[connected]
-        target = idx2[connected]
-        return source, target
+                # sample the pairs for this number of edges
+                # NOTE: this does not default preserve the contact rate per person,
+                # but on average should
+                if ag1 == ag2:
+                    # Sample without replacement within same group
+                    if len(idx1) < 2 or n_edges == 0:
+                        continue
+                    pairs = np.random.choice(len(idx1), size=(n_edges, 2))
+                    valid = pairs[:, 0] != pairs[:, 1] # remove self pairs
+                    pairs = pairs[valid]
+                    p1 = uids[idx1[pairs[:, 0]]]
+                    p2 = uids[idx1[pairs[:, 1]]]
+                else:
+                    # Between groups: random pairings
+                    p1 = uids[np.random.choice(idx1, size=n_edges)]
+                    p2 = uids[np.random.choice(idx2, size=n_edges)]
+    
+                p1_list.append(p1)
+                p2_list.append(p2)
+        return np.concatenate(p1_list), np.concatenate(p2_list)
 
     def add_pairs(self):
         """ Generate contacts using a specific age mixing pattern """
         people = self.sim.people
         born = people.alive & (people.age > 0)
 
-        # Convert age into age group
-        born_age_group = self.age_group[born.uids]
-
-        # Total (integer) number of average contacts **per day** for each available age group
-        n_contacts_by_age_grp = np.round(self.contact_rate_num_by_ag_gr).astype(int)
-
-        # Get the total number of contacts each person will have in one time step (1 day)
-        # TODO: There could be a dispersion parameter, such that each person within one age group
-        # could have a slightly different number of contacts
-        n_contacts = n_contacts_by_age_grp[born_age_group]
-
-        p1, p2 = self.get_contacts(born, n_contacts)
+        p1, p2 = self.get_contacts(born)
 
         beta = np.ones(len(p1), dtype=ss_float_)
         dur = np.full(len(p1), self.pars.dur.values)
