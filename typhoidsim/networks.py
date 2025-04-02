@@ -121,16 +121,12 @@ class CommunityNet(ss.DynamicNetwork):
                     p2 = uids[idx1[pairs[:, 1]]]
                 else:
                     # Between groups: random pairings
-                    p1 = np.random.choice(idx1, size=n_edges)
-                    p2 = np.random.choice(idx2, size=n_edges)
+                    i1 = np.random.choice(len(idx1), size=n_edges)
+                    i2 = np.random.choice(len(idx2), size=n_edges)
+
+                    p1 = uids[idx1[i1]]
+                    p2 = uids[idx2[i2]]
                     
-                    # filter out any repeat edges
-                    pairs = np.stack([p1, p2], axis=1)
-                    pairs_unique = np.unique(pairs, axis=0)
-                    
-                    p1 = uids[pairs_unique[:, 0]]
-                    p2 = uids[pairs_unique[:, 1]]
-                     
                 p1_list.append(p1)
                 p2_list.append(p2)
         return np.concatenate(p1_list), np.concatenate(p2_list)
