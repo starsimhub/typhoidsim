@@ -842,51 +842,34 @@ class Typhoid(ss.Disease):
         betamap = self._check_betas()
         dt = self.t.dt
 
-        for i, (nkey, net) in enumerate(self.sim.networks.items()):
-            if not len(net):
-                break
+        # TODO: Handle in disease module and then use standard starsim transmission
+        rel_sus   = self.rel_sus.asnew(self.susceptible * self.rel_sus) \
+                    * self.susceptibility * (1.0 - self.immunity_acquired)
+        rel_trans = self.rel_trans.asnew(self.infectious * self.rel_trans) \
+                    * self.infectiousness / self.tai * self.pars.transmission.exposure2contact_rate / tyd.day2year * dt
 
-            nbetas = betamap[nkey]
-            edges = net.edges
+        for i, (nkey,route) in enumerate(self.sim.networks.items()):
+            nk = ss.standardize_netkey(nkey)
+            if isinstance(route, (ss.MixingPool, ss.MixingPools)):
+                target_uids = route.compute_transmission(rel_sus, rel_trans, betamap[nk])
+                new_cases.append(target_uids)
+                sources.append(np.full(len(target_uids), dtype=ss.dtypes.float, fill_value=np.nan))
+                networks.append(np.full(len(target_uids), dtype=ss.dtypes.int, fill_value=i))
+            elif isinstance(route, ss.Network) and len(route): # Skip networks with no edges
+                edges = route.edges
+                p1p2b0 = [edges.p1, edges.p2, betamap[nk][0]] # Person 1, person 2, beta 0
+                p2p1b1 = [edges.p2, edges.p1, betamap[nk][1]] # Person 2, person 1, beta 1
+                for src, trg, beta in [p1p2b0, p2p1b1]:
+                    if beta: # Skip networks with no transmission
+                        beta_per_dt = route.net_beta(disease_beta=beta) # Compute beta for this network and timestep
+                        randvals = self.trans_rng.rvs(src, trg) # Generate a new random number based on the two other random numbers
+                        args = (src, trg, rel_trans, rel_sus, beta_per_dt, randvals) # Set up the arguments to calculate transmission
+                        target_uids, source_uids = self.compute_transmission(*args) # Actually calculate it
+                        new_cases.append(target_uids)
+                        sources.append(source_uids)
+                        networks.append(np.full(len(target_uids), dtype=ss.dtypes.int, fill_value=i))
 
-            # Relative Transmissibility: Relevant for sources
-            rel_trans = self.rel_trans.asnew(self.infectious * self.rel_trans)
-
-            p1p2b0 = [edges.p1, edges.p2, nbetas[0]]
-            for src, trg, beta in [p1p2b0]:
-
-                # Transmission of infection
-                # Skip networks with no transmission
-                if beta == 0:
-                    continue
-
-                # In typhoid source->target 'physical contact' is guaranteed,
-                # but transmission of pathogens and probability of infection are not.
-                #beta_per_dt = net.beta_per_dt(disease_beta=beta, dt=self.t.dt)  # This is equal to 1, but needs to be here for starsim networks
-
-                # EXPOSURE/TRANSMISSION/INFECTION PROB Exposure encompasses exposure frequency per unit of time
-                self.p_resp[trg] = (self.infectiousness[src] / self.tai[src]) * rel_trans[src] * ((self.pars.transmission.exposure2contact_rate / tyd.day2year) * dt)
-
-                # INFECTION OUTCOME: Decide who gets infected/
-                # self.pars.transmission.ppl2ppl_p_inf will calculate p_infc = rel_sus[trg] * susceptibility[trg] * self.p_resp[trg]
-                new_cases_bool = self.pars.transmission.ppl2ppl_p_inf(trg)
-
-                # Append new cases
-                new_cases.append(trg[new_cases_bool])
-                sources.append(src[new_cases_bool])
-                networks.append(np.full(np.count_nonzero(new_cases_bool), dtype=ss_int_, fill_value=i))
-
-        # Tidy up
-        if len(new_cases) and len(sources):
-            new_cases = ss.uids.cat(new_cases)
-            new_cases, inds = new_cases.unique(return_index=True)
-            sources = ss.uids.cat(sources)[inds]
-            networks = np.concatenate(networks)[inds]
-        else:
-            new_cases = np.empty(0, dtype=int)
-            sources = np.empty(0, dtype=int)
-            networks = np.empty(0, dtype=int)
-
+        new_cases = ss.uids.cat(new_cases)
         if len(new_cases):
             # "Adjust" cfu_dose of agents who become infected at this time step.
             # This will guarantee the high dose mu/sigma parameters for prepatent duration
