@@ -2,19 +2,19 @@ Typhoidsim
 =======
 
 Typhodsim implements an agent-based disease model of Typhoid fever (caused by S. Typhi).
-This package is part of the `Starsim <https://github.com/starsimhub>`_ family. Currently, typhoidsim needs **v2.3.0** of the Starsim framework to run.
+This package is part of the `Starsim <https://github.com/starsimhub>`_ family. Currently, Typhoidsim needs **v2.3.0** of the Starsim framework to run.
 
 
 Installation
 ------------
 
-Make sure you're inside the typhoidsim repository:
+Make sure you're inside the Typhoidsim repository:
    - ``cd typhoidsim``
 
 And then run
    - ``pip install -e .`` (don't forget the dot at the end!).
 
-There are a few version of typhoidsim:
+There are a few version of Typhoidsim:
   - 1. legacy `typhoidsim v0.11.7 <https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.11.7-starsim-1.0.3>`_ , which exclusively works with `starsim 1.0.3 <https://pypi.org/project/starsim/1.0.3/>`_.
   - 2. legacy `typhoidsim v0.26.9 <https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.26.9-starsim-2.2.0>`_ , which exclusively works with `starsim 2.2.0 <https://pypi.org/project/starsim/2.2.0/>`_.
   - 3. typhoidsim from the `main <https://github.com/starsimhub/typhoidsim>`_ branch, which works with the `starsim 2.3.0 <https://pypi.org/project/starsim/>`_.
