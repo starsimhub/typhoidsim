@@ -25,7 +25,7 @@ class AgeGroup(sc.prettyobj):
         if (not do_cache) or (cache_dur_ti is None):
             self.cache_dur_ti = 0
         else:
-            self.cache_dur_ti = cache_dur_ti # cache duration in years
+            self.cache_dur_ti = cache_dur_ti # cache duration in timesteps
             
         self.uids = None # Cached
         self.ti_cache = -1 - self.cache_dur_ti # remove cache duration so groups are recached on first step
