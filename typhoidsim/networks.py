@@ -40,6 +40,10 @@ class AgeGroup(sc.prettyobj):
                 in_group = in_group & (sim.people.age < self.high)
             self.uids = ss.uids(in_group)
             self.ti_cache = sim.ti
+        
+        # filter for alive IDs outside of loop - so done at every time step
+        self.uids = self.uids.intersect(sim.people.auids)
+        
         return self.uids
 
     def __repr__(self):
