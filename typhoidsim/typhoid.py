@@ -51,8 +51,8 @@ class Typhoid(ss.Disease):
             # Prepatent stage, the parameters of the distribution of durations is CFU-dose dependent
             prep_dur_dpars=tyu.load_dataset("prepatent_dur_dist_pars"),   # CFU dose-dependent duration distribution parameters, in days. Stratified in 3 levels (low, medium and high)
             prep_dur_fun=tyum.double_sigmoid_tanh,                        # Function to represent the 3 levels of each prepatent duration distribution parameter as a continuous function
-            dur_prep_dist=ss.lognorm_ex(mean=self.prepatent_mean_dur_function,
-                                        std=self.prepatent_std_dur_function),
+            dur_prep_dist=ss.lognorm_im(mean=self.prepatent_mean_dur_function,
+                                        sigma=self.prepatent_std_dur_function),
 
             cfu_lo_me=5_050_000.0,   # Threshold CFU value to determine whether to use the 'low dose' (for cfu_dose <= cfu_lo_me) or 'medium dose'  (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
             cfu_me_hi=55_000_000.0,  # Threshold CFU value to determine whether  to use the 'medium dose' (for cfu_dose <= cfu_me_hi) or 'high dose' (cfu_dose > cfu_lo_me) mean & std duration parameters for prepatent duration distribution.
@@ -67,8 +67,8 @@ class Typhoid(ss.Disease):
             # For people aged threshold value and over
             inf_dur_mean_geq=1.172,  # Acute/subclinical duration mean if age >= age_threshold, in weeks.
             inf_dur_std_geq=0.788,   # Acute/subclinical duration std if age  >= age_threshold, in weeks.
-            dur_inf_dist=ss.lognorm_ex(mean=self.inf_dur_mean,
-                                       std=self.inf_dur_std),     #  acute or subclinical duration, depends on age, expressed in weeks.
+            dur_inf_dist=ss.lognorm_im(mean=self.inf_dur_mean,
+                                       sigma=self.inf_dur_std),     #  acute or subclinical duration, depends on age, expressed in weeks.
             dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, std=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
 
             # Long-term stages
@@ -596,7 +596,7 @@ class Typhoid(ss.Disease):
         """
         Returns a mean duration parameter for every agent based on the cfu_dose,
         they have been exposed to. Assumes the parameter will be used by a
-        lognormal_ex distribution.
+        lognormal_im distribution.
         """
         # NOTE: this check is necessary otherwise lognorm_ex fails at initialization
         # when the module has not been initialized and uids are None
@@ -611,7 +611,7 @@ class Typhoid(ss.Disease):
         """
         Returns a stdev duration parameter for every agent based on the cfu_dose,
         they have been exposed to. Assumes the parameter will be used by a
-        lognormal_ex distribution.
+        lognormal_im distribution.
         """
         if uids is None:
             std = []
@@ -994,7 +994,7 @@ class Typhoid(ss.Disease):
     def inf_dur_mean(module, sim, uids):
         """_
         Age-dependent mean of the distribution of durations of the
-        acute or subclinical stage. Assumes a lognormal_ex distribution.
+        acute or subclinical stage. Assumes a lognormal_im distribution.
         """
         if uids is None:
             mean_arr = np.array([])
@@ -1009,7 +1009,7 @@ class Typhoid(ss.Disease):
     def inf_dur_std(module, sim, uids):
         """
         Age-dependent standard deviation of the distribution of durations of the
-        acute or subclinical stage. Assumes a lognormal_ex distribution.
+        acute or subclinical stage. Assumes a lognormal_im distribution.
         """
         if uids is None:
             std_arr = np.array([])
