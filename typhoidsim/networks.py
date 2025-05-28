@@ -12,42 +12,7 @@ from . import utils as tyu
 ss_float_ = ss.dtypes.float
 ss_int_ = ss.dtypes.int
 
-__all__ = ["AgeGroup", "CommunityNet", "HouseholdNet"]
-
-
-class AgeGroup(sc.prettyobj):
-    """ A simple age-based filter that returns uids of agents that match the criteria """
-    def __init__(self, low, high, do_cache=True, cache_dur_ti=None):
-        self.low = low
-        self.high = high
-
-        self.do_cache = do_cache
-        if (not do_cache) or (cache_dur_ti is None):
-            self.cache_dur_ti = 0
-        else:
-            self.cache_dur_ti = cache_dur_ti # cache duration in timesteps
-            
-        self.uids = None # Cached
-        self.ti_cache = -1 - self.cache_dur_ti # remove cache duration so groups are recached on first step
-
-        self.name = repr(self)
-        return
-
-    def __call__(self, sim):
-        if (not self.do_cache) or ((self.ti_cache + self.cache_dur_ti) <= sim.ti):
-            in_group = sim.people.age >= self.low
-            if self.high is not None:
-                in_group = in_group & (sim.people.age < self.high)
-            self.uids = ss.uids(in_group)
-            self.ti_cache = sim.ti
-        
-        # filter for alive IDs outside of loop - so done at every time step
-        self.uids = self.uids.intersect(sim.people.auids)
-        
-        return self.uids
-
-    def __repr__(self):
-        return f'age({self.low}-{self.high})'
+__all__ = ["CommunityNet", "HouseholdNet"]
     
 class CommunityNet(ss.DynamicNetwork):
     """ Create an age-assortative network based on a 2D age-mixing pattern."""
