@@ -13,8 +13,7 @@ ss_float_ = ss.dtypes.float
 ss_int_ = ss.dtypes.int
 
 __all__ = ["CommunityNet", "HouseholdNet"]
-
-
+    
 class CommunityNet(ss.DynamicNetwork):
     """ Create an age-assortative network based on a 2D age-mixing pattern."""
     def __init__(self, pars=None, key_dict=None, **kwargs):
@@ -42,20 +41,21 @@ class CommunityNet(ss.DynamicNetwork):
         return
 
     def get_contact_rates(self):
-        """
-        Get average number of total number of contacts per day, per age group
-        (num age groups x 1), and a matrix of the average proportion of
-        contacts per day of each age group (num age groups x num age groups).
-        """
-        contact_rate_matrix = self.pars.age_mixing['matrix']  # in average contacts per day
-        # Transform number of daily contacts into proportion of contacts in each age bin
-        total_rate = contact_rate_matrix.sum(axis=1)
-        total_rate[total_rate == 0.0] = 1.0  # avoid division by zero
-        contact_rate_probs = contact_rate_matrix / total_rate.reshape(-1, 1)
-        # Get integer number of contacts per age group
-        contact_rate_num = sc.randround(contact_rate_matrix.sum(axis=1))
-        return contact_rate_num, contact_rate_probs
-
+         """
+         Get average number of total number of contacts per day, per age group
+         (num age groups x 1), and a matrix of the average proportion of
+         contacts per day of each age group (num age groups x num age groups).
+         """
+         contact_rate_matrix = self.pars.age_mixing['matrix']  # in average contacts per day
+         # Transform number of daily contacts into proportion of contacts in each age bin
+         total_rate = contact_rate_matrix.sum(axis=1)
+         total_rate[total_rate == 0.0] = 1.0  # avoid division by zero
+         contact_rate_probs = contact_rate_matrix / total_rate.reshape(-1, 1)
+         # Get integer number of contacts per age group
+         contact_rate_num = sc.randround(contact_rate_matrix.sum(axis=1))
+         return contact_rate_num, contact_rate_probs
+ 
+    
     def init_pre(self, sim):
         super().init_pre(sim)
         return
@@ -80,42 +80,62 @@ class CommunityNet(ss.DynamicNetwork):
                                           weights=np.ones(len(born.uids))/len(born.uids))
         return
 
-    def get_contacts(self, born, n_contacts):
-        """ Generate contacts based on age mixing """
-        available_uids = born.uids
+    def get_contacts(self, born):
+        uids = born.uids
+        ag = self.age_group[uids]
+    
+        # get index for each person by age group
+        ag_indices = [np.where(ag == i)[0] for i in range(self.num_age_groups)]
+        
+        p1_list, p2_list = [], []
+    
+        for ag1 in range(self.num_age_groups):
+            # pull out individuals of selected age group
+            idx1 = ag_indices[ag1]
+            if len(idx1) == 0:
+                continue
+    
+            for ag2 in range(self.num_age_groups):
+                # pull out the individuals of the contact age group
+                idx2 = ag_indices[ag2]
+                if len(idx2) == 0:
+                    continue
+    
+                # given the mixing rate for these two age groups, and the number of people
+                # in the ego age group, how many contacts in total should be drawn between
+                # these groups?
+                n_edges = np.round(self.pars.age_mixing['matrix'][ag1, ag2] * len(idx1)).astype(int)
 
-        # Get all possible connections in the networks (upper triangle)
-        idx1, idx2 = np.triu_indices(n=len(available_uids), k=1)
+                # sample the pairs for this number of edges
+                # NOTE: this does not default preserve the contact rate per person,
+                # but on average should
+                if ag1 == ag2:
+                    # Sample without replacement within same group
+                    if len(idx1) < 2 or n_edges == 0:
+                        continue
+                    pairs = np.random.choice(len(idx1), size=(n_edges, 2))
+                    valid = pairs[:, 0] != pairs[:, 1] # remove self pairs
+                    pairs = pairs[valid]
+                    p1 = uids[idx1[pairs[:, 0]]]
+                    p2 = uids[idx1[pairs[:, 1]]]
+                else:
+                    # Between groups: random pairings
+                    i1 = np.random.choice(len(idx1), size=n_edges)
+                    i2 = np.random.choice(len(idx2), size=n_edges)
 
-        # Weight age-group probabilities by the propoportion of each age group in this specific population
-        probs = self.age_mix_matrix_probs * self.age_group_size.reshape(-1, 1)
-
-        edge_probs = probs[self.age_group[available_uids[idx1]],
-                           self.age_group[available_uids[idx2]]]
-        connected = np.random.rand(len(edge_probs)) <= edge_probs
-
-        source = idx1[connected]
-        target = idx2[connected]
-        return source, target
+                    p1 = uids[idx1[i1]]
+                    p2 = uids[idx2[i2]]
+                    
+                p1_list.append(p1)
+                p2_list.append(p2)
+        return np.concatenate(p1_list), np.concatenate(p2_list)
 
     def add_pairs(self):
         """ Generate contacts using a specific age mixing pattern """
         people = self.sim.people
         born = people.alive & (people.age > 0)
 
-        # Convert age into age group
-        born_age_group = self.age_group[born.uids]
-
-        # Total (integer) number of average contacts **per day** for each available age group
-        # TODO: this does not have to be stochastic, could be fixed
-        n_contacts_by_age_grp = sc.randround(self.contact_rate_num_by_ag_gr)
-
-        # Get the total number of contacts each person will have in one time step (1 day)
-        # TODO: There could be a dispersion parameter, such that each person within one age group
-        # could have a slightly different number of contacts
-        n_contacts = n_contacts_by_age_grp[born_age_group]
-
-        p1, p2 = self.get_contacts(born, n_contacts)
+        p1, p2 = self.get_contacts(born)
 
         beta = np.ones(len(p1), dtype=ss_float_)
         dur = np.full(len(p1), self.pars.dur.values)
@@ -195,7 +215,7 @@ class CommunityNet(ss.DynamicNetwork):
         ax.set_ylabel('Age of contact (years)')
         return fig
 
-
+        
 class HouseholdNet(ss.DynamicNetwork):
     """
     [WIP]: Microstructured connectivity between agents. Households can change in size
