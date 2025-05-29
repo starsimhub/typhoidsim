@@ -69,7 +69,7 @@ class Typhoid(ss.Disease):
             inf_dur_std_geq=0.788,   # Acute/subclinical duration std if age  >= age_threshold, in weeks.
             dur_inf_dist=ss.lognorm_im(mean=self.inf_dur_mean,
                                        sigma=self.inf_dur_std),     #  acute or subclinical duration, depends on age, expressed in weeks.
-            dur_wait2treatment=ss.lognorm_ex(mean=2.33219066, std=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
+            dur_wait2treatment=ss.lognorm_im(mean=2.33219066, sigma=0.5430),  # (Relative to acute onset) day of treatment-seeking for acute cases, in days.
 
             # Long-term stages
             # Chronic
