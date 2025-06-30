@@ -5,10 +5,11 @@ for parametrisation of otherwise constant parameters. .
 
 import numpy as np
 import sciris as sc
+import scipy.stats as sps
 
 # Specify all externally visible things this file defines
 __all__ = ['sigmoid', 'gompertz_fun', 'gompertz_dfun', 'double_sigmoid_exp', 'double_sigmoid_tanh',
-           'asym_trapezoidal', 'box_exponential']
+           'asym_trapezoidal', 'box_gamma']
 
 
 def sigmoid(x, max_x, slope):
@@ -198,33 +199,29 @@ def asym_trapezoidal(x, period=365.0, peak_start_doy=45.0, ramp_up_dur=15.0,
     )
     return trapezoidal_pulse
 
-
-def box_exponential(x, start, box_duration, decay_time_constant):
+def box_gamma(x, start, box_duration, shape, rate):
     """
     Generate a time signal which is 0 up to a 'start' time; 1 from
     'start' until 'start + box_duration', and from 'start + box_duration'
-    decays as an exponential function.
-
-    From EMDO: `currentEffect *= (1 - dt/decayTimeConstant)`.
+    decays as a gamma function.
+    
+    Reverts to box exponential if shape = 1, where rate = 1/dur
 
     Args:
         x (numpy.ndarray): The array of points at which we calculate the signal, usually time.
         start (numpy.ndarray): The start time of the box_duration in the signal.
         box_duration (numpy.ndarray): The duration for which the signal remains at 1.
-        decay_time_constant (numpy.ndarray): The time constant for the exponential decay.
+        shape (numpy.ndarray): the shape parameter for gamma decay
+        rate (numpy.ndarray): the rate parameter for gamma decay
 
     Returns:
         numpy.ndarray: The resulting signal as an array.
 
-    Example:
-        >>> time = np.linspace(0, 10, 1000)
-        >>> start, box_duration, decay_time_constant = np.array([2.0]), np.array([5.0]), np.array([3.0])
-        >>> efficacy_modulation = box_exponential(time, start, box_duration, decay_time_constant)
     """
     x_offset = x - start
     vals = np.where((x_offset >= 0.0) & (x_offset < box_duration), 1.0, 0.0)
     x_vals = (x - (start + box_duration))
     # If decay time constant is 0, then the exponent should be infinity (instant decay)
-    vals = np.where(x_offset >= box_duration, np.exp(-(sc.safedivide(x_vals, decay_time_constant, default=np.inf))), vals)
+    vals = np.where(x_offset >= box_duration, 1 - sps.gamma.cdf(x_vals, a=shape, scale=1/rate), vals)
     vals = np.where(vals < 0, 0.0, vals)
     return vals
