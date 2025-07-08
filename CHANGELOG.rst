@@ -9,6 +9,10 @@ may result in differences in model output, or are required in order to run an
 old parameter set with the current version, are flagged with the term
 "Regression information".
 
+Version 0.32.0 (2025-07-08)
+--------------------------
+- Updating immune waning to follow box-gamma decay (reducible to previous exponential decay with shape=1)
+
 Version 0.6.0 (2024-11-22)
 --------------------------
 - Bugfixes to seasonal modulation

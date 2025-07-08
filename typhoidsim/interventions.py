@@ -788,22 +788,24 @@ class vaccination_with_waning(RoutineDelivery):
     at ve0 for a duration and then it wanes exponentially).
 
     Args:
-         prob              (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
-         booster1_prob     (float)     : conditional probability of receiving first booster dose given that an individual has received their first routine dose
-         booster2_prob     (float)     : conditional probability of receiving second booster dose given that an individual has received their first routine dose
-         booster1_interval (float)     : the interval of time in years between an individual receiving their routine dose and their first booster
-         booster2_interval (float)     : the interval of time in years between an individual receiving their routine dose and their second booster
-         imm_decay         (ss.Dist)   : a starsim Distribution that will return the approrpriate value of immunity decay (time constant)
-         imm_ve0           (ss.Dist)   : a starsim Distribution that will return the appropriate value of immunity ve0 (maximum acquired immune response at time of vaccination)
-         imm_constant_dur  (ss.Dist)   : a starsim Distribution that will return the appropriate value of duration at constant ve0, after which acquired immunity starts waning
-         imm_draw_fn       (callable)  : a function that tells the intervention how to get the right parameters from from the ss.Dist parameters imm_decay, imm_ve0, imm_constant_dur
-         label             (str)       : the name of vaccination strategy
-         kwargs            (dict)      : passed to Intervention()
+         prob                  (float/arr) : probability of eligible population getting vaccinated, by default it is interepreted as an annual probability
+         booster1_prob         (float)     : conditional probability of receiving first booster dose given that an individual has received their first routine dose
+         booster2_prob         (float)     : conditional probability of receiving second booster dose given that an individual has received their first routine dose
+         booster1_interval     (float)     : the interval of time in years between an individual receiving their routine dose and their first booster
+         booster2_interval     (float)     : the interval of time in years between an individual receiving their routine dose and their second booster
+         imm_decay_shape_dist  (ss.Dist)   : a starsim Distribution that will return the approrpriate value of immunity decay shape (gamma decay). Default, constant with shape=1 (i.e. exponential waning)
+         imm_decay_rate_dist   (ss.Dist)   : a starsim Distribution that will return the approrpriate value of immunity decay rate (gamma decay)
+         imm_ve0 _dist         (ss.Dist)   : a starsim Distribution that will return the appropriate value of immunity ve0 (maximum acquired immune response at time of vaccination)
+         imm_constant_dur_dist (ss.Dist)   : a starsim Distribution that will return the appropriate value of duration at constant ve0, after which acquired immunity starts waning
+         imm_draw_fn           (callable)  : a function that tells the intervention how to get the right parameters from from the ss.Dist parameters imm_decay, imm_ve0, imm_constant_dur
+         label                 (str)       : the name of vaccination strategy
+         kwargs                (dict)      : passed to Intervention()
     """
     def __init__(self, *args, booster1_prob=0.0, booster2_prob=0.0, booster1_interval=None, booster2_interval=None,
-                 imm_decay=ss.constant(v=tyi.imm_decay_by_age()),
-                 imm_ve0=ss.constant(v=tyi.imm_ve0_by_age()),
-                 imm_constant_dur=ss.constant(v=tyi.imm_constant_dur_by_age()),
+                 imm_decay_shape_dist=ss.constant(v=1.0),
+                 imm_decay_rate_dist=ss.constant(v=tyi.imm_decay_rate_by_age()),
+                 imm_ve0_dist=ss.constant(v=tyi.imm_ve0_by_age()),
+                 imm_constant_dur_dist=ss.constant(v=tyi.imm_constant_dur_by_age()),
                  imm_draw_fn=None,
                  imm_draw_fn_kwargs=None,
                  label=None, debug=False, **kwargs):
@@ -826,12 +828,14 @@ class vaccination_with_waning(RoutineDelivery):
         self.n_doses = ss.FloatArr('n_doses')                                  # number of doses received by each agent
         self.imm_ve0 = ss.FloatArr('imm_ve0', default=0.0)                     # Maximum protection at t=0 of receiving a vaccine
         self.imm_constant_dur = ss.FloatArr('imm_constant_dur', default=0.0)   # Duration of constant immunity in years, assuming the model is a box-exponential model
-        self.imm_decay = ss.FloatArr('imm_decay', default=np.inf)              # Decay time constant (avg duration), in years, one value per age bin of interest
+        self.imm_decay_shape = ss.FloatArr('imm_decay_shape', default=np.inf)  # Decay shape (gamma decay), one value per age bin of interest
+        self.imm_decay_rate = ss.FloatArr('imm_decay_rate', default=np.inf)    # Decay rate (gamma decay; = shape/avg dur), in 1/years, one value per age bin of interest
 
-        self.imm_decay_dist = imm_decay  # Decay time constant (avg duration), in years, one value per age bin of interest
-        self.imm_ve0_dist = imm_ve0      # Maximum protection at t=0 of receiving a vaccine
-        self.imm_constant_dur_dist = imm_constant_dur  # Duration at constant level of immunity ve0 before waning starts
-        self.imm_draw_fn = tyi.imm_draw_fn_constant if imm_draw_fn is None else imm_draw_fn
+        self.imm_decay_shape_dist = imm_decay_shape_dist  # Decay shape (Gamma decay)
+        self.imm_decay_rate_dist = imm_decay_rate_dist  # Decay rate (shape/avg duration), in years, one value per age bin of interest
+        self.imm_ve0_dist = imm_ve0_dist      # Maximum protection at t=0 of receiving a vaccine
+        self.imm_constant_dur_dist = imm_constant_dur_dist  # Duration at constant level of immunity ve0 before waning starts
+        self.imm_draw_fn = tyi.imm_draw_fn_constant if imm_draw_fn is None else imm_draw_fn # default to constant distributions if not otherwise specified
         self.imm_draw_fn_kwargs = {} if imm_draw_fn_kwargs is None else imm_draw_fn_kwargs
 
         # Debug - track more things
@@ -892,7 +896,7 @@ class vaccination_with_waning(RoutineDelivery):
         """
         This is the model of the the dynamics of an individual's immunity
         response to receiving a vaccination. The acquired immunity wanes over
-        time with an exponential decay.
+        time with a gamma decay.
         """
         module = sim.diseases.typhoid
         t_vaccinated = self.t_vaccinated[uids]    # Time, in calendar years, when the individual received the vaccine. t_0 in the waning equation.
@@ -900,9 +904,13 @@ class vaccination_with_waning(RoutineDelivery):
         # Age-dependent immunity parameters
         ve0 = self.imm_ve0[uids]
         constant_ve0_dur = self.imm_constant_dur[uids]
-        decay = self.imm_decay[uids]
-        module.immunity_acquired[uids] = np.clip(ve0 * tyum.box_exponential(np.float32(sim.t.now('year')), t_vaccinated,
-                                                                            constant_ve0_dur, decay),
+        shape = self.imm_decay_shape[uids]
+        rate = self.imm_decay_rate[uids]
+        module.immunity_acquired[uids] = np.clip(ve0 * tyum.box_gamma(np.float32(sim.t.now('year')), 
+                                                                      t_vaccinated,
+                                                                      constant_ve0_dur, 
+                                                                      shape,
+                                                                      rate),
                                                  a_min=0.0, a_max=1.0)
         return
 
