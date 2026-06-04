@@ -59,7 +59,7 @@ class acute_treatment(ss.Intervention):
         self.eligibility = eligibility
         self._parse_product(product)
         self.coverage_dist = ss.bernoulli(p=self.prob)
-        self.treated = ss.State('treated')
+        self.treated = ss.BoolState('treated')
         return
 
     def init_results(self):
@@ -116,7 +116,7 @@ class infection_clearence(ss.Intervention):
         super().__init__(**kwargs)
         self.eligibility = eligibility
         self._parse_product(product)
-        self.treated = ss.State('treated')
+        self.treated = ss.BoolState('treated')
         return
 
     def init_pre(self, sim):
@@ -145,7 +145,7 @@ class infection_clearence(ss.Intervention):
         self.results['n_treated'][self.ti] = all_treated
 
         # Check if infectiousness was cleared in this timestep
-        treated = ss.uids.cat(new_patients, under_treatment)
+        treated = ss.uids.concatenate(new_patients, under_treatment)
         cleared_uids = treated.intersect((sim.people.typhoid.infectiousness < 0).uids)
         if len(cleared_uids):
             # Reset infectiousness
@@ -158,7 +158,7 @@ class infection_clearence(ss.Intervention):
                 "subclinical",
                 "chronic",
             ]:
-               sim.people.typhoid.statesdict[state][cleared_uids] = False
+               sim.people.typhoid.state_dict[state][cleared_uids] = False
 
             # Reset time of death if this patient was supposed die
             for state in [
@@ -169,12 +169,12 @@ class infection_clearence(ss.Intervention):
                 "ti_chronic",
                 "ti_dead",
             ]:
-                sim.people.typhoid.statesdict[state][cleared_uids] = np.nan
+                sim.people.typhoid.state_dict[state][cleared_uids] = np.nan
 
             # Set recovered state and when this agent becomes susceptible
-            sim.people.typhoid.statesdict["recovered"][cleared_uids] = True
-            sim.people.typhoid.statesdict["ti_recovered"][cleared_uids] = sim.ti # CK: TODO: should this be sim.ti or self.ti?
-            sim.people.typhoid.statesdict["ti_susceptible"][cleared_uids] = sim.ti + 1
+            sim.people.typhoid.state_dict["recovered"][cleared_uids] = True
+            sim.people.typhoid.state_dict["ti_recovered"][cleared_uids] = sim.ti # CK: TODO: should this be sim.ti or self.ti?
+            sim.people.typhoid.state_dict["ti_susceptible"][cleared_uids] = sim.ti + 1
             # Count again
             sim.people.typhoid.update_results()
 
@@ -380,7 +380,9 @@ class WASH(ss.Intervention):
         if self.start is None:
             self.start = sim.pars['start']
         if self.dur is None:
-            self.dur = sim.pars['stop'] - sim.pars['start']
+            # In v3, sim.pars['stop'] may be None when the sim is defined via start+dur;
+            # the timeline always holds the resolved start/stop (as float years).
+            self.dur = float(sim.t.stop) - float(sim.t.start)
         super().init_pre(sim)
         return
 
@@ -390,7 +392,7 @@ class WASH(ss.Intervention):
         # time is the compact support to evaluate the pattern over.
         # time = 0, represents time relative to the start of the temporal pattern.
         # so a sin() pattern would always return a value of 0.0 on its start
-        self.time = sc.inclusiverange(0, self.dur, self.t.dt)  # CK: TODO: replace with self.t
+        self.time = sc.inclusiverange(0, self.dur, float(self.t.dt))  # CK: TODO: replace with self.t
         self.define_results(
             ss.Result('efficacy', dtype=float, scale=False),
             ss.Result('effective_value', dtype=float, scale=False, label='Effective Value')
@@ -424,7 +426,12 @@ class WASH(ss.Intervention):
         for attr_name in self.target_attr_path[:-1]:
             attr = getattr(attr, attr_name)
         target_attr = self.target_attr_path[-1]
-        setattr(attr, target_attr, val)
+        current = getattr(attr, target_attr)
+        if isinstance(current, ss.Arr):
+            # In v3, module Arr attributes are locked against rebinding; modify in place.
+            current[:] = val
+        else:
+            setattr(attr, target_attr, val)
         return
 
     def _set_target_val_arr(self, idx, val):
@@ -587,10 +594,12 @@ class environmental_seasonality(ss.Intervention):
         if self.start is None:
             self.start = sim.pars['start']
         if self.dur is None:
-            self.dur = sim.pars['stop'] - sim.pars['start']
+            # In v3, sim.pars['stop'] may be None when the sim is defined via start+dur;
+            # the timeline always holds the resolved start/stop (as float years).
+            self.dur = float(sim.t.stop) - float(sim.t.start)
 
         # This is the "time" variable relative to the specified start year
-        self.t_relative = sc.inclusiverange(0, self.dur, sim.t.dt)
+        self.t_relative = sc.inclusiverange(0, self.dur, float(sim.t.dt))
         super().init_pre(sim)  # PSL: TODO: refactor? starsim interventions init_pre() call self.init_results() (?), so some attributes used by that method are not defined
         return
 
@@ -676,8 +685,10 @@ class RoutineDelivery(ss.Intervention):
     def init_pre(self, sim):
         super().init_pre(sim)
         # If start_year and end_year are not provided, figure them out from the provided years or the sim
-        if self.start_year is None: self.start_year = sim.pars.start
-        if self.end_year is None:   self.end_year = sim.pars.stop
+        # In v3, sim.pars.stop may be None when the sim is defined via start+dur;
+        # the timeline always holds the resolved start/stop (as float years).
+        if self.start_year is None: self.start_year = float(sim.t.start)
+        if self.end_year is None:   self.end_year = float(sim.t.stop)
         self._dt = sim.pars.dt  # TODO: need to eventually replace with own timestep, but not initialized yet since super().init_pre() hasn't been called
         self._timevec = sim.t.timevec
 
@@ -694,7 +705,7 @@ class RoutineDelivery(ss.Intervention):
             errormsg = 'Start and end years must be at least one timestep (dt) apart.'
             raise ValueError(errormsg)
 
-        if not (any(np.isclose(self.start_year, self._timevec)) and any(np.isclose(self.end_year, self._timevec))):
+        if not (any(np.isclose(self.start_year, self._timevec.years)) and any(np.isclose(self.end_year, self._timevec.years))):
             errormsg = 'Years must be within simulation start and end dates.'
             raise ValueError(errormsg)
 
@@ -708,8 +719,8 @@ class RoutineDelivery(ss.Intervention):
 
     def _configure_time_attributes(self):
         # Determine the timepoints at which the intervention will be applied
-        self.start_point = sc.findnearest(self._timevec-self.start_year, 0.0)
-        self.end_point   = sc.findnearest(self._timevec-self.end_year, 0.0)
+        self.start_point = sc.findnearest(self._timevec.years-self.start_year, 0.0)
+        self.end_point   = sc.findnearest(self._timevec.years-self.end_year, 0.0)
         self.timepoints  = sc.inclusiverange(self.start_point, self.end_point-1).astype(int) # TODO: when integrating with self.t, check if -1 still needed.
         self._timevec    = sc.inclusiverange(self.start_year, self.end_year, self._dt) # TODO: integrate with self.t
         return

@@ -122,15 +122,15 @@ class Typhoid(ss.Disease):
         # Boolean states
         self.define_states(
             # Infection life cycle states
-            ss.State("susceptible", default=False, label="Susceptible"),
-            ss.State("infected", default=False, label="Infectious"),
-            ss.State("unexposed", default=True, label="Unexposed"),  # People are born into this state, naive and never exposed
-            ss.State("prepatent", default=False, label="Prepatent"),  # Also known as exposed state (incubation stage)
-            ss.State("acute", default=False, label="Acute"),
-            ss.State("subclinical", default=False, label="Subclinical"),
-            ss.State("chronic", default=False, label="Chronic"),
-            ss.State("recovered", default=False, label="Recovered/Been Infected"),
-            ss.State("infected_ever", default=False, label="Ever Infected"),
+            ss.BoolState("susceptible", default=False, label="Susceptible"),
+            ss.BoolState("infected", default=False, label="Infectious"),
+            ss.BoolState("unexposed", default=True, label="Unexposed"),  # People are born into this state, naive and never exposed
+            ss.BoolState("prepatent", default=False, label="Prepatent"),  # Also known as exposed state (incubation stage)
+            ss.BoolState("acute", default=False, label="Acute"),
+            ss.BoolState("subclinical", default=False, label="Subclinical"),
+            ss.BoolState("chronic", default=False, label="Chronic"),
+            ss.BoolState("recovered", default=False, label="Recovered/Been Infected"),
+            ss.BoolState("infected_ever", default=False, label="Ever Infected"),
 
             # States that track immunity-related quantities or variables
             # and depend on infection states
@@ -138,8 +138,8 @@ class Typhoid(ss.Disease):
             ss.FloatArr("exposure_amount", default=0.0, label="Number of Exposures"),        # average (number of exposures * volume) from a given source/route over the interval of one timestep (usually 1 day)
             ss.FloatArr("cfu_dose_per_exposure", default=0.0, label="Single environmental exposure amount (CFUs)"),
             ss.FloatArr("cfu_dose", default=0.0, label="Exposure amount (CFUs)"),            # contagion amount in number of CFUs (acquisition phase, "doses" of bacteria that the target host takes as input from sources of contagion)
-            ss.FloatArr("infectiousness", 0.0, label="Infectiousness"),                      # average number of CFUs during different stages of the disease (infected phase, within host).
-            ss.FloatArr("n_infections", 0.0, label="Number of Infections"),                  # number of infections over the lifespan of this agent
+            ss.FloatArr("infectiousness", default=0.0, label="Infectiousness"),              # average number of CFUs during different stages of the disease (infected phase, within host).
+            ss.FloatArr("n_infections", default=0.0, label="Number of Infections"),          # number of infections over the lifespan of this agent
             ss.FloatArr("susceptibility", default=1.0, label="Susceptibility Level"),        # blocking effect factor due to immunity to typhoid, value between 0 (blocking new infections) and 1 (completely vulnerable). Maybe we need a more descriptive name.
             ss.FloatArr("immunity_acquired", default=0.0, label="Acquired Immunity Level"),  # Acquired/evoked immune protection against infection due to vaccinations, a value between 0 and 1
 
@@ -199,7 +199,7 @@ class Typhoid(ss.Disease):
                 # expect this parameter to exist. To cancel out the effect we set
                 # beta to be the time step, such that when beta_per_dt is calculated
                 # the effective value is 1.0
-                self.pars.beta = 1./self.t.dt
+                self.pars.beta = 1.0/float(self.t.dt)
 
             # If beta is a scalar, apply this bi-directionally to all networks
             if sc.isnumber(self.pars.beta):
@@ -394,9 +394,9 @@ class Typhoid(ss.Disease):
             "chronic",
             "recovered",
         ]:
-            self.statesdict[state][uids] = False
-            self.statesdict[f"ti_{state}"][uids] = np.nan
-        self.statesdict["unexposed"][uids] = False
+            self.state_dict[state][uids] = False
+            self.state_dict[f"ti_{state}"][uids] = np.nan
+        self.state_dict["unexposed"][uids] = False
         return
 
     # Update progression of disease, handle transitions
@@ -503,7 +503,7 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_prep = self.pars.dur_prep_dist.rvs(uids).astype(float)  # in days
         dur_prep = dur_prep * tyd.day2year  # in years
-        return sc.randround(dur_prep / dt)  # in number of timesteps
+        return sc.randround(dur_prep / float(dt))  # in number of timesteps
 
     def get_acute_duration_by_age(self, uids):
         """
@@ -513,7 +513,7 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_acu = p.dur_inf_dist.rvs(uids) * tyd.days_per_week  # in days
         dur_acu = dur_acu * tyd.day2year  # in years
-        return sc.randround(dur_acu / dt)  # in number of timesteps
+        return sc.randround(dur_acu / float(dt))  # in number of timesteps
 
     def get_subclinical_duration_by_age(self, uids):
         """
@@ -523,7 +523,7 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_scl = p.dur_inf_dist.rvs(uids) * tyd.days_per_week  # in days
         dur_scl = dur_scl * tyd.day2year
-        return sc.randround(dur_scl / dt)
+        return sc.randround(dur_scl / float(dt))
 
     def get_wait_duration(self, uids):
         """
@@ -534,14 +534,14 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_wait = p.dur_wait2treatment.rvs(uids).astype(float)
         dur_wait = dur_wait * tyd.day2year
-        return sc.randround(dur_wait / dt)
+        return sc.randround(dur_wait / float(dt))
 
     def get_recovered_duration(self, uids):
         p = self.pars
         dt = self.t.dt
         dur_rec = p.dur_rec_dist.rvs(uids)  # duration in days
         dur_rec = dur_rec * tyd.day2year                  # duration in years
-        return sc.randround(dur_rec / dt)        # duration in integer number of timesteps
+        return sc.randround(dur_rec / float(dt))        # duration in integer number of timesteps
 
     def get_chronic_duration(self, uids):
         """
@@ -552,7 +552,7 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_chro = p.dur_chro_dist.rvs(uids) * tyd.days_per_week  # duration in in days
         dur_chro = dur_chro * tyd.day2year        # duration in years
-        return sc.randround(dur_chro / dt)        # duration in integer number of timesteps
+        return sc.randround(dur_chro / float(dt))        # duration in integer number of timesteps
 
 
     def get_tai_vals(self, uids):
@@ -667,7 +667,7 @@ class Typhoid(ss.Disease):
         sat_age = module.pars.unexp2sus_saturation_age
         slope = module.pars.unexp2sus_slope
         p2 = tyum.sigmoid(sim.people.age[uids], sat_age, slope)
-        p1 = tyum.sigmoid(sim.people.age[uids] - sim.t.dt, sat_age, slope)
+        p1 = tyum.sigmoid(sim.people.age[uids] - float(sim.t.dt), sat_age, slope)
         if module.ti == 0:
             p_sus = p2
         else:
@@ -759,7 +759,7 @@ class Typhoid(ss.Disease):
 
         # Determine which carriers will recover and when
         # See: https://github.com/starsimhub/typhoidsim/issues/66
-        chro2rec_uids = acu2chro_uids[p.p_rec.rvs(acu2chro_uids)].concat(scl2chro_uids[p.p_rec.rvs(scl2chro_uids)])
+        chro2rec_uids = acu2chro_uids[p.p_rec.rvs(acu2chro_uids)].concatenate(scl2chro_uids[p.p_rec.rvs(scl2chro_uids)])
         dur_chro = self.get_chronic_duration(chro2rec_uids)
         self.ti_recovered[chro2rec_uids] = self.ti_chronic[chro2rec_uids] + dur_chro
 
@@ -770,7 +770,7 @@ class Typhoid(ss.Disease):
 
         # Recovery: Get sublinical cases that recover because they won't become carriers
         scl2rec_uids = np.setdiff1d(subcl_uids, scl2chro_uids)
-        will_recover_uids = acu2rec_uids.concat(scl2rec_uids).concat(chro2rec_uids)
+        will_recover_uids = acu2rec_uids.concatenate(scl2rec_uids).concatenate(chro2rec_uids)
 
         # Determine when non-carriers who recover will become susceptible again,
         dur_acu = self.get_acute_duration_by_age(acu2rec_uids)
@@ -840,7 +840,7 @@ class Typhoid(ss.Disease):
         sources = []
         networks = []
         betamap = self._check_betas()
-        dt = self.t.dt
+        dt = float(self.t.dt)
 
         # TODO: Handle in disease module and then use standard starsim transmission
         rel_sus   = self.rel_sus.asnew(self.susceptible * self.rel_sus) \
@@ -851,7 +851,7 @@ class Typhoid(ss.Disease):
         for i, (nkey,route) in enumerate(self.sim.networks.items()):
             nk = ss.standardize_netkey(nkey)
             if isinstance(route, (ss.MixingPool, ss.MixingPools)):
-                target_uids = route.compute_transmission(rel_sus, rel_trans, betamap[nk])
+                target_uids = route.compute_transmission(rel_sus, rel_trans, betamap[nk], disease=self)
                 new_cases.append(target_uids)
                 sources.append(np.full(len(target_uids), dtype=ss.dtypes.float, fill_value=np.nan))
                 networks.append(np.full(len(target_uids), dtype=ss.dtypes.int, fill_value=i))
@@ -884,7 +884,7 @@ class Typhoid(ss.Disease):
                         sources.append(src[new_cases_bool])
                         networks.append(np.full(np.count_nonzero(new_cases_bool), dtype=ss_int_, fill_value=i))
 
-        new_cases = ss.uids.cat(new_cases)
+        new_cases = ss.uids.concatenate(new_cases)
         if len(new_cases):
             # "Adjust" cfu_dose of agents who become infected at this time step.
             # This will guarantee the high dose mu/sigma parameters for prepatent duration
@@ -921,7 +921,7 @@ class Typhoid(ss.Disease):
         if not self.pars.has_environment:
             return []
         ti = self.ti
-        dt = self.t.dt
+        dt = float(self.t.dt)
         n_agents = np.count_nonzero(self.sim.people.alive) # current N, number of agents currently alive
         exposure_volume = 1.0 / n_agents  # CFUs in the environment need to be proportionally distributed among agents, so we don't have the case where number of CFUs received by agents > CFU's available in the environment
         environment = self.sim.demographics['environmentalpool']

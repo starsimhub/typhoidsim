@@ -75,6 +75,6 @@ selected_uids = np.intersect1d(children_uids, vaccinated_uids)
 sim.analyzers[0].plot_ridge(uids=selected_uids, y_scaling=1.2)
 
 fig, ax = sc.getrowscols(n=1, nrows=1, make=True)
-ax.plot(sim.timevec, sim.analyzers[0].results["eff_sus"][:, selected_uids])
+ax.plot(sim.timevec.years, sim.analyzers[0].results["eff_sus"][:, selected_uids])
 
 plt.show()

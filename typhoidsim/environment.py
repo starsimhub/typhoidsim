@@ -37,6 +37,7 @@ class EnvironmentalPool(ss.Demographics):
         return
 
     def init_results(self):
+        super().init_results()
         self.define_results(
             ss.Result('cfu_conc', dtype=float, scale=False, label='Current CFU concentration'),
             ss.Result('cfu_num', dtype=int, scale=False, label='Current number of CFUs'),

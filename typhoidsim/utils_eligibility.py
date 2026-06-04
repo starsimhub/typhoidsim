@@ -25,7 +25,8 @@ def eligibility_by_sex(sim, sex=0):
     Returns uids of living of a given biological sex people who are in the age group
     age_min <= age < age_max (semi-open interval).
     """
-    eligible_uids = (sim.people.alive & (sim.people.sex == sex)).uids
+    sex_state = sim.people.female if sex == 0 else sim.people.male  # v3: sex array removed; 0=female, 1=male
+    eligible_uids = (sim.people.alive & sex_state).uids
     return eligible_uids
 
 

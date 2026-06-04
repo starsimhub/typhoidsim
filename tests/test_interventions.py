@@ -231,38 +231,40 @@ def test_screening_with_monitor():
     res_positive = 'monitor_by_age_sex_b_new_positive'
     assert (flat[res_acute].sum() == flat[res_tested].sum() == flat[res_positive].sum())
 
-    coverage = 0.5
-    sim1 = make_sim_with_acute_screening(screen_coverage=coverage)
-    #msim = ss.MultiSim(sims=sim1, n_runs=10)
-    #msim.run()
-    sim1.run()
+    # The remaining checks are statistical (they verify screening/test rates), so we
+    # average over several seeds to reduce single-run Monte Carlo noise. (This test was
+    # originally designed around a 10-run MultiSim for the same reason; under Starsim v3
+    # the RNG stream differs, so a single fixed seed is too noisy for rtol=0.1.)
+    n_runs = 8
 
+    coverage = 0.5
     val = 0.0
     target_val = 0.0
-    #for sim in msim.sims:
-    flat = sim1.results.flatten()
-    val += flat[res_tested].sum()
-    target_val += flat[res_acute].sum()*coverage
-    #val /= 1#len(msim.sims)
-    #target_val /= 1#len(msim.sims)
+    for seed in range(n_runs):
+        sim1 = make_sim_with_acute_screening(screen_coverage=coverage)
+        sim1.pars['rand_seed'] = seed
+        sim1.run()
+        flat = sim1.results.flatten()
+        val += flat[res_tested].sum()
+        target_val += flat[res_acute].sum()*coverage
+    val /= n_runs
+    target_val /= n_runs
     assert np.isclose(val, target_val, rtol=1e-1)
 
     coverage = 0.5
     sensitivity = 0.6
-    sim2 = make_sim_with_acute_screening(screen_coverage=coverage,
-                                        test_sensitivity=sensitivity)
-    #msim = ss.MultiSim(sims=sim2, n_runs=10)
-    #msim.run()
-    sim2.run()
-
     val = 0.0
     target_val = 0.0
-    #for sim in msim.sims:
-    flat = sim2.results.flatten()
-    val += flat[res_positive].sum()
-    target_val += flat[res_acute].sum()*coverage*sensitivity
-    #val /= len(msim.sims)
-    #target_val /= len(msim.sims)
+    for seed in range(n_runs):
+        sim2 = make_sim_with_acute_screening(screen_coverage=coverage,
+                                             test_sensitivity=sensitivity)
+        sim2.pars['rand_seed'] = seed
+        sim2.run()
+        flat = sim2.results.flatten()
+        val += flat[res_positive].sum()
+        target_val += flat[res_acute].sum()*coverage*sensitivity
+    val /= n_runs
+    target_val /= n_runs
     assert np.isclose(val, target_val, rtol=1e-1)
     return
 
@@ -277,6 +279,30 @@ def test_base_test_leaky(do_plot=False):
 
 def test_wash_behavior_change():
     return run_sim_with_wash(efficacy=0.5)
+
+
+def test_shedding_reduction():
+    """
+    The WASH shedding_reduction intervention should scale the environmental
+    shedding rate by (1 - efficacy). This exercises the WASH base class against
+    an environmental-pool parameter target (the non-Array branch of
+    _set_target_val_par) and the start/dur defaulting from the sim timeline.
+    """
+    pars = sc.objdict(start=2000, dur=1.0, dt=1.0/365.0, rand_seed=2, verbose=0)
+    efficacy = 0.5
+    sim = ss.Sim(
+        pars=pars,
+        diseases=ty.Typhoid(),
+        demographics=ty.EnvironmentalPool(),
+        interventions=ty.shedding_reduction(efficacy=efficacy),
+    )
+    sim.init()
+    baseline = float(sim.demographics.environmentalpool.pars.transmission.shedding_rate)
+    sim.run()
+    after = float(sim.demographics.environmentalpool.pars.transmission.shedding_rate)
+    assert np.isclose(after, (1.0 - efficacy) * baseline), \
+        f'shedding_rate should be {(1.0 - efficacy) * baseline}, got {after}'
+    return sim
 
 
 # def test_vaccine_leaky(do_plot=False):
@@ -295,5 +321,6 @@ if __name__ == '__main__':
     #test_base_test_leaky(do_plot=do_plot)
     #test_vaccine_leaky()
     test_wash_behavior_change()
+    test_shedding_reduction()
     test_screening_with_monitor()
     T.toc()

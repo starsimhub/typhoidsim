@@ -16,12 +16,12 @@ __all__ = ["CommunityNet", "HouseholdNet"]
     
 class CommunityNet(ss.DynamicNetwork):
     """ Create an age-assortative network based on a 2D age-mixing pattern."""
-    def __init__(self, pars=None, key_dict=None, **kwargs):
-        super().__init__(key_dict=key_dict, **kwargs)
+    def __init__(self, pars=None, **kwargs):
+        super().__init__(**kwargs)
         self.define_pars(
             age_mixing=None,
             location='Chile',
-            dur=ss.dur(0, unit='day'),  # Duration ensures new random edges each time step
+            dur=ss.days(0),  # Duration ensures new random edges each time step
         )
         self.update_pars(pars, **kwargs)
 
@@ -138,7 +138,7 @@ class CommunityNet(ss.DynamicNetwork):
         p1, p2 = self.get_contacts(born)
 
         beta = np.ones(len(p1), dtype=ss_float_)
-        dur = np.full(len(p1), self.pars.dur.values)
+        dur = np.full(len(p1), self.pars.dur.value)
         self.append(p1=p1, p2=p2, beta=beta, dur=dur)
         return
 
@@ -222,9 +222,9 @@ class HouseholdNet(ss.DynamicNetwork):
     if one of their members die.
     """
 
-    def __init__(self, pars=None, key_dict=None, **kwargs):
+    def __init__(self, pars=None, **kwargs):
         """ Initialize """
-        super().__init__(key_dict=key_dict)
+        super().__init__()
         self.define_pars(
             n_contacts=ss.constant(10),
             location=None,
