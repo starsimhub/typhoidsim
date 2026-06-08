@@ -1,0 +1,2319 @@
+{
+  "project": "typhoidsim",
+  "version": "0.0.9999",
+  "count": 153,
+  "items": [
+    {
+      "name": "typhoidsim.calibration.euclidean",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/calibration.html#typhoidsim.calibration.euclidean",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.calibration.normalized_median_absolute_error",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/calibration.html#typhoidsim.calibration.normalized_median_absolute_error",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.calibration.weighted_euclidean",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/calibration.html#typhoidsim.calibration.weighted_euclidean",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.calibration",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/calibration.html#typhoidsim.calibration",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.defaults",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/defaults.html#typhoidsim.defaults",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.distributions.beta.make_rvs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.beta.make_rvs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.distributions.beta",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.beta",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.distributions.gausshyper.make_rvs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.gausshyper.make_rvs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.distributions.gausshyper",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.gausshyper",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.distributions.gompertz.make_rvs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.gompertz.make_rvs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.distributions.gompertz",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.gompertz",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.distributions.truncnorm.make_rvs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.truncnorm.make_rvs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.distributions.truncnorm",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.truncnorm",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.distributions",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.environment",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/environment.html#typhoidsim.environment",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.immunity.imm_constant_dur_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/immunity.html#typhoidsim.immunity.imm_constant_dur_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.immunity.imm_decay_rate_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/immunity.html#typhoidsim.immunity.imm_decay_rate_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.immunity.imm_draw_fn_constant",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/immunity.html#typhoidsim.immunity.imm_draw_fn_constant",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.immunity.imm_ve0_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/immunity.html#typhoidsim.immunity.imm_ve0_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.immunity",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/immunity.html#typhoidsim.immunity",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.ingest.get_age_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_age_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.ingest.get_age_mix_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_age_mix_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.ingest.get_household_head_age_by_size_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_household_head_age_by_size_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.ingest.get_household_head_age_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_household_head_age_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.ingest.get_household_size",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_household_size",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.ingest.get_household_size_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_household_size_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.ingest",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.acute_treatment.get_eligible",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.acute_treatment.get_eligible",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.acute_treatment",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.acute_treatment",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.behavioral_change",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.behavioral_change",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.environmental_exposure_reduction",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.environmental_exposure_reduction",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.environmental_seasonality",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.environmental_seasonality",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.environmental_trapezoidal_modulation",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.environmental_trapezoidal_modulation",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.infection_clearence.get_eligible",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.infection_clearence.get_eligible",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.infection_clearence",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.infection_clearence",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.routine_acute_screening",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.routine_acute_screening",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.shedding_reduction",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.shedding_reduction",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.vaccination_with_waning.step_acquired_immunity",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.vaccination_with_waning.step_acquired_immunity",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions.vaccination_with_waning",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.vaccination_with_waning",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.interventions",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.histogram_by_vaccination_status",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histogram_by_vaccination_status",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.histograms_by_age_sex_monitor.plot",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor.plot",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.histograms_by_age_sex_monitor.plot_waterfall",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor.plot_waterfall",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.histograms_by_age_sex_monitor.set_observation_interval",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor.set_observation_interval",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.histograms_by_age_sex_monitor.to_df",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor.to_df",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.histograms_by_age_sex_monitor",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.states_consistency_monitor.step",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.states_consistency_monitor.step",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.states_consistency_monitor",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.states_consistency_monitor",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.track_individuals_monitor.plot_ridge",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.track_individuals_monitor.plot_ridge",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors.track_individuals_monitor",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.track_individuals_monitor",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.monitors",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.CommunityNet.add_pairs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.add_pairs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.CommunityNet.estimate_age_mixing_density",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.estimate_age_mixing_density",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.CommunityNet.get_age_groups",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.get_age_groups",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.CommunityNet.get_contact_rates",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.get_contact_rates",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.CommunityNet.plot_age_mixing_density",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.plot_age_mixing_density",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.CommunityNet",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.HouseholdNet.add_pairs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet.add_pairs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.HouseholdNet.get_contacts",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet.get_contacts",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.HouseholdNet.get_households",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet.get_households",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.HouseholdNet.get_source",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet.get_source",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks.HouseholdNet",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.networks",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern.disp",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.disp",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern.evaluate",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.evaluate",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern.generate_data",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.generate_data",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern.init",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.init",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern.link_module",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.link_module",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern.link_sim",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.link_sim",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern.plot",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.plot",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern.set",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.set",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern.show_state",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.show_state",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.Pattern",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns.StateVariable",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.StateVariable",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.patterns",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.products.blocking_vaccine.administer",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.blocking_vaccine.administer",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.products.blocking_vaccine",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.blocking_vaccine",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.products.infectiousness_clearence",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.infectiousness_clearence",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.products.infectiousness_redux",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.infectiousness_redux",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.products.typhoid_test.administer",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.typhoid_test.administer",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.products.typhoid_test",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.typhoid_test",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.products.typhoid_vaccine",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.typhoid_vaccine",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.products",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.settings",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/settings.html#typhoidsim.settings",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.chronic_gall_prob_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.chronic_gall_prob_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.chronic_prob_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.chronic_prob_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.drc",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.drc",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.get_acute_duration_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_acute_duration_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.get_chronic_duration",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_chronic_duration",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.get_prepatent_duration_by_exposure",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_prepatent_duration_by_exposure",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.get_subclinical_duration_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_subclinical_duration_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.get_tai_vals",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_tai_vals",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.get_wait_duration",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_wait_duration",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.inf_dur_mean",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.inf_dur_mean",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.inf_dur_std",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.inf_dur_std",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.infection_prob_function_env",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.infection_prob_function_env",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.init_post",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.init_post",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.init_pre",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.init_pre",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.init_results",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.init_results",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.make_new_cases_contact",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.make_new_cases_contact",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.make_new_cases_environmental",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.make_new_cases_environmental",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.make_new_cases_sequential",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.make_new_cases_sequential",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.make_susceptible",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.make_susceptible",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.prepare_partial_prep_funs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.prepare_partial_prep_funs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.prepatent_mean_dur_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.prepatent_mean_dur_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.prepatent_std_dur_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.prepatent_std_dur_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.prior_infections_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.prior_infections_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.set_prognoses",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.set_prognoses",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.step",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.step",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.step_die",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.step_die",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.step_state",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.step_state",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.tai_mean",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.tai_mean",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.tai_std",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.tai_std",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.unexp2sus_prob_gauld2018",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.unexp2sus_prob_gauld2018",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.unexp2susc_prob_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.unexp2susc_prob_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.update_susceptibility",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.update_susceptibility",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.validate_beta",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.validate_beta",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.validate_environment",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.validate_environment",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid.will_become_chronic_carrier",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.will_become_chronic_carrier",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.Typhoid",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid.unexp2sus_childhood_prob_function_gauld2018",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.unexp2sus_childhood_prob_function_gauld2018",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.detect_age_anniversary",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.detect_age_anniversary",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.digitize_ages_1yr",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.digitize_ages_1yr",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.generate_age_bin_labels",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.generate_age_bin_labels",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.generate_unique_filename",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.generate_unique_filename",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.get_age_distribution_un",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.get_age_distribution_un",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.get_attr_vals",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.get_attr_vals",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.get_data_home",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.get_data_home",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.get_dataset_names",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.get_dataset_names",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.load_age_dist_un",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.load_age_dist_un",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.load_dataset",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.load_dataset",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.stratify_parameter_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.stratify_parameter_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.test_cpu_performance",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.test_cpu_performance",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils.to_df",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.to_df",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_eligibility.eligibility_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_eligibility.html#typhoidsim.utils_eligibility.eligibility_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_eligibility.eligibility_by_age_sex",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_eligibility.html#typhoidsim.utils_eligibility.eligibility_by_age_sex",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_eligibility.eligibility_by_sex",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_eligibility.html#typhoidsim.utils_eligibility.eligibility_by_sex",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_eligibility",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/utils_eligibility.html#typhoidsim.utils_eligibility",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_math.asym_trapezoidal",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.asym_trapezoidal",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_math.box_gamma",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.box_gamma",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_math.double_sigmoid_exp",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.double_sigmoid_exp",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_math.double_sigmoid_tanh",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.double_sigmoid_tanh",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_math.gompertz_dfun",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.gompertz_dfun",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_math.gompertz_fun",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.gompertz_fun",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_math.sigmoid",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.sigmoid",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.utils_math",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.visualizers.plot_age_histogram",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/visualizers.html#typhoidsim.visualizers.plot_age_histogram",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.visualizers.plot_age_mixing",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/visualizers.html#typhoidsim.visualizers.plot_age_mixing",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.visualizers.plot_calib",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/visualizers.html#typhoidsim.visualizers.plot_calib",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.visualizers.plot_sim",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/visualizers.html#typhoidsim.visualizers.plot_sim",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.visualizers",
+      "domain": "py",
+      "role": "module",
+      "priority": "1",
+      "uri": "api/visualizers.html#typhoidsim.visualizers",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.euclidean",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/calibration.html#typhoidsim.calibration.euclidean",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.normalized_median_absolute_error",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/calibration.html#typhoidsim.calibration.normalized_median_absolute_error",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.weighted_euclidean",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/calibration.html#typhoidsim.calibration.weighted_euclidean",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.beta.make_rvs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.beta.make_rvs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.beta",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.beta",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.gausshyper.make_rvs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.gausshyper.make_rvs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.gausshyper",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.gausshyper",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.gompertz.make_rvs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.gompertz.make_rvs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.gompertz",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.gompertz",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.truncnorm.make_rvs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.truncnorm.make_rvs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.truncnorm",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/distributions.html#typhoidsim.distributions.truncnorm",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.imm_constant_dur_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/immunity.html#typhoidsim.immunity.imm_constant_dur_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.imm_decay_rate_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/immunity.html#typhoidsim.immunity.imm_decay_rate_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.imm_draw_fn_constant",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/immunity.html#typhoidsim.immunity.imm_draw_fn_constant",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.imm_ve0_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/immunity.html#typhoidsim.immunity.imm_ve0_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_age_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_age_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_age_mix_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_age_mix_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_household_head_age_by_size_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_household_head_age_by_size_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_household_head_age_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_household_head_age_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_household_size",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_household_size",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_household_size_distribution",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/ingest.html#typhoidsim.ingest.get_household_size_distribution",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.acute_treatment.get_eligible",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.acute_treatment.get_eligible",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.acute_treatment",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.acute_treatment",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.behavioral_change",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.behavioral_change",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.environmental_exposure_reduction",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.environmental_exposure_reduction",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.environmental_seasonality",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.environmental_seasonality",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.environmental_trapezoidal_modulation",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.environmental_trapezoidal_modulation",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.infection_clearence.get_eligible",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.infection_clearence.get_eligible",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.infection_clearence",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.infection_clearence",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.routine_acute_screening",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.routine_acute_screening",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.shedding_reduction",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.shedding_reduction",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.vaccination_with_waning.step_acquired_immunity",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.vaccination_with_waning.step_acquired_immunity",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.vaccination_with_waning",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/interventions.html#typhoidsim.interventions.vaccination_with_waning",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.histogram_by_vaccination_status",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histogram_by_vaccination_status",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.histograms_by_age_sex_monitor.plot",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor.plot",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.histograms_by_age_sex_monitor.plot_waterfall",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor.plot_waterfall",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.histograms_by_age_sex_monitor.set_observation_interval",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor.set_observation_interval",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.histograms_by_age_sex_monitor.to_df",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor.to_df",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.histograms_by_age_sex_monitor",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.histograms_by_age_sex_monitor",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.states_consistency_monitor.step",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.states_consistency_monitor.step",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.states_consistency_monitor",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.states_consistency_monitor",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.track_individuals_monitor.plot_ridge",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.track_individuals_monitor.plot_ridge",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.track_individuals_monitor",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/monitors.html#typhoidsim.monitors.track_individuals_monitor",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.CommunityNet.add_pairs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.add_pairs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.CommunityNet.estimate_age_mixing_density",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.estimate_age_mixing_density",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.CommunityNet.get_age_groups",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.get_age_groups",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.CommunityNet.get_contact_rates",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.get_contact_rates",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.CommunityNet.plot_age_mixing_density",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet.plot_age_mixing_density",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.CommunityNet",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.CommunityNet",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.HouseholdNet.add_pairs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet.add_pairs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.HouseholdNet.get_contacts",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet.get_contacts",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.HouseholdNet.get_households",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet.get_households",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.HouseholdNet.get_source",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet.get_source",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.HouseholdNet",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/networks.html#typhoidsim.networks.HouseholdNet",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern.disp",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.disp",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern.evaluate",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.evaluate",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern.generate_data",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.generate_data",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern.init",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.init",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern.link_module",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.link_module",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern.link_sim",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.link_sim",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern.plot",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.plot",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern.set",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.set",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern.show_state",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern.show_state",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Pattern",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.Pattern",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.StateVariable",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/patterns.html#typhoidsim.patterns.StateVariable",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.blocking_vaccine.administer",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.blocking_vaccine.administer",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.blocking_vaccine",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.blocking_vaccine",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.infectiousness_clearence",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.infectiousness_clearence",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.infectiousness_redux",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.infectiousness_redux",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid_test.administer",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.typhoid_test.administer",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid_test",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.typhoid_test",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.typhoid_vaccine",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/products.html#typhoidsim.products.typhoid_vaccine",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.chronic_gall_prob_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.chronic_gall_prob_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.chronic_prob_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.chronic_prob_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.drc",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.drc",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.get_acute_duration_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_acute_duration_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.get_chronic_duration",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_chronic_duration",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.get_prepatent_duration_by_exposure",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_prepatent_duration_by_exposure",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.get_subclinical_duration_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_subclinical_duration_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.get_tai_vals",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_tai_vals",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.get_wait_duration",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.get_wait_duration",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.inf_dur_mean",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.inf_dur_mean",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.inf_dur_std",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.inf_dur_std",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.infection_prob_function_env",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.infection_prob_function_env",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.init_post",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.init_post",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.init_pre",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.init_pre",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.init_results",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.init_results",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.make_new_cases_contact",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.make_new_cases_contact",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.make_new_cases_environmental",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.make_new_cases_environmental",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.make_new_cases_sequential",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.make_new_cases_sequential",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.make_susceptible",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.make_susceptible",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.prepare_partial_prep_funs",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.prepare_partial_prep_funs",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.prepatent_mean_dur_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.prepatent_mean_dur_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.prepatent_std_dur_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.prepatent_std_dur_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.prior_infections_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.prior_infections_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.set_prognoses",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.set_prognoses",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.step",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.step",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.step_die",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.step_die",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.step_state",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.step_state",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.tai_mean",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.tai_mean",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.tai_std",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.tai_std",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.unexp2sus_prob_gauld2018",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.unexp2sus_prob_gauld2018",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.unexp2susc_prob_function",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.unexp2susc_prob_function",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.update_susceptibility",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.update_susceptibility",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.validate_beta",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.validate_beta",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.validate_environment",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.validate_environment",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid.will_become_chronic_carrier",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid.will_become_chronic_carrier",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.Typhoid",
+      "domain": "py",
+      "role": "class",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.Typhoid",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.unexp2sus_childhood_prob_function_gauld2018",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/typhoid.html#typhoidsim.typhoid.unexp2sus_childhood_prob_function_gauld2018",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.detect_age_anniversary",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.detect_age_anniversary",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.digitize_ages_1yr",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.digitize_ages_1yr",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.generate_age_bin_labels",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.generate_age_bin_labels",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.generate_unique_filename",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.generate_unique_filename",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_age_distribution_un",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.get_age_distribution_un",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_attr_vals",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.get_attr_vals",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_data_home",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.get_data_home",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.get_dataset_names",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.get_dataset_names",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.load_age_dist_un",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.load_age_dist_un",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.load_dataset",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.load_dataset",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.stratify_parameter_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.stratify_parameter_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.test_cpu_performance",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.test_cpu_performance",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.to_df",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils.html#typhoidsim.utils.to_df",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.eligibility_by_age",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_eligibility.html#typhoidsim.utils_eligibility.eligibility_by_age",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.eligibility_by_age_sex",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_eligibility.html#typhoidsim.utils_eligibility.eligibility_by_age_sex",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.eligibility_by_sex",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_eligibility.html#typhoidsim.utils_eligibility.eligibility_by_sex",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.asym_trapezoidal",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.asym_trapezoidal",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.box_gamma",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.box_gamma",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.double_sigmoid_exp",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.double_sigmoid_exp",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.double_sigmoid_tanh",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.double_sigmoid_tanh",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.gompertz_dfun",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.gompertz_dfun",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.gompertz_fun",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.gompertz_fun",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.sigmoid",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/utils_math.html#typhoidsim.utils_math.sigmoid",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.plot_age_histogram",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/visualizers.html#typhoidsim.visualizers.plot_age_histogram",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.plot_age_mixing",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/visualizers.html#typhoidsim.visualizers.plot_age_mixing",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.plot_calib",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/visualizers.html#typhoidsim.visualizers.plot_calib",
+      "dispname": "-"
+    },
+    {
+      "name": "typhoidsim.plot_sim",
+      "domain": "py",
+      "role": "function",
+      "priority": "1",
+      "uri": "api/visualizers.html#typhoidsim.visualizers.plot_sim",
+      "dispname": "-"
+    }
+  ]
+}

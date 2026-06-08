@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>typhoid – Typhoidsim</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../api/immunity.html" rel="next">
+<link href="../api/index.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-52748901a92be0f40b1b71967a65718b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-7b08722db7b8837b422d6b4de827e391.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-52748901a92be0f40b1b71967a65718b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Typhoidsim</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link active" href="../index.html" aria-current="page"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../whatsnew.html"> 
+<span class="menu-text">What’s new</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../tutorials.html"> 
+<span class="menu-text">Tutorials</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../conduct.html"> 
+<span class="menu-text">Code of conduct</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../contributing.html"> 
+<span class="menu-text">Contributing</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../api/index.html"> 
+<span class="menu-text">API reference</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools tools-wide">
+    <a href="https://github.com/starsimhub/typhoidsim" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-github"></i></a>
+    <a href="mailto:info@starsim.org" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-envelope-at-fill"></i></a>
+    <a href="https://starsim.org" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-globe"></i></a>
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../api/typhoid.html"><strong>Disease</strong></a></li><li class="breadcrumb-item"><a href="../api/typhoid.html">typhoid</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><strong>Home</strong></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><strong>API reference</strong></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text"><strong>Disease</strong></span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/typhoid.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">typhoid</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/immunity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">immunity</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/environment.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">environment</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text"><strong>Modules</strong></span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/networks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/interventions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">interventions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/products.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">products</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/monitors.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">monitors</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/visualizers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">visualizers</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text"><strong>Workflows</strong></span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/calibration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">calibration</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/ingest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ingest</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text"><strong>Utilities</strong></span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">distributions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/patterns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">patterns</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/defaults.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">defaults</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/settings.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">settings</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/utils.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/utils_eligibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils_eligibility</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/utils_math.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils_math</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#typhoidsim.typhoid" id="toc-typhoidsim.typhoid" class="nav-link active" data-scroll-target="#typhoidsim.typhoid">typhoid</a>
+  <ul class="collapse">
+  <li><a href="#classes" id="toc-classes" class="nav-link" data-scroll-target="#classes">Classes</a>
+  <ul class="collapse">
+  <li><a href="#typhoidsim.typhoid.Typhoid" id="toc-typhoidsim.typhoid.Typhoid" class="nav-link" data-scroll-target="#typhoidsim.typhoid.Typhoid">Typhoid</a></li>
+  </ul></li>
+  <li><a href="#functions" id="toc-functions" class="nav-link" data-scroll-target="#functions">Functions</a>
+  <ul class="collapse">
+  <li><a href="#typhoidsim.typhoid.unexp2sus_childhood_prob_function_gauld2018" id="toc-typhoidsim.typhoid.unexp2sus_childhood_prob_function_gauld2018" class="nav-link" data-scroll-target="#typhoidsim.typhoid.unexp2sus_childhood_prob_function_gauld2018">unexp2sus_childhood_prob_function_gauld2018</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/starsimhub/typhoidsim/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../api/typhoid.html"><strong>Disease</strong></a></li><li class="breadcrumb-item"><a href="../api/typhoid.html">typhoid</a></li></ol></nav></header>
+
+
+
+
+
+<section id="typhoidsim.typhoid" class="level1">
+<h1>typhoid</h1>
+<p><a href="../api/typhoid.html#typhoidsim.typhoid" title="0"><code>typhoid</code></a></p>
+<p>Typhoid model.</p>
+<section id="classes" class="level2">
+<h2 class="anchored" data-anchor-id="classes">Classes</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid">Typhoid</a></td>
+<td>Typhoid module that includes the natural history of the disease in a human</td>
+</tr>
+</tbody>
+</table>
+<section id="typhoidsim.typhoid.Typhoid" class="level3">
+<h3 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid">Typhoid</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid(pars<span class="op">=</span><span class="va">None</span>, <span class="op">*</span>args, <span class="op">**</span>kwargs)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Typhoid module that includes the natural history of the disease in a human agent.</p>
+<section id="methods" class="level4">
+<h4 class="anchored" data-anchor-id="methods">Methods</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.chronic_gall_prob_function">chronic_gall_prob_function</a></td>
+<td>Assumes gallstone probabilities and prevalence are defined.</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.chronic_prob_function">chronic_prob_function</a></td>
+<td>Does not use gallstone probabilities and prevalence.</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.drc">drc</a></td>
+<td>The probability of infection due to environmental exposure is mediated by</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.get_acute_duration_by_age">get_acute_duration_by_age</a></td>
+<td>Duration of the acute stage</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.get_chronic_duration">get_chronic_duration</a></td>
+<td>Determine duration of chronic stage</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.get_prepatent_duration_by_exposure">get_prepatent_duration_by_exposure</a></td>
+<td>Get durations in number of timesteps</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.get_subclinical_duration_by_age">get_subclinical_duration_by_age</a></td>
+<td>Determine duration of the sublinical stage</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.get_tai_vals">get_tai_vals</a></td>
+<td>Value of typhoid individual infectiousness</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.get_wait_duration">get_wait_duration</a></td>
+<td>Determine how many days a person in the acute stage would wait before</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.inf_dur_mean">inf_dur_mean</a></td>
+<td>_</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.inf_dur_std">inf_dur_std</a></td>
+<td>Age-dependent standard deviation of the distribution of durations of the</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.infection_prob_function_env">infection_prob_function_env</a></td>
+<td>Calculate the probability of infection for environmental route</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.init_post">init_post</a></td>
+<td>Set initial values for all agent states, and seed new cases if initial</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.init_pre">init_pre</a></td>
+<td>Initialise objects and valid before simulation run</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.init_results">init_results</a></td>
+<td>Initialise Result objects</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.make_new_cases_contact">make_new_cases_contact</a></td>
+<td>Add new cases of module, through transmission, incidence, etc.</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.make_new_cases_environmental">make_new_cases_environmental</a></td>
+<td>At each time step:</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.make_new_cases_sequential">make_new_cases_sequential</a></td>
+<td>This function exists to allow for testing different mechanisms</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.make_susceptible">make_susceptible</a></td>
+<td>Our model assumes all individuals are born into an unexposed, completely</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.prepare_partial_prep_funs">prepare_partial_prep_funs</a></td>
+<td>Partially evaluate functions that return parameters (mean and std) of</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.prepatent_mean_dur_function">prepatent_mean_dur_function</a></td>
+<td>Returns a mean duration parameter for every agent based on the cfu_dose,</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.prepatent_std_dur_function">prepatent_std_dur_function</a></td>
+<td>Returns a stdev duration parameter for every agent based on the cfu_dose,</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.prior_infections_by_age">prior_infections_by_age</a></td>
+<td>TODO: [WIP] palceholder - the functional form is just a toy example</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.set_prognoses">set_prognoses</a></td>
+<td>Here we define the whole natural history for every agent that has been infected.</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.step">step</a></td>
+<td>Handle transmission of pathogens and who becomes infected,</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.step_die">step_die</a></td>
+<td>Reset states for dead agents</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.step_state">step_state</a></td>
+<td>Update the progression of the disease – handles disease state transitions.</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.tai_mean">tai_mean</a></td>
+<td>Make an array of values for the mean of a normal distribution.</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.tai_std">tai_std</a></td>
+<td>Make an array of values for the std of a normal distribution</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.unexp2sus_prob_gauld2018">unexp2sus_prob_gauld2018</a></td>
+<td>Estimate the age-dependent probability of transistioning from</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.unexp2susc_prob_function">unexp2susc_prob_function</a></td>
+<td>Simple (default) mechanism that defines the probability of</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.update_susceptibility">update_susceptibility</a></td>
+<td>Susceptibility die to acquired immunity following infection.</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.validate_beta">validate_beta</a></td>
+<td>Perform any parameter validation</td>
+</tr>
+<tr class="even">
+<td><a href="#typhoidsim.typhoid.Typhoid.validate_environment">validate_environment</a></td>
+<td>Validate environment</td>
+</tr>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.Typhoid.will_become_chronic_carrier">will_become_chronic_carrier</a></td>
+<td>Determine who will become a chronic carrier</td>
+</tr>
+</tbody>
+</table>
+<section id="typhoidsim.typhoid.Typhoid.chronic_gall_prob_function" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.chronic_gall_prob_function">chronic_gall_prob_function</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.chronic_gall_prob_function(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Assumes gallstone probabilities and prevalence are defined. This scales p_cpg using prob of having gallstones and gallstone prevalence.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.chronic_prob_function" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.chronic_prob_function">chronic_prob_function</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.chronic_prob_function(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Does not use gallstone probabilities and prevalence. Uses directly p_cpg as p_chro.</p>
+<p>This method can be useful when either we do not have age and sex gallstone prob and prevalence distributions, or we want to simplify calibration by reducing degrees of freedom.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.drc" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.drc">drc</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.drc(cfu_dose)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The probability of infection due to environmental exposure is mediated by the dose-response curve (drc), taking in the contagion population as a value of colony-forming units (CFU) and returning a probability of infection.</p>
+<p>Here <code>cfu_dose</code> is the CFU dose received from the environment.</p>
+<p>The DRC is a beta-binomial curve fitted the historical challenge data by QMRA (Enger, 2013), where:</p>
+<p>P(response) = 1- [1 + cfu_dose * (2^(1/ α)- 1)/N50] ^(-α) and self.drc() could be a method to be defined by the user.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.get_acute_duration_by_age" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.get_acute_duration_by_age">get_acute_duration_by_age</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.get_acute_duration_by_age(uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Duration of the acute stage</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.get_chronic_duration" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.get_chronic_duration">get_chronic_duration</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.get_chronic_duration(uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Determine duration of chronic stage See: https://github.com/starsimhub/typhoidsim/issues/66</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.get_prepatent_duration_by_exposure" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.get_prepatent_duration_by_exposure">get_prepatent_duration_by_exposure</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.get_prepatent_duration_by_exposure(uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Get durations in number of timesteps</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.get_subclinical_duration_by_age" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.get_subclinical_duration_by_age">get_subclinical_duration_by_age</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.get_subclinical_duration_by_age(uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Determine duration of the sublinical stage</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.get_tai_vals" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.get_tai_vals">get_tai_vals</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.get_tai_vals(uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Value of typhoid individual infectiousness</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.get_wait_duration" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.get_wait_duration">get_wait_duration</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.get_wait_duration(uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Determine how many days a person in the acute stage would wait before seeking treatment</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.inf_dur_mean" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.inf_dur_mean">inf_dur_mean</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.inf_dur_mean(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>_ Age-dependent mean of the distribution of durations of the acute or subclinical stage. Assumes a lognormal_im distribution.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.inf_dur_std" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.inf_dur_std">inf_dur_std</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.inf_dur_std(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Age-dependent standard deviation of the distribution of durations of the acute or subclinical stage. Assumes a lognormal_im distribution.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.infection_prob_function_env" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.infection_prob_function_env">infection_prob_function_env</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.infection_prob_function_env(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Calculate the probability of infection for environmental route In EMOD (https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/IndividualTyphoid.cpp): NonNegativeFloat infects = 1.0f-pow( 1.0f + exposure * ( pow( 2.0f, (1/alpha) ) -1.0f )/N50, -alpha ); // Dose-response for prob of infection prob = 1.0f - pow(1.0f - immunity * infects * ira, number_of_exposures);</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.init_post" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.init_post">init_post</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.init_post()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Set initial values for all agent states, and seed new cases if initial prevalence is provided.</p>
+<p>This function could involve passing in a full set of initial conditions, or using init_prev (initial prevalence), or other.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.init_pre" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.init_pre">init_pre</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.init_pre(sim)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Initialise objects and valid before simulation run</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.init_results" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.init_results">init_results</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.init_results()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Initialise Result objects</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.make_new_cases_contact" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.make_new_cases_contact">make_new_cases_contact</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.make_new_cases_contact()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Add new cases of module, through transmission, incidence, etc. Common-random-number-safe transmission code works by mapping edges onto slots.</p>
+<p>The direct or contact transmission route. The probability of infection is calculated for each infector-infectee pair (not summed across all possible exposures an infectee experiences).</p>
+<p>See diagram for Model A in https://github.com/starsimhub/typhoidsim/issues/90</p>
+<p>Implicitly, at each time step, the number of “exposures” for a src-trg pair is equal to 1.</p>
+<p>In starsim we use beta_per_dt, the per time step probability that a contact between two susceptible people results in transmission.</p>
+<p>However, historically in EMOD-world this per-time-step probability is called exposure2contact_rate. For time being, and to faciliate mapping between past EMOD-based simulations, and starsim-based sims, we enforce beta_per_dt=1, and keep exposure2contct_rate. Eventually, we can move onto just using beta_per_dt.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.make_new_cases_environmental" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.make_new_cases_environmental">make_new_cases_environmental</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.make_new_cases_environmental()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>At each time step: 1. Individuals get exposed by the environment (env-&gt;ppl) - They receive a cfu dose, which depends on: - the cfu concentration in the environment, and - the exposures amouint to the environment.</p>
+<ol start="2" type="1">
+<li><p>New individuals may become infected, based on the cfu dose received and their past history with the disease. This is mediated by the Dose Response Curve. See self.drc(),</p></li>
+<li><p>Individuals shed bacteria/CFU to the environment. How many CFUs are shedded depends on two main factors: - shedding rate, a single factor that depends on the environment as it represents level of sanitation and/or collective change in behaviour. - each agent’s infectiousness, which can be modulated by treatment interventions.</p></li>
+</ol>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.make_new_cases_sequential" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.make_new_cases_sequential">make_new_cases_sequential</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.make_new_cases_sequential()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This function exists to allow for testing different mechanisms that handle multiroute transmission.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.make_susceptible" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.make_susceptible">make_susceptible</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.make_susceptible()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Our model assumes all individuals are born into an unexposed, completely immune state and move to the susceptible class based on some probability.</p>
+<p>The mechanism that moves individuals from one state to the other, can depend on age and/or other factors.</p>
+<p>By default, we do not assume any age-specific structure. Thus, agents are born into the unexposed state and are moved immediately to the susceptible state.</p>
+<p>However, there are a couple of predefined age-specific susceptibility probability functions implemented: - unexp2sus_youth_prob_function_gauld2018() - unexp2sus_childhood_prob_function_gauld2018()</p>
+<p>These functions can be passed as arguments to the Typhoid parameter. For instance:</p>
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<p>p_unexp2sus=ss.bernoulli(p=unexp2sus_prob_gauld2018), or p_unexp2sus=ss.bernoulli(p=unexp2sus_childhood_prob_function_gauld2018),</p>
+</blockquote>
+</blockquote>
+<p>See Also: https://github.com/jgauld/DtkTrunk/blob/Typhoid-Ongoing/Eradication/SusceptibilityTyphoid.cpp</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.prepare_partial_prep_funs" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.prepare_partial_prep_funs">prepare_partial_prep_funs</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.prepare_partial_prep_funs()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Partially evaluate functions that return parameters (mean and std) of the distribution of prepatatent durations.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.prepatent_mean_dur_function" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.prepatent_mean_dur_function">prepatent_mean_dur_function</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.prepatent_mean_dur_function(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Returns a mean duration parameter for every agent based on the cfu_dose, they have been exposed to. Assumes the parameter will be used by a lognormal_im distribution.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.prepatent_std_dur_function" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.prepatent_std_dur_function">prepatent_std_dur_function</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.prepatent_std_dur_function(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Returns a stdev duration parameter for every agent based on the cfu_dose, they have been exposed to. Assumes the parameter will be used by a lognormal_im distribution.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.prior_infections_by_age" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.prior_infections_by_age">prior_infections_by_age</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.prior_infections_by_age(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>TODO: [WIP] palceholder - the functional form is just a toy example Function to modulate probability of prior n_infections by age at t=0, but would need to discuss functional form/how to parameterize.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.set_prognoses" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.set_prognoses">set_prognoses</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.set_prognoses(uids, sources<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Here we define the whole natural history for every agent that has been infected. Specifically, we define <em>how long</em> each agent will stay in each stage of the disease, thus define <em>when</em> agents transition from one stage (state) to the next. This function also uses the probability distributions passes as parameters of the model to determine whol will become acute/sublinical/chronic, etc.</p>
+<p>The progression of this natural history can be altered by the environment, interventions, or other diseases.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.step" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.step">step</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.step()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Handle transmission of pathogens and who becomes infected, includes all transmission routes. This method is called by the Sim object.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.step_die" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.step_die">step_die</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.step_die(uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Reset states for dead agents</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.step_state" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.step_state">step_state</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.step_state()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Update the progression of the disease – handles disease state transitions. In a typical simulation flow this method is called before propagating the infection/disease is propagated via make_new_cases()</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.tai_mean" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.tai_mean">tai_mean</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.tai_mean(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Make an array of values for the mean of a normal distribution. Any function with the same signature can be passed as the values to the parameters of a distribution.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.tai_std" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.tai_std">tai_std</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.tai_std(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Make an array of values for the std of a normal distribution Any function with the same signature can be passed as the values to the parameters of a distribution.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.unexp2sus_prob_gauld2018" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.unexp2sus_prob_gauld2018">unexp2sus_prob_gauld2018</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.unexp2sus_prob_gauld2018(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Estimate the age-dependent probability of transistioning from unexposed to susceptible. From Gauld et al 2018, Fig. 2B.</p>
+<section id="parameters" class="level6 doc-section doc-section-parameters">
+<h6 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h6>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 61%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>module</td>
+<td></td>
+<td>a starsim (disease) Module</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>sim</td>
+<td></td>
+<td>the starsim Sim object (fully initialized)</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>uids</td>
+<td></td>
+<td>the uids of the eligible people</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level6 doc-section doc-section-returns">
+<h6 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h6>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>p_sus</td>
+<td><a href="https://docs.python.org/3/library/array.html#module-array">array</a></td>
+<td>array of probabilities for every agent in uids.</td>
+</tr>
+</tbody>
+</table>
+<p>EMOD: if( ( age &lt; twenty_years_old_days ) &amp;&amp; mod_acquire == 0 ) { float lambda = IndividualHumanTyphoidConfig::typhoid_exposure_lambda;</p>
+<pre><code>        perc2 = 1.0f - ((twenty_years_old_days - age) / (age*lambda + twenty_years_old_days ));
+        perc1 = 1.0f - ((twenty_years_old_days - (age-1)) / ((age-1)*lambda + twenty_years_old_days ));
+        perc = (perc2 - perc1) / (1 - perc1); &lt;--- probability</code></pre>
+<p>}</p>
+<p>From Gauld 2018: Specifically, at each month of age a fitted curve determines the probability of an individual entering the susceptible class.</p>
+<p>But the EMOD code does not seem to assess at every month of age, rather at every time step of 1 day.</p>
+</section>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.unexp2susc_prob_function" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.unexp2susc_prob_function">unexp2susc_prob_function</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.unexp2susc_prob_function(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Simple (default) mechanism that defines the probability of moving from the unexposed stat to the susceptible state. This mechanism moves everyone to the susceotible state.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.update_susceptibility" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.update_susceptibility">update_susceptibility</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.update_susceptibility(uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Susceptibility die to acquired immunity following infection. The more infections, the lower the number.</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.validate_beta" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.validate_beta">validate_beta</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.validate_beta()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Perform any parameter validation</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.validate_environment" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.validate_environment">validate_environment</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.validate_environment()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Validate environment</p>
+</section>
+<section id="typhoidsim.typhoid.Typhoid.will_become_chronic_carrier" class="level5">
+<h5 class="anchored" data-anchor-id="typhoidsim.typhoid.Typhoid.will_become_chronic_carrier">will_become_chronic_carrier</h5>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>typhoid.Typhoid.will_become_chronic_carrier(uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Determine who will become a chronic carrier</p>
+</section>
+</section>
+</section>
+</section>
+<section id="functions" class="level2">
+<h2 class="anchored" data-anchor-id="functions">Functions</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#typhoidsim.typhoid.unexp2sus_childhood_prob_function_gauld2018">unexp2sus_childhood_prob_function_gauld2018</a></td>
+<td>Estimate the age-dependent probability of transitioning from</td>
+</tr>
+</tbody>
+</table>
+<section id="typhoidsim.typhoid.unexp2sus_childhood_prob_function_gauld2018" class="level3">
+<h3 class="anchored" data-anchor-id="typhoidsim.typhoid.unexp2sus_childhood_prob_function_gauld2018">unexp2sus_childhood_prob_function_gauld2018</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>typhoid.unexp2sus_childhood_prob_function_gauld2018(module, sim, uids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Estimate the age-dependent probability of transitioning from unexposed to susceptible. From Gauld et al 2018, Fig. 2B.</p>
+<p>Age-specific immunity. Individuals that are created through births in the model start out in a fully immune state. For the Santiago-site simulation, there are three ages that individuals can move from immune (unexposed) to susceptible: - 6 months (no children under 6 months of age can be infected). - Need to define the distribution parameter p_unexp2sus_6m=ss.bernoulli(p=0.14) - 3 years - Need to define the distribution parameter p_unexp2sus_3y=ss.bernoulli(p=0.29), - 6 years - Need to define the distribution parameter p_unexp2sus_6y=ss.bernoulli(p=0.61)</p>
+<p>At each of these ages, a proportion of the remaining unexposed population will be moved to the susceptible population determined by the calibrated values below</p>
+<section id="parameters-1" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 61%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>module</td>
+<td></td>
+<td>a starsim (disease) Module</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>sim</td>
+<td></td>
+<td>the starsim Sim object (fully initialized)</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>uids</td>
+<td></td>
+<td>the uids of the eligible people</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>p_sus</td>
+<td><a href="https://docs.python.org/3/library/array.html#module-array">array</a></td>
+<td>array of probabilities for every agent in uids.</td>
+</tr>
+</tbody>
+</table>
+
+
+</section>
+</section>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../api/index.html" class="pagination-link" aria-label="**API reference**">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><strong>API reference</strong></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../api/immunity.html" class="pagination-link" aria-label="immunity">
+        <span class="nav-page-text">immunity</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Docs built for Typhoidsim v1.0.0 (2026-06-07).<br>© 2024–2026, Gates Foundation. All rights reserved. <a href="https://www.gatesfoundation.org/Privacy-and-Cookies-Notice">Privacy and Cookies Notice</a> | <a href="https://www.gatesfoundation.org/Terms-of-Use">Terms of Use</a></p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/starsimhub/typhoidsim/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/starsimhub/typhoidsim">
+      <i class="bi bi-github" role="img" aria-label="GitHub">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="mailto:info@starsim.org">
+      <i class="bi bi-envelope-at-fill" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://starsim.org/">
+      <i class="bi bi-globe" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>
