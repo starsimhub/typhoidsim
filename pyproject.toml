@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "typhoidsim"
 dynamic = ["version"]
 description = "Agent-based model for typhoid simulations"
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
 keywords = ["typhoid", "typhoidsim", "calibration", "research", "starsim"]
@@ -54,7 +54,7 @@ where = ["."]
 include = ["typhoidsim*"]
 
 [tool.setuptools.package-data]
-mypkg = ["*.ipynb", "*.rst", "data/**/*.csv"]
+mypkg = ["*.ipynb", "*.md", "data/**/*.csv"]
 
 [tool.setuptools.dynamic]
 version = {attr = "typhoidsim.version.__version__"}

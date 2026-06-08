@@ -1,0 +1,52 @@
+---
+title: T3 - Environment (as a demographics module)
+jupyter: python3
+---
+
+
+The environment plays a key role in the spread of Typhoid. At the moment, the environment is defined as a Starsim Demographic module -- as of starsim v1.0.1 the environment is not supported as one of the independent model ingredients we saw before. Watch this space 👀 -- this is architecture is subject to change.   
+
+
+```{python}
+import starsim as ss
+import typhoidsim as ty
+
+# Define high-level simulation parameters
+pars = dict(
+    start    = 2000,  # Starting year
+    dur      = 1.0,   # Duration of the simulation in years
+    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    verbose  = 0,             # Do not print details of the run
+)
+
+# The population
+ppl = ss.People(10_000)
+
+# The environment the population is affected by, and can carry the pathogen
+environment = ty.EnvironmentalPool()
+
+# The disease 
+typhoid = ty.Typhoid()
+
+sim = ss.Sim(
+    pars=pars,
+    people=ppl, 
+    demographics=environment,
+    diseases=typhoid,
+    )
+sim.run()
+sim.plot(key=('environmentalpool_cfu_conc'))
+```
+
+```{python}
+#| collapsed: false
+sim.results
+```
+
+### Environmental dynamics 
+
+This model of the environment changes over time:
+- grows (↑↑) by receiving CFUs from infectious individuals;
+- decays (↓↓) according to a decay rate that you can specify.
+    
+

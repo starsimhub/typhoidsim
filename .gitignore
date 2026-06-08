@@ -91,11 +91,12 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-docs/modules.rst
-docs/starsim.*.rst
-docs/api/_autosummary/
+# Quarto documentation
+docs/_site/
+docs/_freeze/
+docs/.quarto/
+docs/objects.json
+docs/objects.inv
 
 # PyBuilder
 target/

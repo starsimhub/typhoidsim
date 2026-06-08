@@ -1,0 +1,20 @@
+results
+
+_site/
+.quarto/
+_freeze/
+__pycache__/
+tutorials/.jupyter_cache/
+
+# Auto-generated interlink inventories (rebuilt by `quartodoc interlinks`)
+_inv/
+objects.json
+objects.inv
+
+# Ignore auto-generated API .qmd files
+/api/*.qmd
+# But keep the index.qmd file
+!/api/index.qmd
+/.quarto/
+
+**/*.quarto_ipynb

@@ -1,0 +1,174 @@
+---
+title: T8 - Calibration
+jupyter: python3
+---
+
+
+This tutorial drafts how we would set up a simple calibration workflow:
+
+- define which data we want to fit the model to 
+- set up a simulation object
+- define which parameters and which parameter values or ranges we want to test
+- set up the calibration oject
+- run the calibration
+
+
+```{python}
+import pandas as pd
+import starsim as ss
+import sciris as sc
+import typhoidsim as ty
+```
+
+We usually have some data we'd like to fit the model to. The data below is simulated data using specific values for `init_prev` (0.01) and `p_cpg` (0.35). The simplest way to pass data for a calibration is in the form of a dataframe with column names matching quantities tracked by the `Sim`. For instance, `n_alive`, or `typhoid.n_chronic` -- the cumulative number of chroi
+
+We first make a function that will create a Sim object with the ingredients we believe explain our data, and over a span of time that matches that of our data. Inside this function you will see that we have wrapped the basic setup seen in many of the other tutorials.
+
+```{python}
+def make_sim():
+    pars = dict(
+    start    = 1982,  # Starting year
+    dur      = 9.0,   # Duration of the simulation in years
+    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    verbose  = 0,             # Do not print details of the run
+)
+    typhoid = ty.Typhoid()
+    ppl = ss.People(10_000)
+
+    sim = ss.Sim(
+        pars=pars,
+        people=ppl,
+        diseases = typhoid,
+    )
+
+    return sim
+```
+
+```{python}
+def get_reference_data():
+    sim = make_sim()
+    sim.init()
+    sim.diseases.typhoid.pars.init_prev.pars.p = 0.01
+    sim.diseases.typhoid.pars.p_cpg = 0.35
+    sim.run()
+    df = sim.to_df()
+    expected_data = pd.DataFrame(data={"n": df["n_alive"],
+                                       "x": df["typhoid_n_infected"]},
+                                 index=pd.Index(df["timevec"], name="t")
+                                 )
+    
+    return expected_data
+```
+
+```{python}
+#| collapsed: false
+def extract_simulated_data(sim):
+    df = sim.to_df()
+    simulated_data = pd.DataFrame(data={"n": df["n_alive"],
+                                       "x": df["typhoid_n_infected"]},
+                                 index=pd.Index(df["timevec"], name="t")
+                                 )
+    
+    return simulated_data
+```
+
+Then, we specifiy which parameters need to be calibrated, and what are the ranges to explore. 
+The calibration parameters has a hierarchical/nested structure similar to the Sim class. 
+
+```{python}
+def get_calib_pars():
+    calib_pars = dict(
+                init_prev =dict(low=0.00,high=0.1, guess=0.05), 
+                p_cpg=dict(low=0.05, high=0.4, guess=0.05),
+            )
+    return calib_pars
+```
+
+```{python}
+#| collapsed: false
+def calib_pars_updater(sim, calib_pars, **kwargs):
+    """
+    Also referred to as as build_sim function in some of starsim's tutorials.
+
+    This function tells the Calibration class how to reach and update a parameter
+    value for our specific model encapuslated in the sim object..
+
+    The more modules our full model has, the more complex to navigate the path
+    to find and update the required parameters.
+    """
+    # Access the modules whose parameters we need to modify during optimisation
+    typh = sim.pars.diseases
+    
+    if 'rand_seed' in calib_pars:
+        sim.pars['rand_seed'] = calib_pars.pop('rand_seed')
+
+
+    for par_name, par_attrs in calib_pars.items():  # Loop over the calibration parameters
+        v = par_attrs["value"]
+        # Each item in calib_pars is a dictionary with keys like 'low', 'high',
+        # 'guess', 'suggest_type', and importantly 'value'. The 'value' key is
+        # the one we want to use as that's the one selected by the algorithm
+        match par_name:
+            case "p_cpg":
+                typh.pars.p_cpg = v
+            case "init_prev":
+                typh.pars.init_prev = ss.bernoulli(v)
+            case _:
+                raise NotImplementedError(f"Do not know how to update parameter {par_name}.")
+    return sim    
+```
+
+```{python}
+#| collapsed: false
+def get_calib_components():
+     expected_data = get_reference_data()
+     # In Starsim v3, the likelihood function is chosen by selecting a CalibComponent
+     # subclass (e.g. BetaBinomial, Binomial, GammaPoisson, Normal) rather than via the
+     # old nll_fn argument. BetaBinomial expects "n" (denominator) and "x" (numerator)
+     # columns, which is what get_reference_data and extract_simulated_data provide.
+     components = [ss.BetaBinomial(
+         name="cases",  # NOTE: can be renamed to something else
+         expected=expected_data,  # dataframe
+         extract_fn=extract_simulated_data, # function
+         conform="prevalent")]
+     return components
+```
+
+Now we set up the put all the elements together using Starsim's `Calibration` class that uses [optuna](https://optuna.org/)
+
+```{python}
+def run_calibration():
+    sc.heading('Testing calibration')
+
+    # The parameters or parameters of each ingredient need to exist in the sim defined in make_sim()
+
+    # Make the sim and data
+    sim = make_sim()
+    calib_components = get_calib_components()
+    calib_pars = get_calib_pars()
+
+    # Make the calibration
+    calib = ss.Calibration(
+        sim = sim,
+        calib_pars = calib_pars,
+        build_fn=calib_pars_updater,
+        components=calib_components,
+        total_trials=50,
+        n_workers=4, # the underlying library runs in parallel
+        db_name="typhoidsim_tutorial",
+        die=True,
+        debug=True
+    )
+
+    # Perform the calibration
+    sc.printcyan('\nPeforming calibration...')
+    calib.calibrate()
+    print(calib.best_pars)
+
+    return sim, calib
+```
+
+```{python}
+run_calibration()
+```
+

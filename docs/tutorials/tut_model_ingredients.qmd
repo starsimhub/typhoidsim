@@ -1,0 +1,44 @@
+---
+title: T2 - How to build your model
+jupyter: python3
+---
+
+
+In the previous tutorial we mentioned `model ingredients`. Within Starsim, these are the ingredients of an epidemic, namely: 
+- people: the population who will experience the epidemic;
+- demographics: how characteristics of this population change over time
+- (contact) networks: describing how people interact
+- diseases: describe the natural history of a pathogen in individuals and handle the transmission of the pathogen 
+- interventions: can modify aspects of any of the ingredients above.
+- analyzers: for reporting results of a simulation, they collect data from the simulation in a specific way (ie, by age and by sex) and plot them. For more details, have a look at the Starsim tutorial on [how to build your own analyzer](https://github.com/starsimhub/starsim/blob/main/docs/tutorials/dev_tut_analyzers.ipynb).
+
+In this tutorial we'll specify the same model as we did before, but you will notice that people is specified as an 'ingredient'. Other ingredients wil be covered later. 
+
+
+```{python}
+import starsim as ss
+import typhoidsim as ty
+
+# Define high-level simulation parameters
+pars = dict(
+    start    = 2000,  # Starting year
+    dur      = 1.0,   # Duration of the simulation in years
+    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    verbose  = 0,             # Do not print details of the run
+)
+
+# The population
+ppl = ss.People(10_000)
+
+# The disease 
+typhoid = ty.Typhoid()
+
+sim = ss.Sim(
+    pars=pars,
+    people=ppl, ## People is now specified as an ingredient
+    diseases=typhoid,
+    )
+sim.run()
+sim.plot()
+```
+

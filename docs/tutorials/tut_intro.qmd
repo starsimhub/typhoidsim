@@ -1,0 +1,57 @@
+---
+title: T1 - Getting started
+jupyter: python3
+---
+
+
+Typhoidsim is a library for running agent-based simulations of typhoid spread. This library is built upon the [Starsim framework](https://github.com/starsimhub/starsim), and covers a lot of functionality from the EMOD-Typhoid implementation. 
+
+To get started you will need to have python installed in yur system. We recommend to use a form of virtual environment.  
+ 
+To install, you first need to clone or download the a copy of the source code from https://github.com/starsimhub/typhoidsim
+ 
+```
+git clone git@github.com:starsimhub/typhoidsim.git 
+cd typhoidsim
+pip install -e .
+```
+
+If it worked, you should be able to import typhoidsim with `import typhoidsim as ty`.
+
+In this tutorial we'll see the most frequent high-level workflow you're likely to perform:
+
+- Define high-level parameters (when does a simulation starts, ends, etc)
+- Define the main ingredients of the 'model of the world' (the disease, the population affected by the disease, any interventions)
+- Run a simulation
+- Plot results
+
+This tutorial walks you through the simplest possible version of how to do these things.
+
+
+## Hello world
+Let's start with running a simple simulation with no transmission routes. The disease will not propagate throughout the population, but we will be able to look at the natural history of the disease on individual agents.
+
+```{python}
+import starsim as ss
+import typhoidsim as ty
+
+# Define high-level simulation parameters, and define the main ingredients of the model of the world we will simulate
+pars = dict(
+    start    = 2000,  # Starting year
+    dur      = 1.0,   # Duration of the simulation in years
+    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    verbose  = 0,             # Do not print details of the run
+    n_agents = 10_000,        # Number of agents to simulate
+)
+
+# The disease 
+typhoid = ty.Typhoid()
+
+sim = ss.Sim(
+    pars=pars,
+    diseases=typhoid,
+    )
+sim.run()
+sim.plot();
+```
+

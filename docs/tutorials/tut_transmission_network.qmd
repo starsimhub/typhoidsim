@@ -1,0 +1,52 @@
+---
+title: T4 - Networks (Contact transmission)
+jupyter: python3
+---
+
+
+Person-to-person transmission is captured by network-mediated interaction. In this tutorial, we will use a random network, where pairings of people are generated at random at each timestep, but the average number of pairings or contacts on each timestep can be specified. 
+
+
+```{python}
+import starsim as ss
+import typhoidsim as ty
+
+# Define high-level simulation parameters
+pars = dict(
+    start    = 2000,  # Starting year
+    dur      = 1.0,   # Duration of the simulation in years
+    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    verbose  = 0,             # Do not print details of the run
+)
+
+# The population
+ppl = ss.People(10_000)
+
+# Person to person transmission
+random_p2p = ss.RandomNet({'n_contacts': 5})
+
+# The disease 
+typhoid = ty.Typhoid()
+
+sim = ss.Sim(
+    pars=pars,
+    people=ppl, 
+    networks=random_p2p,
+    diseases=typhoid,
+    )
+sim.run()
+sim.plot()
+```
+
+## Contact route: how it currently works
+
+For this particular network, a _target_ individual will be in contact on average with 5 people (called _sources_) on each time step. These sources can be infected or not. If they are infected, the _target_ individual will receive a dose of CFUs that will depend on: 
+
+- the infectiousness of the source individual
+- the individual shedding rate of the source individual -- currently captured in a variable called `rel_trans` (abbreviation for relative transmissibility)
+
+The tranmission is handled as follows: 
+- For every source contact of a _target_ individual
+    -  (1) draw a daily daily number of exposures to the source, and
+    -  (2) assess whether the _target_ becomes infected 
+
