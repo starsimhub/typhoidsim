@@ -6,7 +6,7 @@ Please see the `tutorials` subfolder.
 
 ## Everything else
 
-This folder includes source code for building the docs. Users are unlikely to need to do this themselves. Instead, view the Typhoidsim docs at https://starsimhub.github.io/typhoidsim.
+This folder includes source code for building the docs. Users are unlikely to need to do this themselves. Instead, view the Typhoidsim docs at https://starsim.org/typhoidsim.
 
 To build the docs, follow these steps:
 

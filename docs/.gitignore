@@ -11,10 +11,8 @@ _inv/
 objects.json
 objects.inv
 
-# Ignore auto-generated API .qmd files
-/api/*.qmd
-# But keep the index.qmd file
-!/api/index.qmd
+# Auto-generated API reference (rebuilt by `quartodoc build` on every render)
+/api/
 /.quarto/
 
 **/*.quarto_ipynb

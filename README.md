@@ -41,7 +41,7 @@ More detailed instructions can be found [here](https://github.com/starsimhub/typ
 
 ## Usage and documentation
 
-Documentation is available at https://starsimhub.github.io/typhoidsim. [Tutorials](https://github.com/starsimhub/typhoidsim/tree/main/docs/tutorials) (Jupyter notebooks) are also available.
+Documentation is available at https://starsim.org/typhoidsim. [Tutorials](https://github.com/starsimhub/typhoidsim/tree/main/docs/tutorials) (Jupyter notebooks) are also available.
 
 
 ## Contributing
