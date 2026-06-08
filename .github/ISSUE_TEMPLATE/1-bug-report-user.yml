@@ -1,0 +1,76 @@
+name: 🐛 Bug report
+description: Report broken functionality.
+title: "[BUG]: "
+labels: [bug]
+assignees:
+  - pausz
+projects: ["starsimhub/8"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        ___
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you saw.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: version
+    attributes:
+      label: Version
+      description: What version of our software are you running?
+      options:
+        - version 0.1.0-dev
+        - main branch
+        - Other (eg, feature branch)
+      default: 0
+
+  - type: input
+    attributes:
+      label: Branch or commit
+      description: What version of the code do you experience this bug on?
+      placeholder: feature/my-new-intervention or commit hash
+
+  - type: input
+    attributes:
+      label: Environment
+      description: Which environment do you experience this bug on?
+      placeholder: Provide most relevant, eg OS Windows 11, Ubuntu LTS 22.04, python version or starsim version
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: >
+        Minimum steps required to reproduce the bug. Include assumptions, prerequisites, snapshots or other relevant items.
+        The information provided in this field must be readily actionable, meaning that anyone should be able to reproduce the bug by following these steps.
+        If the reproduction steps are too complex to fit in this field, please provide a link to a repository or gist instead.
+      placeholder: |
+        - 1. Run this.
+        - 2. Run that. 
+        - 3. Plot this.
+    validations:
+      required: true
+
+  - type: textarea
+    id: snippets
+    attributes:
+      label: Relevant snippets to reproduce
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: python
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell

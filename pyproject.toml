@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "typhoidsim"
+dynamic = ["version"]
+description = "Agent-based model for typhoid simulations"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+keywords = ["typhoid", "typhoidsim", "calibration", "research", "starsim"]
+
+authors = [
+  { name = "Paula Sanz-Leon" },
+  { name = "Kyra Grantz" },
+  { name = "Cliff Kerr" }
+]
+
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
+]
+
+dependencies = [
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "sciris>=3.2.8",
+    "starsim>=3.4",
+    "numba",
+    "scipy",
+    "networkx",
+    "matplotlib",
+    "seaborn",
+    "optuna",
+    "numexpr"
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.3", "pytest-cov", "pytest-env", "pytest-xdist"]
+cloud = ["coiled", "dask", "distributed", "tornado", "cloudpickle", "msgpack", "optuna-integration[dask]"]
+
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["typhoidsim*"]
+
+[tool.setuptools.package-data]
+typhoidsim = ["*.ipynb", "*.md", "data/**/*.csv", "data/**/*.json", "data/**/*.xlsx"]
+
+[tool.setuptools.dynamic]
+version = {attr = "typhoidsim.version.__version__"}
