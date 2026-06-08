@@ -3,6 +3,14 @@
 All notable changes to the codebase are documented in this file. Changes that may result in differences in model output, or are required in order to run an old parameter set with the current version, are flagged with the term "Regression information".
 
 
+## Version 1.0.0 (2026-06-07)
+- Ported the codebase from starsim v2.3 to starsim v3.
+- Regenerated `tests/baseline.json` under starsim v3.
+- Converted documentation to Quarto.
+- Requires starsim 3.4.
+- *Regression information*: the move to starsim v3 changes the CRN/RNG streams, so simulation outputs differ from v2.3 results (short runs match within a few percent; long runs diverge through chaotic amplification).
+
+
 ## Version 0.32.0 (2025-07-08)
 - Updating immune waning to follow box-gamma decay (reducible to previous exponential decay with shape=1)
 

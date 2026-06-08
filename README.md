@@ -1,6 +1,6 @@
 # Typhoidsim
 
-Typhoidsim implements an agent-based disease model of typhoid fever (caused by S. Typhi). This package is part of the [Starsim](https://github.com/starsimhub) family. Currently, Typhoidsim needs **v2.3.0** of the Starsim framework to run.
+Typhoidsim implements an agent-based disease model of typhoid fever (caused by S. Typhi). This package is part of the [Starsim](https://github.com/starsimhub) family. Currently, Typhoidsim needs **v3.4** or later of the Starsim framework to run.
 
 
 ## Installation
@@ -22,7 +22,7 @@ There are a few versions of Typhoidsim:
 1. Legacy [typhoidsim v0.11.7](https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.11.7-starsim-1.0.3), which exclusively works with [starsim 1.0.3](https://pypi.org/project/starsim/1.0.3/).
 2. Legacy [typhoidsim v0.26.9](https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.26.9-starsim-2.2.0), which exclusively works with [starsim 2.2.0](https://pypi.org/project/starsim/2.2.0/).
 3. Legacy [typhoidsim v0.30.6](https://github.com/starsimhub/typhoidsim/tree/legacy/main-v0.30.6-starsim-2.3.0), which exclusively works with [starsim 2.3.0](https://pypi.org/project/starsim/).
-4. Typhoidsim from the [main](https://github.com/starsimhub/typhoidsim) branch, which works with [starsim 2.3.0](https://pypi.org/project/starsim/).
+4. Typhoidsim from the [main](https://github.com/starsimhub/typhoidsim) branch, which works with [starsim 3.4](https://pypi.org/project/starsim/) or later.
 
 To install the legacy version that runs with starsim 1.0.3, first clone the specific branch:
 
