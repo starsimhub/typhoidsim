@@ -442,11 +442,10 @@ ul.task-list li input[type="checkbox"] {
 <section id="version-1.0.0-2026-06-07" class="level2">
 <h2 class="anchored" data-anchor-id="version-1.0.0-2026-06-07">Version 1.0.0 (2026-06-07)</h2>
 <ul>
-<li>Ported the codebase from starsim v2.3 to starsim v3.</li>
-<li>Regenerated <code>tests/baseline.json</code> under starsim v3.</li>
+<li>Ported the codebase from Starsim v2.3 to Starsim v3.</li>
+<li>Regenerated <code>tests/baseline.json</code> under Starsim v3.</li>
 <li>Converted documentation to Quarto.</li>
-<li>Requires starsim 3.4.</li>
-<li><em>Regression information</em>: the move to starsim v3 changes the CRN/RNG streams, so simulation outputs differ from v2.3 results (short runs match within a few percent; long runs diverge through chaotic amplification).</li>
+<li><em>Regression information</em>: The move to Starsim v3 changes the CRN/RNG streams, so simulation outputs differ from v2.3 results (short runs match within a few percent; long runs diverge through chaotic amplification).</li>
 </ul>
 </section>
 <section id="version-0.32.0-2025-07-08" class="level2">
@@ -596,7 +595,7 @@ ul.task-list li input[type="checkbox"] {
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp('/' + window.location.host + '/');
+        var filterRegex = new RegExp("https:\/\/starsimhub\.github\.io\/typhoidsim\/");
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

@@ -263,7 +263,7 @@
     "href": "index.html",
     "title": "Typhoidsim",
     "section": "",
-    "text": "Typhoidsim implements an agent-based disease model of typhoid fever (caused by S. Typhi). This package is part of the Starsim family. Currently, Typhoidsim needs v3.4 or later of the Starsim framework to run.\n\n\nMake sure you’re inside the Typhoidsim repository:\ncd typhoidsim\nAnd then run (don’t forget the dot at the end!):\npip install -e .\nThere are a few versions of Typhoidsim:\n\nLegacy typhoidsim v0.11.7, which exclusively works with starsim 1.0.3.\nLegacy typhoidsim v0.26.9, which exclusively works with starsim 2.2.0.\nLegacy typhoidsim v0.30.6, which exclusively works with starsim 2.3.0.\nTyphoidsim from the main branch, which works with starsim 3.4 or later.\n\nTo install the legacy version that runs with starsim 1.0.3, first clone the specific branch:\ngit clone --single-branch --branch legacy/main-v0.11.7-starsim-1.0.3 origin\nTo install the legacy version that runs with starsim 2.2.0, first clone the specific branch:\ngit clone --single-branch --branch legacy/main-v0.26.9-starsim-2.2.0 origin\nMore detailed instructions can be found here.\n\n\n\nDocumentation is available at https://starsim.org/typhoidsim. Tutorials (Jupyter notebooks) are also available.\n\n\n\nIf you wish to contribute, please see the code of conduct and contributing documents.\n\n\n\nThe code in this repository was developed by IDM and other collaborators to support our joint research on flexible agent-based modeling. We’ve made it publicly available under the MIT License to provide others with a better understanding of our research and an opportunity to build upon it for their own work. We make no representations that the code works as intended or that we will provide support, address issues that are found, or accept pull requests. You are welcome to create your own fork and modify the code to suit your own modeling needs as permitted under the MIT License.\n\n\n\n\n\nTutorials\nAn interactive tour of Typhoidsim’s key features.\n\n\nAPI reference\nFull details on all classes and functions.\n\n\nWhat’s new\nSee what’s in the latest Typhoidsim releases.",
+    "text": "Typhoidsim implements an agent-based disease model of typhoid fever (caused by S. Typhi). This package is part of the Starsim family.\n\n\nMake sure you’re inside the Typhoidsim repository:\ncd typhoidsim\nAnd then run (don’t forget the dot at the end!):\npip install -e .\nThere are a few versions of Typhoidsim:\n\nLegacy typhoidsim v0.11.7, which exclusively works with Starsim 1.0.3.\nLegacy typhoidsim v0.26.9, which exclusively works with Starsim 2.2.0.\nLegacy typhoidsim v0.30.6, which exclusively works with Starsim 2.3.0.\nTyphoidsim from the main branch, which works with Starsim 3.0 or later.\n\nTo install the legacy version that runs with Starsim 1.0.3, first clone the specific branch:\ngit clone --single-branch --branch legacy/main-v0.11.7-starsim-1.0.3 origin\nTo install the legacy version that runs with Starsim 2.2.0, first clone the specific branch:\ngit clone --single-branch --branch legacy/main-v0.26.9-starsim-2.2.0 origin\nMore detailed instructions can be found here.\n\n\n\nDocumentation is available at https://starsim.org/typhoidsim. Tutorials (Jupyter notebooks) are also available.\n\n\n\nIf you wish to contribute, please see the code of conduct and contributing documents.\n\n\n\n\n\nTutorials\nAn interactive tour of Typhoidsim’s key features.\n\n\nAPI reference\nFull details on all classes and functions.\n\n\nWhat’s new\nSee what’s in the latest Typhoidsim releases.",
     "crumbs": [
       "Home",
       "**Home**"
@@ -274,7 +274,7 @@
     "href": "index.html#installation",
     "title": "Typhoidsim",
     "section": "",
-    "text": "Make sure you’re inside the Typhoidsim repository:\ncd typhoidsim\nAnd then run (don’t forget the dot at the end!):\npip install -e .\nThere are a few versions of Typhoidsim:\n\nLegacy typhoidsim v0.11.7, which exclusively works with starsim 1.0.3.\nLegacy typhoidsim v0.26.9, which exclusively works with starsim 2.2.0.\nLegacy typhoidsim v0.30.6, which exclusively works with starsim 2.3.0.\nTyphoidsim from the main branch, which works with starsim 3.4 or later.\n\nTo install the legacy version that runs with starsim 1.0.3, first clone the specific branch:\ngit clone --single-branch --branch legacy/main-v0.11.7-starsim-1.0.3 origin\nTo install the legacy version that runs with starsim 2.2.0, first clone the specific branch:\ngit clone --single-branch --branch legacy/main-v0.26.9-starsim-2.2.0 origin\nMore detailed instructions can be found here.",
+    "text": "Make sure you’re inside the Typhoidsim repository:\ncd typhoidsim\nAnd then run (don’t forget the dot at the end!):\npip install -e .\nThere are a few versions of Typhoidsim:\n\nLegacy typhoidsim v0.11.7, which exclusively works with Starsim 1.0.3.\nLegacy typhoidsim v0.26.9, which exclusively works with Starsim 2.2.0.\nLegacy typhoidsim v0.30.6, which exclusively works with Starsim 2.3.0.\nTyphoidsim from the main branch, which works with Starsim 3.0 or later.\n\nTo install the legacy version that runs with Starsim 1.0.3, first clone the specific branch:\ngit clone --single-branch --branch legacy/main-v0.11.7-starsim-1.0.3 origin\nTo install the legacy version that runs with Starsim 2.2.0, first clone the specific branch:\ngit clone --single-branch --branch legacy/main-v0.26.9-starsim-2.2.0 origin\nMore detailed instructions can be found here.",
     "crumbs": [
       "Home",
       "**Home**"
@@ -303,17 +303,6 @@
     ]
   },
   {
-    "objectID": "index.html#disclaimer",
-    "href": "index.html#disclaimer",
-    "title": "Typhoidsim",
-    "section": "",
-    "text": "The code in this repository was developed by IDM and other collaborators to support our joint research on flexible agent-based modeling. We’ve made it publicly available under the MIT License to provide others with a better understanding of our research and an opportunity to build upon it for their own work. We make no representations that the code works as intended or that we will provide support, address issues that are found, or accept pull requests. You are welcome to create your own fork and modify the code to suit your own modeling needs as permitted under the MIT License.",
-    "crumbs": [
-      "Home",
-      "**Home**"
-    ]
-  },
-  {
     "objectID": "index.html#learn-more",
     "href": "index.html#learn-more",
     "title": "Typhoidsim",
@@ -329,7 +318,7 @@
     "href": "whatsnew.html",
     "title": "What’s new",
     "section": "",
-    "text": "All notable changes to the codebase are documented in this file. Changes that may result in differences in model output, or are required in order to run an old parameter set with the current version, are flagged with the term “Regression information”.\n\n\n\nPorted the codebase from starsim v2.3 to starsim v3.\nRegenerated tests/baseline.json under starsim v3.\nConverted documentation to Quarto.\nRequires starsim 3.4.\nRegression information: the move to starsim v3 changes the CRN/RNG streams, so simulation outputs differ from v2.3 results (short runs match within a few percent; long runs diverge through chaotic amplification).\n\n\n\n\n\nUpdating immune waning to follow box-gamma decay (reducible to previous exponential decay with shape=1)\n\n\n\n\n\nBugfixes to seasonal modulation\nImproved histogram by age and sex analyzer\nImproved base test intervention\nBackport Calibration classes from starsim 2.2.0\n\n\n\n\n\nEnvironment level of pathogens is measured in CFU concentration\nEnvironment has a new parameter volume\nLots of code tidying up\nFirst test script for interventions added for CI workflows\nRequires starsim 1.0.3\n\n\n\n\n\nNew community network with age mixing\nNew functionality to use location-specific age distribution\nIntroduces dependency to synthpops\nRequires starsim 1.0.3\n\n\n\n\n\nNew tutorials\nNew WASH interventions\nRequires starsim 1.1.0\n\n\n\n\n\nUpdate age-based susceptibility dynamics.\nRequires starsim 0.5.9\n\n\n\n\n\nInitial version. Repository draft.\nRequires starsim 0.5.2",
+    "text": "All notable changes to the codebase are documented in this file. Changes that may result in differences in model output, or are required in order to run an old parameter set with the current version, are flagged with the term “Regression information”.\n\n\n\nPorted the codebase from Starsim v2.3 to Starsim v3.\nRegenerated tests/baseline.json under Starsim v3.\nConverted documentation to Quarto.\nRegression information: The move to Starsim v3 changes the CRN/RNG streams, so simulation outputs differ from v2.3 results (short runs match within a few percent; long runs diverge through chaotic amplification).\n\n\n\n\n\nUpdating immune waning to follow box-gamma decay (reducible to previous exponential decay with shape=1)\n\n\n\n\n\nBugfixes to seasonal modulation\nImproved histogram by age and sex analyzer\nImproved base test intervention\nBackport Calibration classes from starsim 2.2.0\n\n\n\n\n\nEnvironment level of pathogens is measured in CFU concentration\nEnvironment has a new parameter volume\nLots of code tidying up\nFirst test script for interventions added for CI workflows\nRequires starsim 1.0.3\n\n\n\n\n\nNew community network with age mixing\nNew functionality to use location-specific age distribution\nIntroduces dependency to synthpops\nRequires starsim 1.0.3\n\n\n\n\n\nNew tutorials\nNew WASH interventions\nRequires starsim 1.1.0\n\n\n\n\n\nUpdate age-based susceptibility dynamics.\nRequires starsim 0.5.9\n\n\n\n\n\nInitial version. Repository draft.\nRequires starsim 0.5.2",
     "crumbs": [
       "Home",
       "**What's new**"
@@ -340,7 +329,7 @@
     "href": "whatsnew.html#version-1.0.0-2026-06-07",
     "title": "What’s new",
     "section": "",
-    "text": "Ported the codebase from starsim v2.3 to starsim v3.\nRegenerated tests/baseline.json under starsim v3.\nConverted documentation to Quarto.\nRequires starsim 3.4.\nRegression information: the move to starsim v3 changes the CRN/RNG streams, so simulation outputs differ from v2.3 results (short runs match within a few percent; long runs diverge through chaotic amplification).",
+    "text": "Ported the codebase from Starsim v2.3 to Starsim v3.\nRegenerated tests/baseline.json under Starsim v3.\nConverted documentation to Quarto.\nRegression information: The move to Starsim v3 changes the CRN/RNG streams, so simulation outputs differ from v2.3 results (short runs match within a few percent; long runs diverge through chaotic amplification).",
     "crumbs": [
       "Home",
       "**What's new**"
