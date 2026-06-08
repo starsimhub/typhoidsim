@@ -33,7 +33,7 @@ dependencies = [
     "numpy>=1.24.0",
     "pandas>=2.0.0",
     "sciris>=3.2.8",
-    "starsim>=3.4",
+    "starsim>=3.0",
     "numba",
     "scipy",
     "networkx",
