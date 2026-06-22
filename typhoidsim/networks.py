@@ -1,3 +1,6 @@
+"""
+Custom network classes for direct transmission
+"""
 import numpy as np
 import numba as nb
 import scipy.stats as spst

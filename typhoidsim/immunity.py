@@ -1,8 +1,8 @@
 """
 Immunity waning functions
-So far, all functions are related to parameterisation of box-exponential model for
-(acquired) immunity waning. These functions facilitate stratifying parameters by age,
-or by other criteria.
+So far, all functions are related to parameterisation of gamma model for
+(vaccine acquired) immunity waning. These functions facilitate stratifying 
+parameters by age or by other criteria.
 """
 import numpy as np
 import sciris as sc
