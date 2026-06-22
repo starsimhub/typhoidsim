@@ -3,7 +3,7 @@ title: T7 - environmental seasonality
 jupyter: python3
 ---
 
-An individual’s dose through long-cycle transmission in the model is attenuated or amplified by a mechanism for seasonality. Seasonality can represent an attenuation of the likely constant shedding of individuals into the long-cycle vehicle; or it could be a temperature-dependent growth in the level of CFUs in the environmental pool. 
+An individual’s dose through long-cycle transmission in the model is attenuated or amplified by a mechanism for seasonality. Seasonality can represent an attenuation of the likely constant shedding of individuals into the long-cycle vehicle; a temperature-dependent growth in the level of CFUs in the environmental pool; changes to the rates of decay or removal of CFU from the environment; or any other method of seasonal forcing. 
 
 
 ```{python}
@@ -40,6 +40,7 @@ bacterial_growth = ty.environmental_seasonality(seasonal_pattern=seasonal_patter
 
 sim = ss.Sim(
     pars=pars,
+    people=ppl,
     diseases=typhoid,
     demographics=environment,
     interventions=bacterial_growth,
@@ -58,16 +59,18 @@ import typhoidsim as ty
 # Define high-level simulation parameters
 pars = dict(
     start    = 2000,  # Starting year
-    dur  = 10.0,   # Duration of the simulation in years
-    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    dur      = 10.0,   # Duration of the simulation in years
+    dt       = 7.0/365.0,     # Timestep of 1 week, expressed in years
     verbose  = 0,             # Do not print details of the run
 )
 
 # The population
-ppl = ss.People(10_000)
+ppl = ss.People(50_000)
 
-# The disease, with reduced protection per infection `tppi`
-typhoid = ty.Typhoid(pars={'tppi':0.1})
+# The disease, with reduced protection per infection `tppi`,
+# initial typhoid prevalence `init_prev`, and preexisting
+# population immunity `init_seroprev`
+typhoid = ty.Typhoid(pars={'tppi':0.1, 'init_seroprev':0.8, 'init_prev':0.001})
 
 
 # The environment (long cycle CCVT)
@@ -75,15 +78,17 @@ environment = ty.EnvironmentalPool()
 
 # Modulates the level of CFUs in the environment by reducing the shedding rate from people to the environment,
 # Use a periodic rectangular pulse
-sanitation_efficacy = ty.Pattern("var % period < width",
+sanitation_efficacy = ty.Pattern("(var % period < width) * max_efficacy",
                               pars={'period': 1.0,        # in years
-                                    'width' : 0.5}        # in years
+                                    'width' : 0.5,        # in years
+                                    'max_efficacy': 0.3}  # peak shedding reduction (0-1)
                                 )
 
 sanitation = ty.shedding_reduction(efficacy=sanitation_efficacy, start_year=2005)
 
 sim = ss.Sim(
     pars=pars,
+    people=ppl,
     diseases=typhoid,
     demographics=environment,
     interventions=sanitation
