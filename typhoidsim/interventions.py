@@ -449,9 +449,8 @@ class WASH(ss.Intervention):
             self.efficacy = self.efficacy_pattern(self.time[0])
             self.time = self.time[1:]
             self._set_target_val_par((1.0 - self.efficacy) * self.target_baseline)
-            self.results['efficacy'][self.tidx] = self.efficacy
-            self.results['effective_value'][self.tidx] = (1.0 - self.efficacy) * self.target_baseline
-            self.tidx += 1
+            self.results['efficacy'][self.sim.ti] = self.efficacy
+            self.results['effective_value'][self.sim.ti] = (1.0 - self.efficacy) * self.target_baseline
         return
 
     def update_results(self):
