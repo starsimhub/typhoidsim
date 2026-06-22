@@ -46,6 +46,7 @@ For this particular network, a _target_ individual will be in contact on average
 - the individual shedding rate of the source individual -- currently captured in a variable called `rel_trans` (abbreviation for relative transmissibility)
 
 The tranmission is handled as follows: 
+
 - For every source contact of a _target_ individual
     -  (1) draw a daily daily number of exposures to the source, and
     -  (2) assess whether the _target_ becomes infected 

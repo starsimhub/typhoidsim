@@ -5,6 +5,7 @@ jupyter: python3
 
 
 In the previous tutorial we mentioned `model ingredients`. Within Starsim, these are the ingredients of an epidemic, namely: 
+
 - people: the population who will experience the epidemic;
 - demographics: how characteristics of this population change over time
 - (contact) networks: describing how people interact

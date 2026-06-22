@@ -3,9 +3,7 @@ title: T5 - Multi-route transmission
 jupyter: python3
 ---
 
-Multi-route transmission can occur two (2) “routes”: the contact transmission route (via networks) and the environmental transmission route.
-These routes are independent of each other. Interventions can attenuate and/or amplify the contribution of each route, including blocking it
-altogether.
+Transmission can occur via both routes in the same model: the contact transmission route (via networks) and the environmental transmission route. These routes are independent of each other. Interventions can attenuate and/or amplify the contribution of each route, including blocking it altogether.
 
 
 ```{python}
@@ -40,5 +38,6 @@ sim = ss.Sim(
     diseases=typhoid,
     )
 sim.run()
+sim.plot()
 ```
 

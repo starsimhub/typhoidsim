@@ -1023,9 +1023,9 @@ class Typhoid(ss.Disease):
     @staticmethod
     def prior_infections_by_age(module, sim, uids):
         """
-        TODO: [WIP] palceholder - the functional form is just a toy example
+        TODO: [WIP] placeholder - the functional form is just a toy example
         Function to modulate probability of prior n_infections by age at t=0,
-        but would need to discuss functional form/how to parameterize.
+        but would need to discuss functional form/how to parameterize before use.
         """
         if uids is None:
             lam_arr = np.array([])
@@ -1036,7 +1036,7 @@ class Typhoid(ss.Disease):
 
     def update_susceptibility(self, uids):
         """
-        Susceptibility die to acquired immunity following infection.
+        Susceptibility due to acquired immunity following infection.
         The more infections, the lower the number.
         """
         # TPPI: Typhoid Protection Per Infection
@@ -1094,12 +1094,15 @@ def unexp2sus_childhood_prob_function_gauld2018(module, sim, uids):
     start out in a fully immune state. For the Santiago-site simulation,
     there are three ages that individuals can move from immune (unexposed)
     to susceptible:
+
      - 6 months (no children under 6 months of age can be infected).
          - Need to define the distribution parameter
              p_unexp2sus_6m=ss.bernoulli(p=0.14)
+
      - 3 years
          - Need to define the distribution parameter
              p_unexp2sus_3y=ss.bernoulli(p=0.29),
+             
      - 6 years
          - Need to define the distribution parameter
             p_unexp2sus_6y=ss.bernoulli(p=0.61)

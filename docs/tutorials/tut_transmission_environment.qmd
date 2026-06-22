@@ -4,7 +4,7 @@ jupyter: python3
 ---
 
 
-The environment plays a key role in the spread of Typhoid. At the moment, the environment is defined as a Starsim Demographic module -- as of starsim v1.0.1 the environment is not supported as one of the independent model ingredients we saw before. Watch this space 👀 -- this is architecture is subject to change.   
+The environment plays a key role in the spread of typhoid. At the moment, the environment is defined as a Starsim Demographic module -- as of starsim v1.0.1 the environment is not supported as one of the independent model ingredients we saw before. Watch this space 👀 -- this is architecture is subject to change.   
 
 
 ```{python}
