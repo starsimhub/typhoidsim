@@ -534,6 +534,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="typhoidsim.networks" class="level1">
 <h1>networks</h1>
 <p><a href="../api/networks.html#typhoidsim.networks" title="0"><code>networks</code></a></p>
+<p>Custom network classes for direct transmission</p>
 <section id="classes" class="level2">
 <h2 class="anchored" data-anchor-id="classes">Classes</h2>
 <table class="caption-top table">
@@ -667,8 +668,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <colgroup>
 <col style="width: 17%">
 <col style="width: 7%">
-<col style="width: 64%">
-<col style="width: 10%">
+<col style="width: 61%">
+<col style="width: 11%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -706,7 +707,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <colgroup>
 <col style="width: 11%">
 <col style="width: 11%">
-<col style="width: 77%">
+<col style="width: 75%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -824,7 +825,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/starsimhub\.github\.io\/typhoidsim\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

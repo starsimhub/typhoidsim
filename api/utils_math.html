@@ -645,6 +645,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="returns" class="level4 doc-section doc-section-returns">
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 70%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -710,6 +715,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="returns-1" class="level4 doc-section doc-section-returns">
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 72%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -774,6 +784,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="returns-2" class="level4 doc-section doc-section-returns">
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 47%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -814,7 +829,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <colgroup>
 <col style="width: 8%">
 <col style="width: 22%">
-<col style="width: 69%">
+<col style="width: 67%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -844,9 +859,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 8%">
+<col style="width: 9%">
 <col style="width: 24%">
-<col style="width: 67%">
+<col style="width: 65%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -912,9 +927,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-5">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 4%">
+<col style="width: 5%">
 <col style="width: 13%">
-<col style="width: 82%">
+<col style="width: 80%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1025,7 +1040,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/starsimhub\.github\.io\/typhoidsim\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

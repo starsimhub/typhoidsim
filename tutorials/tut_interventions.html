@@ -473,7 +473,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <p>This tutorial shows how to use a routine diagnostic intervention, that administers a test (the product) to a fraction of the eligible population. By default the eligible population is <em>acute</em> individuals. The eligibility criteria can can optionally passed to the intervention as a function that returns the indices (uids) of the eligibile individuals, or directly as an array of uids.</p>
 <p>The sensitivity of the diagnostic product (the test), understood as the probability of receiving a positive diagnostic given that the individual is infected, can be set when instantiating the product.</p>
-<div id="0eeb4c0c" class="cell" data-execution_count="1">
+<div id="2aaa319d" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> starsim <span class="im">as</span> ss</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> typhoidsim <span class="im">as</span> ty</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -481,18 +481,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>pars <span class="op">=</span> <span class="bu">dict</span>(</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    start    <span class="op">=</span> <span class="dv">2000</span>,  <span class="co"># Starting year</span></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    dur      <span class="op">=</span> <span class="fl">2.0</span>,   <span class="co"># Duration of the simulation in years</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    dt       <span class="op">=</span> <span class="fl">1.0</span><span class="op">/</span><span class="fl">365.0</span>,     <span class="co"># Timestep of 1 day, expressed in years</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    dt       <span class="op">=</span> <span class="fl">7.0</span><span class="op">/</span><span class="fl">365.0</span>,     <span class="co"># Timestep of 1 week, expressed in years</span></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    verbose  <span class="op">=</span> <span class="dv">0</span>,             <span class="co"># Do not print details of the run</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># The population</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>ppl <span class="op">=</span> ss.People(<span class="dv">100_000</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>ppl <span class="op">=</span> ss.People(<span class="dv">50_000</span>)</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Person to person transmission</span></span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>random_p2p <span class="op">=</span> ss.RandomNet({<span class="st">'n_contacts'</span>: <span class="dv">10</span>})</span>
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># The disease</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>typhoid <span class="op">=</span> ty.Typhoid(pars<span class="op">=</span>{<span class="st">'tppi'</span>:<span class="fl">0.1</span>})</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>typhoid <span class="op">=</span> ty.Typhoid(pars<span class="op">=</span>{<span class="st">'tppi'</span>:<span class="fl">0.1</span>, <span class="st">'init_seroprev'</span>:<span class="fl">0.8</span>, <span class="st">'init_prev'</span>:<span class="fl">0.001</span>})</span>
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an intervention that routine screens symptoimatic (acute) inidividuals. </span></span>
 <span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># The diagnostic product is a test that is equivalent to a blood test with sensitivity of 0.65</span></span>
@@ -508,10 +508,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>             interventions<span class="op">=</span>screen_acute)</span>
 <span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>sim.run()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>Sim(n=100000; 2000—2002.0; networks=randomnet; diseases=typhoid; interventions=routine_acute_screening)</code></pre>
+<pre><code>Sim(n=50000; 2000—2002.0; networks=randomnet; diseases=typhoid; interventions=routine_acute_screening)</code></pre>
 </div>
 </div>
-<div id="391ffdd0" class="cell" data-execution_count="2">
+<div id="1276cce5" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sim.plot()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Figure(1152x864)</code></pre>
@@ -519,12 +519,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="tut_interventions_files/figure-html/cell-3-output-2.png" width="1162" height="854" class="figure-img"></p>
+<p><img src="tut_interventions_files/figure-html/cell-3-output-2.png" width="1157" height="854" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
-<div id="cf91b005" class="cell" data-execution_count="3">
+<div id="f731cefb" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>plt.figure()</span>
@@ -537,12 +537,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="tut_interventions_files/figure-html/cell-4-output-1.png" width="566" height="426" class="figure-img"></p>
+<p><img src="tut_interventions_files/figure-html/cell-4-output-1.png" width="575" height="428" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
-<div id="970db0a2" class="cell" data-execution_count="4">
+<div id="942e2e63" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>plt.figure()</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>plt.plot(sim.timevec, sim.interventions.routine_acute_screening.results.positivity, label<span class="op">=</span><span class="st">'Instantaneous Positivity'</span>)</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -647,7 +647,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/starsimhub\.github\.io\/typhoidsim\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

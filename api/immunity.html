@@ -536,7 +536,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="typhoidsim.immunity" class="level1">
 <h1>immunity</h1>
 <p><a href="../api/immunity.html#typhoidsim.immunity" title="0"><code>immunity</code></a></p>
-<p>Immunity waning functions So far, all functions are related to parameterisation of box-exponential model for (acquired) immunity waning. These functions facilitate stratifying parameters by age, or by other criteria.</p>
+<p>Immunity waning functions So far, all functions are related to parameterisation of gamma model for (vaccine acquired) immunity waning. These functions facilitate stratifying parameters by age or by other criteria.</p>
 <section id="functions" class="level2">
 <h2 class="anchored" data-anchor-id="functions">Functions</h2>
 <table class="caption-top table">
@@ -599,9 +599,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
+<col style="width: 8%">
 <col style="width: 6%">
-<col style="width: 86%">
+<col style="width: 84%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -654,9 +654,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
+<col style="width: 8%">
 <col style="width: 6%">
-<col style="width: 86%">
+<col style="width: 84%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -722,9 +722,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
+<col style="width: 8%">
 <col style="width: 6%">
-<col style="width: 86%">
+<col style="width: 84%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -835,7 +835,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/starsimhub\.github\.io\/typhoidsim\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

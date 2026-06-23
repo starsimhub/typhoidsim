@@ -477,8 +477,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>The environment plays a key role in the spread of Typhoid. At the moment, the environment is defined as a Starsim Demographic module – as of starsim v1.0.1 the environment is not supported as one of the independent model ingredients we saw before. Watch this space 👀 – this is architecture is subject to change.</p>
-<div id="13454307" class="cell" data-execution_count="1">
+<p>The environment plays a key role in the spread of typhoid. At the moment, the environment is defined as a Starsim Demographic module – as of starsim v1.0.1 the environment is not supported as one of the independent model ingredients we saw before. Watch this space 👀 – this is architecture is subject to change.</p>
+<div id="91cf43f6" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> starsim <span class="im">as</span> ss</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> typhoidsim <span class="im">as</span> ty</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -518,7 +518,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<div id="f5df2fcb" class="cell" data-execution_count="2">
+<div id="0a7536df" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sim.results</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div class="ansi-escaped-output">
@@ -526,33 +526,33 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 0. timevec: array(start=2000.01.01, stop=2001.01.01)
 1. environmentalpool: <span class="ansi-cyan-fg">Results(EnvironmentalPool)</span>
     1.0. <span class="ansi-green-fg">timevec</span>: array(start=2000.01.01, stop=2001.01.01)
-    1.1. <span class="ansi-green-fg">cfu_conc</span>: Result(min=0, mean=666874, max=6.78109e+06)
-    1.2. <span class="ansi-green-fg">cfu_num</span>: Result(min=0, mean=666874, max=6781092)
+    1.1. <span class="ansi-green-fg">cfu_conc</span>: Result(min=0, mean=622387, max=6.53795e+06)
+    1.2. <span class="ansi-green-fg">cfu_num</span>: Result(min=0, mean=622387, max=6537952)
 2. typhoid: <span class="ansi-cyan-fg">Results(Typhoid)</span>
     2.0. <span class="ansi-green-fg">timevec</span>: array(start=2000.01.01, stop=2001.01.01)
-    2.1. <span class="ansi-green-fg">n_susceptible</span>: Result(min=9204, mean=9293.77, max=9345)
-    2.2. <span class="ansi-green-fg">n_infected</span>: Result(min=0, mean=5.06011, max=50)
+    2.1. <span class="ansi-green-fg">n_susceptible</span>: Result(min=9204, mean=9294.08, max=9345)
+    2.2. <span class="ansi-green-fg">n_infected</span>: Result(min=0, mean=4.75956, max=50)
     2.3. <span class="ansi-green-fg">n_unexposed</span>: Result(min=655, mean=701.027, max=747)
-    2.4. <span class="ansi-green-fg">n_prepatent</span>: Result(min=0, mean=1.47814, max=49)
-    2.5. <span class="ansi-green-fg">n_acute</span>: Result(min=0, mean=0.696721, max=8)
-    2.6. <span class="ansi-green-fg">n_subclinical</span>: Result(min=0, mean=2.88525, max=34)
+    2.4. <span class="ansi-green-fg">n_prepatent</span>: Result(min=0, mean=1.45355, max=49)
+    2.5. <span class="ansi-green-fg">n_acute</span>: Result(min=0, mean=0.647541, max=8)
+    2.6. <span class="ansi-green-fg">n_subclinical</span>: Result(min=0, mean=2.65847, max=33)
     2.7. <span class="ansi-green-fg">n_chronic</span>: Result(min=0, mean=0, max=0)
-    2.8. <span class="ansi-green-fg">n_recovered</span>: Result(min=0, mean=0.139344, max=3)
-    2.9. <span class="ansi-green-fg">n_infected_ever</span>: Result(min=49, mean=50.9344, max=51)
-    2.10. <span class="ansi-green-fg">prevalence</span>: Result(min=0, mean=0.000506011, max=0.005)
-    2.11. <span class="ansi-green-fg">new_infections</span>: Result(min=0, mean=0.139344, max=49)
-    2.12. <span class="ansi-green-fg">cum_infections</span>: Result(min=49, mean=50.9344, max=51)
-    2.13. <span class="ansi-green-fg">new_susceptible</span>: Result(min=655, mean=726.566, max=9951)
-    2.14. <span class="ansi-green-fg">new_prepatent</span>: Result(min=0, mean=0.00546448, max=1)
+    2.8. <span class="ansi-green-fg">n_recovered</span>: Result(min=0, mean=0.136612, max=3)
+    2.9. <span class="ansi-green-fg">n_infected_ever</span>: Result(min=49, mean=49.9945, max=50)
+    2.10. <span class="ansi-green-fg">prevalence</span>: Result(min=0, mean=0.000475956, max=0.005)
+    2.11. <span class="ansi-green-fg">new_infections</span>: Result(min=0, mean=0.136612, max=49)
+    2.12. <span class="ansi-green-fg">cum_infections</span>: Result(min=49, mean=49.9945, max=50)
+    2.13. <span class="ansi-green-fg">new_susceptible</span>: Result(min=655, mean=726.563, max=9951)
+    2.14. <span class="ansi-green-fg">new_prepatent</span>: Result(min=0, mean=0.00273224, max=1)
     2.15. <span class="ansi-green-fg">new_acute</span>: Result(min=0, mean=0.0245902, max=2)
     2.16. <span class="ansi-green-fg">cum_acute</span>: Result(min=0, mean=8.74317, max=9)
-    2.17. <span class="ansi-green-fg">new_subclinical</span>: Result(min=0, mean=0.114754, max=11)
+    2.17. <span class="ansi-green-fg">new_subclinical</span>: Result(min=0, mean=0.112022, max=11)
     2.18. <span class="ansi-green-fg">new_chronic</span>: Result(min=0, mean=0, max=0)
-    2.19. <span class="ansi-green-fg">new_recovered</span>: Result(min=0, mean=0.139344, max=3)
+    2.19. <span class="ansi-green-fg">new_recovered</span>: Result(min=0, mean=0.136612, max=3)
     2.20. <span class="ansi-green-fg">new_deaths</span>: Result(min=0, mean=0, max=0)
     2.21. <span class="ansi-green-fg">cum_deaths</span>: Result(min=0, mean=0, max=0)
 3. n_alive: Result(min=10000, mean=10000, max=10000)
-4. n_female: Result(min=0, mean=0, max=0)
+4. n_female: Result(min=5013, mean=5013, max=5013)
 5. new_deaths: Result(min=0, mean=0, max=0)
 6. new_emigrants: Result(min=0, mean=0, max=0)
 7. cum_deaths: Result(min=0, mean=0, max=0)</pre>
@@ -653,7 +653,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/starsimhub\.github\.io\/typhoidsim\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

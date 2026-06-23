@@ -478,7 +478,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>Person-to-person transmission is captured by network-mediated interaction. In this tutorial, we will use a random network, where pairings of people are generated at random at each timestep, but the average number of pairings or contacts on each timestep can be specified.</p>
-<div id="f35df6d6" class="cell" data-execution_count="1">
+<div id="15d37874" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> starsim <span class="im">as</span> ss</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> typhoidsim <span class="im">as</span> ty</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -513,7 +513,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="tut_transmission_network_files/figure-html/cell-2-output-2.png" width="1023" height="743" class="figure-img"></p>
+<p><img src="tut_transmission_network_files/figure-html/cell-2-output-2.png" width="1046" height="743" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -525,7 +525,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>the infectiousness of the source individual</li>
 <li>the individual shedding rate of the source individual – currently captured in a variable called <code>rel_trans</code> (abbreviation for relative transmissibility)</li>
 </ul>
-<p>The tranmission is handled as follows: - For every source contact of a <em>target</em> individual - (1) draw a daily daily number of exposures to the source, and - (2) assess whether the <em>target</em> becomes infected</p>
+<p>The tranmission is handled as follows:</p>
+<ul>
+<li>For every source contact of a <em>target</em> individual
+<ul>
+<li><ol type="1">
+<li>draw a daily daily number of exposures to the source, and</li>
+</ol></li>
+<li><ol start="2" type="1">
+<li>assess whether the <em>target</em> becomes infected</li>
+</ol></li>
+</ul></li>
+</ul>
 
 
 </section>
@@ -617,7 +628,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/starsimhub\.github\.io\/typhoidsim\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

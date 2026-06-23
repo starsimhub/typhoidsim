@@ -471,9 +471,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>In the previous tutorial we mentioned <code>model ingredients</code>. Within Starsim, these are the ingredients of an epidemic, namely: - people: the population who will experience the epidemic; - demographics: how characteristics of this population change over time - (contact) networks: describing how people interact - diseases: describe the natural history of a pathogen in individuals and handle the transmission of the pathogen - interventions: can modify aspects of any of the ingredients above. - analyzers: for reporting results of a simulation, they collect data from the simulation in a specific way (ie, by age and by sex) and plot them. For more details, have a look at the Starsim tutorial on <a href="https://github.com/starsimhub/starsim/blob/main/docs/tutorials/dev_tut_analyzers.ipynb">how to build your own analyzer</a>.</p>
+<p>In the previous tutorial we mentioned <code>model ingredients</code>. Within Starsim, these are the ingredients of an epidemic, namely:</p>
+<ul>
+<li>people: the population who will experience the epidemic;</li>
+<li>demographics: how characteristics of this population change over time</li>
+<li>(contact) networks: describing how people interact</li>
+<li>diseases: describe the natural history of a pathogen in individuals and handle the transmission of the pathogen</li>
+<li>interventions: can modify aspects of any of the ingredients above.</li>
+<li>analyzers: for reporting results of a simulation, they collect data from the simulation in a specific way (ie, by age and by sex) and plot them. For more details, have a look at the Starsim tutorial on <a href="https://github.com/starsimhub/starsim/blob/main/docs/tutorials/dev_tut_analyzers.ipynb">how to build your own analyzer</a>.</li>
+</ul>
 <p>In this tutorial we’ll specify the same model as we did before, but you will notice that people is specified as an ‘ingredient’. Other ingredients wil be covered later.</p>
-<div id="f8a600b8" class="cell" data-execution_count="1">
+<div id="d43801e9" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> starsim <span class="im">as</span> ss</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> typhoidsim <span class="im">as</span> ty</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -599,7 +607,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/starsimhub\.github\.io\/typhoidsim\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

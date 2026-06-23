@@ -480,59 +480,76 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>This tutorial shows how to use a simple vaccination, that acts independently of any environmental intervention.</p>
 <section id="products-and-interventions" class="level2">
 <h2 class="anchored" data-anchor-id="products-and-interventions">Products and interventions</h2>
-<p>Typhoidsim has implemented a few <em>products</em>, that can be used in combination with different types of interventions. For instance a vaccine product like <a href="../api/products.html#typhoidsim.products.typhoid_vaccine" title="0"><code>typhoid_vaccine()</code></a> can be used in combination with</p>
+<p>In addition to direct modification of environmental shedding (previous tutorial), Typhoidsim has implemented a few <em>products</em>, that can be used in combination with different types of interventions. For instance a vaccine product like <a href="../api/products.html#typhoidsim.products.typhoid_vaccine" title="0"><code>typhoid_vaccine()</code></a> can be used in combination with</p>
 <ul>
-<li><code>routine_vx()</code> for routine vaccination, <code>campaign_vx()</code> for one-off campaigns</li>
-<li><code>treat_num()</code>, which treats a certain number of people each timestep (by default, as many people as need treatment, but you can also set a maximum).</li>
+<li><code>routine_vx()</code> for routine vaccination</li>
+<li><code>campaign_vx()</code> for one-off campaigns</li>
+<li><a href="../api/interventions.html#typhoidsim.interventions.vaccination_with_waning" title="0"><code>vaccination_with_waning()</code></a> for a purpose-built implementation of typhoid vaccine schedules with optional age-specific waning</li>
 </ul>
-<div id="599a7b8a" class="cell" data-execution_count="1">
+<p>The next tutorial will describe diagnostic and screening interventions.</p>
+<div id="de8d6113" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> starsim <span class="im">as</span> ss</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> typhoidsim <span class="im">as</span> ty</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Define high-level simulation parameters</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>pars <span class="op">=</span> <span class="bu">dict</span>(</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    start    <span class="op">=</span> <span class="dv">2000</span>,  <span class="co"># Starting year</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    dur      <span class="op">=</span> <span class="fl">1.0</span>,   <span class="co"># Duration of the simulation in years</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    dt       <span class="op">=</span> <span class="fl">1.0</span><span class="op">/</span><span class="fl">365.0</span>,     <span class="co"># Timestep of 1 day, expressed in years</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    dur      <span class="op">=</span> <span class="fl">2.0</span>,   <span class="co"># Duration of the simulation in years</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    dt       <span class="op">=</span> <span class="fl">7.0</span><span class="op">/</span><span class="fl">365.0</span>,     <span class="co"># Timestep of 1 week, expressed in years</span></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    verbose  <span class="op">=</span> <span class="dv">0</span>,             <span class="co"># Do not print details of the run</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># The population</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>ppl <span class="op">=</span> ss.People(<span class="dv">10_000</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>ppl <span class="op">=</span> ss.People(<span class="dv">50_000</span>)</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># The disease</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>typhoid <span class="op">=</span> ty.Typhoid()</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Person to person transmission</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>random_p2p <span class="op">=</span> ss.RandomNet({<span class="st">'n_contacts'</span>: <span class="dv">10</span>})</span>
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Create products</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>vax1 <span class="op">=</span> ty.typhoid_vaccine(efficacy<span class="op">=</span><span class="fl">0.4</span>)</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>vax2 <span class="op">=</span> ty.blocking_vaccine()</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the interventions</span></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>my_intervention_vax1 <span class="op">=</span> ss.routine_vx(</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    start_year<span class="op">=</span><span class="dv">2000</span>,     <span class="co"># Begin vaccination in 2000</span></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    prob<span class="op">=</span><span class="fl">0.2</span>,            <span class="co"># 20% coverage</span></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    product<span class="op">=</span>vax1         <span class="co"># Use vax 1</span></span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the interventions</span></span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>my_intervention_vax2 <span class="op">=</span> ss.routine_vx(</span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    start_year<span class="op">=</span><span class="dv">2000</span>,     <span class="co"># Begin vaccination in 2000</span></span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    prob<span class="op">=</span><span class="fl">0.1</span>,            <span class="co"># 10% coverage</span></span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    product<span class="op">=</span>vax2         <span class="co"># Use vax 2</span></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co"># Now create two sims: a baseline sim and one with the intervention</span></span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>sim_base <span class="op">=</span> ss.Sim(pars<span class="op">=</span>pars, people<span class="op">=</span>ppl, diseases<span class="op">=</span>typhoid)</span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>sim_base.run()</span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>sim_vax1 <span class="op">=</span> ss.Sim(pars<span class="op">=</span>pars, people<span class="op">=</span>ppl, diseases<span class="op">=</span>typhoid, interventions<span class="op">=</span>my_intervention_vax1)</span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>sim_vax1.run()</span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>sim_vax2 <span class="op">=</span> ss.Sim(pars<span class="op">=</span>pars, people<span class="op">=</span>ppl, diseases<span class="op">=</span>typhoid, interventions<span class="op">=</span>my_intervention_vax2)</span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>sim_vax2.run()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># The disease</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>typhoid <span class="op">=</span> ty.Typhoid(pars<span class="op">=</span>{<span class="st">'tppi'</span>:<span class="fl">0.1</span>, <span class="st">'init_seroprev'</span>:<span class="fl">0.8</span>, <span class="st">'init_prev'</span>:<span class="fl">0.001</span>})</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Create products</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>vax1 <span class="op">=</span> ty.typhoid_vaccine(efficacy<span class="op">=</span><span class="fl">0.4</span>)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>vax2 <span class="op">=</span> ty.typhoid_vaccine(efficacy<span class="op">=</span><span class="fl">0.8</span>)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the interventions</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>my_intervention_vax1 <span class="op">=</span> ss.routine_vx(</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    start_year<span class="op">=</span><span class="dv">2000</span>,     <span class="co"># Begin vaccination in 2000</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    prob<span class="op">=</span><span class="fl">0.2</span>,            <span class="co"># 20% coverage</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    product<span class="op">=</span>vax1         <span class="co"># Use vax 1</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the interventions</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>my_intervention_vax2 <span class="op">=</span> ss.routine_vx(</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    start_year<span class="op">=</span><span class="dv">2000</span>,     <span class="co"># Begin vaccination in 2000</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    prob<span class="op">=</span><span class="fl">0.2</span>,            <span class="co"># 20% coverage</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>    product<span class="op">=</span>vax2         <span class="co"># Use vax 2</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Now create two sims: a baseline sim and one with the intervention</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>sim_base <span class="op">=</span> ss.Sim(pars<span class="op">=</span>pars, </span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>                  people<span class="op">=</span>ppl, </span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>                  networks<span class="op">=</span>random_p2p, </span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>                  diseases<span class="op">=</span>typhoid)</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>sim_base.run()</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>sim_vax1 <span class="op">=</span> ss.Sim(pars<span class="op">=</span>pars, </span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>                  people<span class="op">=</span>ppl, </span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>                  networks<span class="op">=</span>random_p2p, </span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>                  diseases<span class="op">=</span>typhoid, </span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>                  interventions<span class="op">=</span>my_intervention_vax1)</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>sim_vax1.run()</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>sim_vax2 <span class="op">=</span> ss.Sim(pars<span class="op">=</span>pars, </span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>                  people<span class="op">=</span>ppl, </span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>                  networks<span class="op">=</span>random_p2p, </span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>                  diseases<span class="op">=</span>typhoid,</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>                  interventions<span class="op">=</span>my_intervention_vax2)</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>sim_vax2.run()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>Sim(n=10000; 2000—2001.0; diseases=typhoid; interventions=routine_vx)</code></pre>
+<pre><code>Sim(n=50000; 2000—2002.0; networks=randomnet; diseases=typhoid; interventions=routine_vx)</code></pre>
 </div>
 </div>
-<div id="badc8097" class="cell" data-execution_count="2">
+<div id="24469599" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sim_base.plot()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Figure(1024x768)</code></pre>
@@ -540,12 +557,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="tut_vaccination_files/figure-html/cell-3-output-2.png" width="1015" height="758" class="figure-img"></p>
+<p><img src="tut_vaccination_files/figure-html/cell-3-output-2.png" width="1048" height="758" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
-<div id="d3591203" class="cell" data-execution_count="3">
+<div id="2d95bd04" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>sim_vax1.plot()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Figure(1024x768)</code></pre>
@@ -553,12 +570,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="tut_vaccination_files/figure-html/cell-4-output-2.png" width="1015" height="758" class="figure-img"></p>
+<p><img src="tut_vaccination_files/figure-html/cell-4-output-2.png" width="1048" height="758" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
-<div id="70383e83" class="cell" data-execution_count="4">
+<div id="128535ce" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>sim_vax2.plot()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Figure(1024x768)</code></pre>
@@ -566,12 +583,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="tut_vaccination_files/figure-html/cell-5-output-2.png" width="1015" height="758" class="figure-img"></p>
+<p><img src="tut_vaccination_files/figure-html/cell-5-output-2.png" width="1048" height="758" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
-<div id="1fe0e5a9" class="cell" data-execution_count="5">
+<div id="45b3f208" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>res_base <span class="op">=</span> sim_base.results</span>
@@ -579,18 +596,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>res_vax2 <span class="op">=</span> sim_vax2.results</span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>plt.figure()</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>plt.plot(res_base.timevec, res_base.typhoid.prevalence, label<span class="op">=</span><span class="st">'Baseline'</span>)</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>plt.plot(res_vax1.timevec, res_vax1.typhoid.prevalence, label<span class="op">=</span><span class="st">'Vax 1'</span>)</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>plt.plot(res_vax1.timevec, res_vax2.typhoid.prevalence, label<span class="op">=</span><span class="st">'Vax 2'</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>plt.plot(res_base.timevec, res_base.typhoid.new_infections, label<span class="op">=</span><span class="st">'Baseline'</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>plt.plot(res_vax1.timevec, res_vax1.typhoid.new_infections, label<span class="op">=</span><span class="st">'Vax 1'</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>plt.plot(res_vax1.timevec, res_vax2.typhoid.new_infections, label<span class="op">=</span><span class="st">'Vax 2'</span>)</span>
 <span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>plt.axvline(x<span class="op">=</span><span class="dv">2000</span>, color<span class="op">=</span><span class="st">'k'</span>, ls<span class="op">=</span><span class="st">'--'</span>)</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Prevalence'</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'New infections'</span>)</span>
 <span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
 <span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="tut_vaccination_files/figure-html/cell-6-output-1.png" width="588" height="446" class="figure-img"></p>
+<p><img src="tut_vaccination_files/figure-html/cell-6-output-1.png" width="592" height="446" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -686,7 +703,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/starsimhub\.github\.io\/typhoidsim\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
