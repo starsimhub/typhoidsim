@@ -5,13 +5,13 @@ Typhoidsim implements an agent-based disease model of typhoid fever (caused by S
 
 ## Installation
 
-Make sure you're inside the Typhoidsim repository:
+The easiest way to install Typhoidsim is via `pip`:
 
 ```bash
-cd typhoidsim
+pip install git+https://github.com/starsimhub/typhoidsim
 ```
 
-And then run (don't forget the dot at the end!):
+You can also clone the Typhoidsim repository and then install locally (don't forget the dot at the end!):
 
 ```bash
 pip install -e .
