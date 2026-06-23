@@ -12,21 +12,21 @@ license = {file = "LICENSE"}
 keywords = ["typhoid", "typhoidsim", "calibration", "research", "starsim"]
 
 authors = [
-  { name = "Paula Sanz-Leon" },
   { name = "Kyra Grantz" },
-  { name = "Cliff Kerr" }
+  { name = "Alicia Kraay" },
+  { name = "Jillian Gauld" },
+  { name = "Paula Sanz-Leon" },
+  { name = "Daniel Klein" },
+  { name = "Cliff Kerr", email = "info@starsim.org" }
 ]
 
 classifiers = [
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
-  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
   "Topic :: Software Development :: Libraries :: Python Modules",
-  "Development Status :: 3 - Alpha",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12"
+  "Development Status :: 5 - Production/Stable",
 ]
 
 dependencies = [
@@ -46,8 +46,6 @@ dependencies = [
 [project.optional-dependencies]
 test = ["pytest>=7.3", "pytest-cov", "pytest-env", "pytest-xdist"]
 cloud = ["coiled", "dask", "distributed", "tornado", "cloudpickle", "msgpack", "optuna-integration[dask]"]
-
-
 
 [tool.setuptools.packages.find]
 where = ["."]
