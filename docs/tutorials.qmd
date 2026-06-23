@@ -1,0 +1,80 @@
+---
+pagetitle: "Tutorials"
+---
+
+# Tutorials
+
+These tutorials will guide you through the main features of Typhoidsim. Each tutorial is interactive and includes executable code examples.
+
+::: {.grid}
+::: {.g-col-4}
+[**T1 - Getting started**](tutorials/tut_intro.qmd)
+
+A quick introduction to the Typhoidsim framework.
+:::
+
+::: {.g-col-4}
+[**T2 - Building your model**](tutorials/tut_model_ingredients.qmd)
+
+How to assemble the main ingredients of a simulation.
+:::
+
+::: {.g-col-4}
+[**T3 - Environment**](tutorials/tut_transmission_environment.qmd)
+
+Modeling the environmental reservoir and pathogen concentration.
+:::
+
+::: {.g-col-4}
+[**T4 - Networks**](tutorials/tut_transmission_network.qmd)
+
+Direct contact transmission between agents.
+:::
+
+::: {.g-col-4}
+[**T5 - Multi-route transmission**](tutorials/tut_transmission_multi.qmd)
+
+Combining environmental and contact transmission routes.
+:::
+
+::: {.g-col-4}
+[**T7 - Seasonality**](tutorials/tut_transmission_seasonality.qmd)
+
+Adding seasonal modulation to environmental transmission.
+:::
+
+::: {.g-col-4}
+[**Interventions: vaccination**](tutorials/tut_vaccination.qmd)
+
+Implementing vaccination campaigns to reduce burden.
+:::
+
+::: {.g-col-4}
+[**Interventions: chronic carriers**](tutorials/tut_interventions.qmd)
+
+Detecting and treating chronic typhoid carriers.
+:::
+
+::: {.g-col-4}
+[**T8 - Calibration**](tutorials/tut_calibration.qmd)
+
+Calibrating a Typhoidsim model to data.
+:::
+:::
+
+
+:::{.callout-note}
+You can download these tutorials as Jupyter notebooks to run them locally. Look for the download button at the top of each tutorial.
+:::
+
+::: {.callout-tip}
+## Running tutorials locally
+
+To run these tutorials locally:
+
+1. Clone the Typhoidsim repository
+2. Install Typhoidsim and its dependencies (`pip install -e .`)
+3. Navigate to the `docs/tutorials` directory
+4. Convert to Jupyter: `./convert_notebooks` (or just open them directly if `jupytext` is installed)
+5. Launch Jupyter: `jupyter lab`
+:::

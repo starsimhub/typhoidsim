@@ -7,11 +7,10 @@ pars = dict(
     n_agents = 10e3,
     start = 2000,
     dur = 2,
-    unit = 'year',
     dt = 1/365,
 )
 
-typh = ty.Typhoid(unit='year', dt=1/365)
+typh = ty.Typhoid(dt=ss.years(1/365))
 
 sim = ss.Sim(
     pars = pars,

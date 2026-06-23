@@ -154,9 +154,9 @@ class track_individuals_monitor(Monitor):
                 flat = {k: v for k, v in flat.items() if k.startswith(key)}
             for key, res in flat.items():
                 fig, ax = sc.getrowscols(n=1, nrows=1, make=True, **fig_kw)
-                ax.plot(res.timevec, res[:, uids]+y_offsets, color=[0.3, 0.3, 0.3])
+                ax.plot(res.timevec.years, res[:, uids]+y_offsets, color=[0.3, 0.3, 0.3])
                 # Labels and annotations
-                ax.set_xlim([res.timevec[0], res.timevec[-1]])
+                ax.set_xlim([res.timevec.years[0], res.timevec.years[-1]])
                 ax.set_xlabel('Time')
                 # Set the y-axis (time) labels
                 #ax.set_yticks(y_scaling * np.arange(n_agents))
@@ -267,7 +267,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
         if self.resampling_period and self.aggregate_time in set(aggregation_functions):
             # integer number of timesteps we need to aggregate to downsample result arrays
-            self.monitor_step_size = round(self.resampling_period / self.t.dt) # CK: TODO: use time units
+            self.monitor_step_size = round(self.resampling_period / float(self.t.dt)) # CK: TODO: use time units
             self.monitor_period = self.resampling_period
             self.agg_func = aggregation_functions.get(self.aggregate_time)
             if self.aggregate_time in ["subsample"]:
@@ -281,8 +281,8 @@ class histograms_by_age_sex_monitor(Monitor):
             self.buffer_ntpts = 1
 
         # [record_from, record_until)
-        self.start_point = sc.findnearest(sim.timevec - self.record_from, 0.0)
-        self.end_point   = sc.findnearest(sim.timevec - (self.record_until-sim.t.dt), 0.0)
+        self.start_point = sc.findnearest(sim.timevec.years - self.record_from, 0.0)
+        self.end_point   = sc.findnearest(sim.timevec.years - (self.record_until-float(sim.t.dt)), 0.0)
 
         self.obs_timepoints = sc.inclusiverange(self.start_point, self.end_point).astype(int)
         obs_n_steps = len(self.obs_timepoints)
@@ -374,15 +374,19 @@ class histograms_by_age_sex_monitor(Monitor):
 
     def set_observation_interval(self, sim): # CK: TODO: use time units
         """ Set the correction endpoints of the observation period recorded by this monitor"""
+        # In v3, sim.pars.stop may be None when the sim is defined via start+dur; use the
+        # timeline's start/stop (as float years) which always hold the resolved values.
+        sim_start = float(sim.t.start)
+        sim_stop = float(sim.t.stop)
         if self.record_from is None and self.record_until is None:
-            start_year = sim.pars.start
-            stop_year = sim.pars.stop
+            start_year = sim_start
+            stop_year = sim_stop
         elif self.record_from is not None and self.record_until is None:
-            start_year = self.record_from if not self.record_from < sim.pars.start else sim.pars.start
-            stop_year = sim.pars.stop
+            start_year = self.record_from if not self.record_from < sim_start else sim_start
+            stop_year = sim_stop
         elif self.record_from is None and self.record_until is not None:
-            start_year = sim.pars.start
-            stop_year = self.record_until if not self.record_until > sim.pars.stop else sim.pars.stop
+            start_year = sim_start
+            stop_year = self.record_until if not self.record_until > sim_stop else sim_stop
         else:
             start_year = self.record_from
             stop_year = self.record_until
@@ -505,7 +509,7 @@ class histograms_by_age_sex_monitor(Monitor):
                         "age_bin_lb": pd.Series([self.age_bins[ab_idx]] * len(x)),   # Lower bound
                         "age_bin_ub": pd.Series([self.age_bins[ab_idx+1]] * len(x)),  # Upper bound
                         "age_bin_label": pd.Series([self.age_bin_labels[ab_idx]] * len(x)),
-                        "time": res_value.timevec}
+                        "time": res_value.timevec.years}
                 dfs.append(pd.DataFrame(data))
         df = pd.concat(dfs, axis=0)
         return df
@@ -568,7 +572,7 @@ class histograms_by_age_sex_monitor(Monitor):
             # Do the plotting
             for ax, (key, res) in zip(axs, flat.items()):
                 for tidx in sorted(t_index):
-                    ax.bar(xticks, res[tidx, :], **plot_kw, label=f"t={timevec[tidx]:.4f}", alpha=0.2)
+                    ax.bar(xticks, res[tidx, :], **plot_kw, label=f"t={timevec.years[tidx]:.4f}", alpha=0.2)
 
                 title = getattr(res, 'label', key)
                 if self.nags == 1:
@@ -665,7 +669,7 @@ class histograms_by_age_sex_monitor(Monitor):
                 ax.set_xlabel('Age (years)')
                 # Set the y-axis (time) labels
                 ax.set_yticks(y_scaling * np.arange(len(t_indices)))
-                yticklbls = [f"{t:.4f}" for t in timevec[t_indices]]
+                yticklbls = [f"{t:.4f}" for t in timevec.years[t_indices]]
                 ax.set_yticklabels(yticklbls)
                 ax.set_ylabel('Year')
                 title = getattr(res, 'label', key)

@@ -79,7 +79,7 @@ def detect_age_anniversary(sim, age_anniversary):
     Returns:
          reached_anniv (Boolean array):
     """
-    reached_anniv = (((sim.people.age - sim.t.dt) < age_anniversary) & (sim.people.age >= age_anniversary))
+    reached_anniv = (((sim.people.age - float(sim.t.dt)) < age_anniversary) & (sim.people.age >= age_anniversary))
     return reached_anniv
 
 

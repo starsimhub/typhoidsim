@@ -1,5 +1,5 @@
 """
-Define the calibration class - migrated from Starsim 2.1.1 and 2.2.0
+Define calibration helpers for ss.Calibration()
 """
 import os
 import datetime

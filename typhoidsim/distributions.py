@@ -1,5 +1,5 @@
 """
-Distributions
+Distributions, useful for vaccine waning parameterization
 """
 import sciris as sc
 import starsim as ss

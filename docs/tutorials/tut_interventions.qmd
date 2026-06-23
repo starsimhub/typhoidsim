@@ -1,0 +1,73 @@
+---
+title: T5b - Interventions (detecting typhoid carriers)
+jupyter: python3
+---
+
+
+This tutorial shows how to use a routine diagnostic intervention, that administers a test (the product) to a fraction of the eligible population. By default the eligible population is _acute_ individuals. The eligibility criteria can can optionally passed to the intervention as a function that returns the indices (uids) of the eligibile individuals, or directly as an array of uids. 
+
+The sensitivity of the diagnostic product (the test), understood as the probability of receiving a positive diagnostic given that the individual is infected, can be set when instantiating the product. 
+
+
+```{python}
+import starsim as ss
+import typhoidsim as ty
+
+# Define high-level simulation parameters
+pars = dict(
+    start    = 2000,  # Starting year
+    dur      = 2.0,   # Duration of the simulation in years
+    dt       = 7.0/365.0,     # Timestep of 1 week, expressed in years
+    verbose  = 0,             # Do not print details of the run
+)
+
+# The population
+ppl = ss.People(50_000)
+
+# Person to person transmission
+random_p2p = ss.RandomNet({'n_contacts': 10})
+
+# The disease
+typhoid = ty.Typhoid(pars={'tppi':0.1, 'init_seroprev':0.8, 'init_prev':0.001})
+
+# Create an intervention that routine screens symptoimatic (acute) inidividuals. 
+# The diagnostic product is a test that is equivalent to a blood test with sensitivity of 0.65
+blood_test   = ty.typhoid_test(pars=dict(sensitivity=ss.bernoulli(p=0.65)))
+screen_acute = ty.routine_acute_screening(product=blood_test, prob=0.3, start_year=2001.0) # Screen 30% of acute individuals every year starting in 2001
+
+
+# Now create two sims: a baseline sim and one with the intervention
+sim = ss.Sim(pars=pars, 
+             people=ppl, 
+             networks=random_p2p,
+             diseases=typhoid, 
+             interventions=screen_acute)
+sim.run()
+```
+
+```{python}
+sim.plot()
+```
+
+```{python}
+import matplotlib.pyplot as plt
+
+plt.figure()
+plt.plot(sim.timevec, sim.interventions.routine_acute_screening.results.new_screened, label='New screened acute carriers')
+plt.plot(sim.timevec,  sim.interventions.routine_acute_screening.results.new_positive, label='New screened who tested positive')
+
+plt.axvline(x=2001, color='k', ls='--')
+plt.legend()
+plt.show()
+```
+
+```{python}
+#| collapsed: false
+plt.figure()
+plt.plot(sim.timevec, sim.interventions.routine_acute_screening.results.positivity, label='Instantaneous Positivity')
+
+plt.axvline(x=2001, color='k', ls='--')
+plt.legend()
+plt.show()
+```
+

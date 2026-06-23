@@ -1,0 +1,43 @@
+---
+title: T5 - Multi-route transmission
+jupyter: python3
+---
+
+Transmission can occur via both routes in the same model: the contact transmission route (via networks) and the environmental transmission route. These routes are independent of each other. Interventions can attenuate and/or amplify the contribution of each route, including blocking it altogether.
+
+
+```{python}
+import starsim as ss
+import typhoidsim as ty
+
+# Define high-level simulation parameters
+pars = dict(
+    start    = 2000,  # Starting year
+    dur      = 1.0,   # Duration of the simulation in years
+    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    verbose  = 0,             # Do not print details of the run
+)
+
+# The population
+ppl = ss.People(10_000)
+
+# The environment the population is affected by, and can carry the pathogen
+environment = ty.EnvironmentalPool()
+
+# Person to person transmission
+random_p2p = ss.RandomNet({'n_contacts': 5})
+
+# The disease 
+typhoid = ty.Typhoid()
+
+sim = ss.Sim(
+    pars=pars,
+    people=ppl, 
+    demographics=environment,
+    networks=random_p2p,
+    diseases=typhoid,
+    )
+sim.run()
+sim.plot()
+```
+

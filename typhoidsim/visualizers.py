@@ -41,7 +41,7 @@ def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, 
     # Do the plotting
     with sc.options.with_style(style):
         if timevec is None:
-            timevec = flat.pop('timevec')
+            timevec = sim.timevec.years
 
         mask = Ellipsis
         mask_from = None

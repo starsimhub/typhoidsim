@@ -1,0 +1,189 @@
+project:
+  type: website
+  pre-render: python quarto_utils.py pre
+  post-render: python quarto_utils.py post
+  output-dir: _site
+  title: "Typhoidsim"
+  execute-dir: file
+  resources:
+    - objects.json
+    - objects.inv
+
+website:
+  title: "Typhoidsim"
+
+  repo-url: https://github.com/starsimhub/typhoidsim
+  repo-actions: [issue]
+  page-navigation: true
+  search:
+    type: overlay
+
+  page-footer:
+    center: "Docs built for Typhoidsim v{{< var version >}} ({{< var versiondate >}}).<br>© 2024–2026, Gates Foundation. All rights reserved. [Privacy and Cookies Notice](https://www.gatesfoundation.org/Privacy-and-Cookies-Notice) | [Terms of Use](https://www.gatesfoundation.org/Terms-of-Use)"
+    right:
+      - icon: github
+        href: https://github.com/starsimhub/typhoidsim
+        aria-label: GitHub
+      - icon: envelope-at-fill
+        href: mailto:info@starsim.org
+      - icon: globe
+        href: https://starsim.org/
+
+  navbar:
+    title: "Typhoidsim"
+    collapse-below: lg
+
+    tools:
+      - icon: github
+        href: https://github.com/starsimhub/typhoidsim
+      - icon: envelope-at-fill
+        href: mailto:info@starsim.org
+      - icon: globe
+        href: https://starsim.org
+
+    left:
+      - href: index.qmd
+        text: Home
+      - href: whatsnew.qmd
+        text: What's new
+      - href: tutorials.qmd
+        text: Tutorials
+      - href: conduct.qmd
+        text: Code of conduct
+      - href: contributing.qmd
+        text: Contributing
+      - href: api/index.qmd
+        text: API reference
+
+  sidebar:
+    - id: main
+      collapse-level: 3
+      contents:
+        - href: index.qmd
+          text: "**Home**"
+        - href: whatsnew.qmd
+          text: "**What's new**"
+        - href: api/index.qmd
+          text: "**API reference**"
+        - section: "**Tutorials**"
+          contents:
+            - tutorials/tut_intro.qmd
+            - tutorials/tut_model_ingredients.qmd
+            - tutorials/tut_transmission_environment.qmd
+            - tutorials/tut_transmission_network.qmd
+            - tutorials/tut_transmission_multi.qmd
+            - tutorials/tut_transmission_seasonality.qmd
+            - tutorials/tut_vaccination.qmd
+            - tutorials/tut_interventions.qmd
+            - tutorials/tut_calibration.qmd
+        - href: conduct.qmd
+          text: "**Code of conduct**"
+        - href: contributing.qmd
+          text: "**Contributing**"
+    - id: api
+      collapse-level: 2
+      contents:
+        - href: index.qmd
+          text: "**Home**"
+        - href: api/index.qmd
+          text: "**API reference**"
+        - section: "**Disease**"
+          contents:
+            - api/typhoid.qmd
+            - api/immunity.qmd
+            - api/environment.qmd
+        - section: "**Modules**"
+          contents:
+            - api/networks.qmd
+            - api/interventions.qmd
+            - api/products.qmd
+            - api/monitors.qmd
+            - api/visualizers.qmd
+        - section: "**Workflows**"
+          contents:
+            - api/calibration.qmd
+            - api/ingest.qmd
+        - section: "**Utilities**"
+          contents:
+            - api/distributions.qmd
+            - api/patterns.qmd
+            - api/defaults.qmd
+            - api/settings.qmd
+            - api/utils.qmd
+            - api/utils_eligibility.qmd
+            - api/utils_math.qmd
+
+format:
+  html:
+    theme:
+      light: [cosmo, ./assets/styles-light.scss]
+      dark: [cosmo, ./assets/styles-dark.scss]
+    css: ./assets/styles.css
+    toc: true
+    toc-depth: 3
+    highlight-style: github
+
+filters:
+  - interlinks
+
+interlinks:
+  fast: false
+  sources:
+    python:
+      url: https://docs.python.org/3/
+    numpy:
+      url: https://numpy.org/doc/stable/
+    pandas:
+      url: https://pandas.pydata.org/pandas-docs/stable/
+    scipy:
+      url: https://docs.scipy.org/doc/scipy/
+    matplotlib:
+      url: https://matplotlib.org/stable/
+    sciris:
+      url: https://docs.sciris.org/en/latest/
+    starsim:
+      url: https://docs.starsim.org/
+  autolink: true
+  aliases:
+    numpy: [np]
+    pandas: [pd]
+    matplotlib: [plt]
+    sciris: [sc]
+    starsim: [ss]
+    typhoidsim: [null, ty]
+
+quartodoc:
+  package: typhoidsim
+  title: API reference
+  style: pkgdown
+  dir: api
+  parser: google
+  render_interlinks: true
+  sections:
+    - title: API reference
+      desc: Full details on all Typhoidsim classes and functions.
+      contents:
+        - calibration
+        - defaults
+        - distributions
+        - environment
+        - immunity
+        - ingest
+        - interventions
+        - monitors
+        - networks
+        - patterns
+        - products
+        - settings
+        - typhoid
+        - utils
+        - utils_eligibility
+        - utils_math
+        - visualizers
+
+execute:
+  freeze: auto # Only re-execute notebooks that have changed
+  cache: true # NB, not sure if this is needed for Quarto notebooks
+  error: false # Do not continue if an error is encountered
+  echo: true
+  warning: true

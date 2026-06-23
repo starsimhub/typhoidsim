@@ -50,7 +50,7 @@ sim = ss.Sim(
 sim.run()
 
 import matplotlib.pyplot as plt
-time_yearvec = sim.timevec
+time_yearvec = sim.timevec.years
 data2 = sim.interventions[0].results['effective_value']
 data3 = sim.interventions[0].results['efficacy']
 data4 = sim.interventions[0].target_baseline ## baseline value of rel_trans

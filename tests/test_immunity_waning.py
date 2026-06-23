@@ -107,14 +107,30 @@ def make_sim_non_default_with_constant_dist(n_agents=5_000):
 
 def run_sim(sim):
     sim.run()
-    ty.to_df(sim)
-    assert True
-    return
+    ty.to_df(sim)  # Exercise the results export path
+    iv = sim.interventions[0]
+    typhoid = sim.diseases.typhoid
+    # The waning vaccination campaign should run to completion, deliver doses, and
+    # confer (subsequently waning) acquired immunity to some agents.
+    assert sim.complete
+    assert iv.results['cum_doses'][-1] > 0, 'No vaccine doses were delivered'
+    assert np.nanmax(typhoid.immunity_acquired.values) > 0, 'No acquired immunity after vaccination'
+    return sim
+
+
+def test_waning_defaults():
+    """ vaccination_with_waning using default immunity distributions """
+    sim = make_sim_with_defaults(n_agents=3_000)
+    return run_sim(sim)
+
+
+def test_waning_with_constant_dist():
+    """ vaccination_with_waning using explicit age-binned immunity distributions """
+    sim = make_sim_non_default_with_constant_dist(n_agents=3_000)
+    return run_sim(sim)
 
 
 if __name__ == '__main__':
-    sim = make_sim_with_defaults()
-    run_sim(sim)
-    sim = make_sim_non_default_with_constant_dist()
-    run_sim(sim)
+    test_waning_defaults()
+    test_waning_with_constant_dist()
 
