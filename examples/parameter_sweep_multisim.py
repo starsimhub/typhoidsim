@@ -1,6 +1,6 @@
 """
-This scripts shows how to perform a parameter sweep using stasrsim's Multisim
-functionality. This code is intended to be run on a latpop to do a super quick
+This scripts shows how to perform a parameter sweep using Starsim's parallel
+runs (`ss.parallel()`). This code is intended to be run on a latpop to do a super quick
 exploration over 1 or 2 parameters.
 """
 import matplotlib.pyplot as plt
@@ -32,32 +32,26 @@ def make_sim(vax_eff=1.0, vax_cov=1.0):
 
     # Define high-level simulation parameters
     pars = dict(
-        start    =2000,          # Starting year
-        dur      =2.0,           # Duration of the simulation in years
-        dt       =1.0/365.0,     # Timestep of 1 day, expressed in years
-        verbose  =0,             # Do not print details of the run
+        start    = 2000,          # Starting year
+        dur      = ss.years(2),   # Duration of the simulation
+        dt       = ss.days(1),    # Timestep of 1 day
+        verbose  = 0,             # Do not print details of the run
     )
 
     # The population
     ppl = ss.People(1_000)
 
     # The disease
-    typhoid = ty.Typhoid(pars={'init_prev': ss.bernoulli(0.1)})
+    typhoid = ty.Typhoid(init_prev=0.1)
 
     # The contacts
-    network = ss.RandomNet({'n_contacts': 10})
+    network = ss.RandomNet(n_contacts=10)
 
-    # Create products
-    vax1 = ty.typhoid_vaccine(efficacy=vax_eff)  # PARAMETER 1
+    # The vaccination: each person not yet vaccinated is vaccinated with a probability of vax_cov a year
+    vaccination = ss.vaccinate(efficacy=vax_eff, coverage=ss.probperyear(vax_cov), start=2000) # PARAMETERS 1 and 2
 
-    # Create the intervention
-    my_intervention_vax1 = ss.routine_vx(
-        start_year=2000.0,   # Beginning of vaccination campaign
-        prob=vax_cov,        # PARAMETER 2
-        product=vax1         # Use vax 1
-    )
     # Create the simulation with specific intervention parameters
-    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, networks=network, interventions=my_intervention_vax1, label=f"Vax efficacy:{vax_eff}; coverage:{vax_cov}")
+    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, networks=network, interventions=vaccination, label=f"Vax efficacy:{vax_eff}; coverage:{vax_cov}")
     return sim
 
 
@@ -70,7 +64,6 @@ for vx_cov in [0.0, 0.2, 0.3, 0.5, 0.7, 0.9]:
 
 
 # Run them
-msim = ss.MultiSim(sims)
-msim.run()
-msim.plot(key="typhoid")
+msim = ss.parallel(sims)
+msim.plot('typhoid')
 plt.show()

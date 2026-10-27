@@ -8,146 +8,8 @@ import matplotlib.pyplot as plt
 import sciris as sc
 
 from .networks import CommunityNet
-from .calibration import calib_to_df
 
-__all__ = ["plot_age_histogram", "plot_age_mixing", "plot_sim", "plot_calib"]
-
-
-def plot_sim(sim, key=None, fig=None, style='fancy', fig_kw=None, plot_kw=None, timevec=None, display_from=None, display_until=None):
-    """
-    Plot all results in the Sim object after the simulation has run
-
-    Args:
-        sim
-        key (str): the results key to plot (by default, all)
-        fig (Figure): if provided, plot results into an existing figure
-        style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
-        fig_kw (dict): passed to ``plt.subplots()``
-        plot_kw (dict): passed to ``plt.plot()``
-        timevec (arr): the time vector (in years) we want to use for plotting the results, defaults to sim.timevec
-
-    """
-    # Configuration
-    flat = sim.results.flatten()
-    n_cols = np.ceil(np.sqrt(len(flat)))  # Number of columns of axes
-    default_figsize = np.array([8, 6])
-    figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,
-                             1.5)  # Scale the default figure size based on the number of rows and columns
-    figsize = default_figsize * figsize_factor
-    fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
-    plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
-    modmap = {m.name: m for m in sim.modules}  # Find modules
-
-    # Do the plotting
-    with sc.options.with_style(style):
-        if timevec is None:
-            timevec = sim.timevec.years
-
-        mask = Ellipsis
-        mask_from = None
-        mask_until = None
-
-        if display_from:
-            mask_from = timevec >= display_from if display_from is not None else None
-
-        if display_until:
-            mask_until = timevec <= display_until if display_until is not None else None
-
-        if mask_from and mask_until:
-            mask = np.logical_and(mask_from, mask_until)
-        elif mask_from and not mask_until:
-            mask = mask_from
-        elif not mask_from and mask_until:
-            mask = mask_until
-
-        if key is not None:
-            flat = {k: v for k, v in flat.items() if k.startswith(key)}
-
-        # Get the figure
-        if fig is None:
-            fig, axs = sc.getrowscols(len(flat), make=True, **fig_kw)
-            if isinstance(axs, np.ndarray):
-                axs = axs.flatten()
-        else:
-            axs = fig.axes
-        if not sc.isiterable(axs):
-            axs = [axs]
-
-        # Do the plotting
-        for ax, (key, res) in zip(axs, flat.items()):
-            ax.plot(timevec[mask], res[mask], **plot_kw, label=sim.label)
-            title = getattr(res, 'label', key)
-            if res.module != 'sim':
-                try:
-                    mod = modmap[res.module]
-                    modtitle = mod.__class__.__name__
-                    assert res.module == modtitle.lower()  # Only use the class name if the module name is the default
-                except:
-                    modtitle = res.module
-                title = f'{modtitle}: {title}'
-            ax.set_title(title)
-            ax.set_xlabel('Year')
-
-    sc.figlayout(fig=fig)
-
-    return fig
-
-
-def plot_calib(calib, fig=None, style='fancy', fig_kw=None, plot_kw=None, timevec=None, display_from=None, display_until=None):
-    """
-    Plot all results in the Sim object after the simulation has run
-
-    Args:
-        calib (typhoidsim.Calibration220): a Calibration object for which check_fit() has been run
-        key (str): the timepoint to plot (by default, all)
-        fig (Figure): if provided, plot results into an existing figure
-        style (str): the plotting style to use (default "fancy"; other options are "simple", None, or any Matplotlib style)
-        fig_kw (dict): passed to ``plt.subplots()``
-        plot_kw (dict): passed to ``plt.plot()``
-        time (arr): the time vector (in years) we want to use for plotting the results, defaults to sim.timevec
-
-    """
-    import seaborn as sns
-    if calib.after_msim is None:
-        print("Please run calib.check_fit()")
-        return
-
-    df = calib_to_df(calib)
-
-    # Configuration
-    n_cols = np.ceil(np.sqrt(df["t"].nunique()))  # Number of columns of axes
-    default_figsize = np.array([8, 6])
-    figsize_factor = np.clip((n_cols - 3) / 6 + 1, 1,1.5)  # Scale the default figure size based on the number of rows and columns
-    figsize = default_figsize * figsize_factor
-    fig_kw = sc.mergedicts({'figsize': figsize}, fig_kw)
-    plot_kw = sc.mergedicts({'lw': 2}, plot_kw)
-
-    # Do the plotting
-    with sc.options.with_style(style):
-        # Get the figure
-        if fig is None:
-            n = np.array([df["t"].nunique()])
-            fig, axs = sc.getrowscols(n, make=True, remove_extra=True, **fig_kw)
-            if isinstance(axs, np.ndarray):
-                axs = axs.flatten()
-        else:
-            axs = fig.axes
-        if not sc.isiterable(axs):
-            axs = [axs]
-
-        # Do the plotting
-        for ax, t in zip(axs, df["t"].unique()):
-            sim_data = df.loc[df["t"] == t, :]
-            sim_data["sort_age"] = sim_data['age_bin'].apply(lambda x: int(x.split('-')[0]))
-            sim_data.sort_values("sort_age", inplace=True)
-            # This will calculate the mean and stadard across seeds
-            ax = sns.barplot(sim_data, x="age_bin", y="x", hue="source_data", estimator="mean", errorbar="sd", ax=ax)
-            component_name = df["component_name"].unique()[0]
-            ax.set_title(f"{component_name} - year: {t}")
-            ax.set_xlabel('Year')
-    sc.figlayout(fig=fig)
-
-    return fig
+__all__ = ["plot_age_histogram", "plot_age_mixing"]
 
 
 def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
@@ -192,7 +54,7 @@ def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
     min_age = min(bins)
     max_age = max(bins)
     edges = np.append(bins, np.inf)  # Add an extra bin to end to turn them into edges
-    age_counts = np.histogram(people.age, edges)[0]
+    age_counts = np.histogram(people.age.values, edges)[0]
 
     # Create the figure
     if fig is None:
@@ -211,7 +73,7 @@ def plot_age_histogram(people, bins=None, width=1.0, alpha=0.6,
 
     # Plot cumulative distribution
     plt.subplot(n_rows, 2, 2)
-    age_sorted = sorted(people.age)
+    age_sorted = np.sort(people.age.values)
     y = np.linspace(0, 100, len(age_sorted))
     plt.plot(age_sorted, y, '-', **plot_args)
     plt.xlim([0, max_age])

@@ -2,7 +2,6 @@
 
 """
 import numpy as np
-import networkx as nx
 
 import matplotlib.pyplot as plt
 
@@ -13,8 +12,8 @@ import typhoidsim as ty
 # Define the parameters
 pars = sc.objdict(
     start=2000,       # Starting year
-    dur=1.0,      # Number of days to simulate
-    dt=1.0/365.0,     # Timestep of 1 day, expressed in years
+    dur=ss.years(1),  # Duration of the simulation
+    dt=ss.days(1),    # Timestep of 1 day
     verbose=1,        # Print details of the run
     rand_seed=2,      # Set a non-default seed
 )
@@ -22,22 +21,16 @@ pars = sc.objdict(
 # Who
 ppl = ss.People(10_000)
 
-# What
-typhoid = ty.Typhoid()
+# What, and how: the environment is part of the disease, and with no contact route, the only one
+typhoid = ty.Typhoid(exposure2contact_rate=0)
 
-# How
-environment = ty.EnvironmentalPool()
+# Behavioral change (e.g. handwashing) that halves susceptibility (was ty.behavioral_change(efficacy=0.5))
+sanitation = ss.modify('typhoid.rel_sus', multiply=1 - 0.5, name='sanitation')
 
-
-sanitation_efficacy = ty.Pattern("efficacy", pars={'efficacy': 0.5})
-
-sanitation = ty.behavioral_change(efficacy=0.5)
-
-#
 sim = ss.Sim(
     pars=pars,
+    people=ppl,
     diseases=typhoid,
-    demographics=environment,
     interventions=sanitation
     )
 

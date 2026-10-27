@@ -9,15 +9,15 @@ import typhoidsim as ty
 
 # Define the parameters
 pars = sc.objdict(
-    start=2000,       # Starting year
-    dur=0.25,     # Number of days to simulate
-    dt=1.0/365.0,     # Timestep of 1 day, expressed in years
-    verbose=1,        # Print details of the run
-    rand_seed=2,      # Set a non-default seed
+    start=2000,          # Starting year
+    dur=ss.days(90),     # Duration of the simulation
+    dt=ss.days(1),       # Timestep of 1 day
+    verbose=1,           # Print details of the run
+    rand_seed=2,         # Set a non-default seed
 )
 
-ppl_chile    = ss.People(10_000, age_data=ty.get_age_distribution('Chile'))
-ppl_pakistan = ss.People(10_000, age_data=ty.get_age_distribution('Pakistan'))
+ppl_chile    = ss.people('Chile', n_agents=10_000) # The country's age structure, from Starsim's own data (was synthpops)
+ppl_pakistan = ss.people('Pakistan', n_agents=10_000)
 
 sim_chile = ss.Sim(pars=pars, people=ppl_chile)
 sim_chile.run()

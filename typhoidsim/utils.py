@@ -12,11 +12,10 @@ from . import defaults as tyd
 from . import settings as tys
 
 # Specify all externally visible things this file defines
-__all__ = ['get_data_home', 'load_dataset', 'get_dataset_names']
-__all__ += ['get_attr_vals']
-__all__ += ['digitize_ages_1yr', 'stratify_parameter_by_age', 'detect_age_anniversary']
+__all__ = ['get_data_home', 'load_dataset', 'get_dataset_names', 'gallstone_probs']
+__all__ += ['digitize_ages_1yr', 'stratify_parameter_by_age']
 __all__ += ['test_cpu_performance']
-__all__ += ['generate_unique_filename', 'to_df', 'promotetoiterable', 'generate_age_bin_labels']
+__all__ += ['generate_unique_filename', 'promotetoiterable', 'generate_age_bin_labels']
 __all__ += ['load_age_dist_un', 'get_age_distribution_un']
 
 
@@ -65,32 +64,6 @@ def stratify_parameter_by_age(age_bin_edges, par_bin_values):
         return par_bin_values[bin_index]
 
     return age_stratified_parameter
-
-
-def detect_age_anniversary(sim, age_anniversary):
-    """
-    Detect people who crossed a specific age_anniversary, does not
-    have to be birthday necessarily.
-
-    Args:
-        sim (starsim.Sim object): the current simulation object
-        age_anniversary (float):  the age we wish to detect
-
-    Returns:
-         reached_anniv (Boolean array):
-    """
-    reached_anniv = (((sim.people.age - float(sim.t.dt)) < age_anniversary) & (sim.people.age >= age_anniversary))
-    return reached_anniv
-
-
-def get_attr_vals(sim, attr_path, attr_name):
-    """Get values of the attribute in attr_path"""
-    attr = sim
-    for attr_link in attr_path:
-        attr = getattr(attr, attr_link)
-    target_attr = attr_name
-    vals = getattr(attr, target_attr)
-    return vals
 
 
 def get_data_home(data_home=None):
@@ -192,6 +165,17 @@ def load_dataset(ds_name, data_home=None, **kwargs):
                     f"'gallstone_prev', and 'prepatent_dur_dist_pars'")
             raise ValueError(mssg)
     return
+
+
+def gallstone_probs(data_home=None):
+    """
+    The probability of having gallstones by age and sex, as a value for each person
+    (`ss.by`), from gallstone_probs.csv (age bins by their lower edges; sex 1 is female)
+    """
+    import starsim as ss
+    df = remove_empty_rows(pd.read_csv(os.path.join(get_data_home(data_home), 'gallstone_probs.csv')))
+    sexes = np.where(df['sex'] == 1, 'female', 'male')
+    return ss.by(dict(age=df['age_lo'].to_numpy(dtype=float), sex=sexes, value=df['prob'].to_numpy(dtype=float)))
 
 
 def remove_empty_rows(df):
@@ -341,25 +325,6 @@ def generate_unique_filename(root_str="typhoidsim"):
     u_id = sc.uuid(which="hex")  # Creates a length-6 hex string
     filename = root_str + "_" + now + u_id
     return filename
-
-
-def to_df(sim, sep='_'):
-    """
-    Export results as a Pandas dataframe. Available in newer starsim versions (ie, 2.0)
-    Only saves 1D result arrays, discards the results from analyzers, unless they
-    are 1D arrays.
-    """
-    if not sim.results_ready:  # pragma: no cover
-        errormsg = 'Please run the sim before exporting the results'
-        raise RuntimeError(errormsg)
-
-    flat = sim.results.flatten(sep=sep)
-    for arr in flat.keys():
-        # We are using .values because of the following bug in starsim: https://github.com/starsimhub/starsim/issues/838
-        if len(flat[arr].values.shape) > 1 or arr.startswith("monitor"):
-            del flat[arr]
-    df = sc.dataframe.from_dict(flat)
-    return df
 
 
 def promotetoiterable(axs):

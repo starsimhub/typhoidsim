@@ -64,6 +64,7 @@ class CommunityNet(ss.DynamicNetwork):
         return
 
     def init_post(self, add_pairs=True):
+        super().init_post(add_pairs=False)
         self.get_age_groups()
         if add_pairs:
             self.add_pairs()
@@ -231,14 +232,10 @@ class HouseholdNet(ss.DynamicNetwork):
         self.define_pars(
             n_contacts=ss.constant(10),
             location=None,
-            dur=20, # TODO SOON: ss.years(20) # average duration of a household in years
+            dur=ss.years(20), # Average duration of a household
         )
         self.update_pars(pars, **kwargs)
         self.dist = ss.Dist(distname='HouseholdNet')  # Default RNG
-        return
-
-    def init_post(self):
-        self.add_pairs()
         return
 
     @staticmethod
@@ -303,7 +300,7 @@ class HouseholdNet(ss.DynamicNetwork):
         if isinstance(self.pars.dur, ss.Dist):
             dur = self.pars.dur.rvs(p1)
         else:
-            dur = np.full(len(p1), self.pars.dur)
+            dur = np.full(len(p1), self.pars.dur.to_dt() if isinstance(self.pars.dur, ss.dur) else self.pars.dur) # In steps
 
         self.append(p1=p1, p2=p2, beta=beta, dur=dur)
         return

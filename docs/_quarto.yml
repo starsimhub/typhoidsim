@@ -91,22 +91,18 @@ website:
           contents:
             - api/typhoid.qmd
             - api/immunity.qmd
-            - api/environment.qmd
         - section: "**Modules**"
           contents:
             - api/networks.qmd
             - api/interventions.qmd
-            - api/products.qmd
             - api/monitors.qmd
             - api/visualizers.qmd
         - section: "**Workflows**"
           contents:
-            - api/calibration.qmd
             - api/ingest.qmd
         - section: "**Utilities**"
           contents:
             - api/distributions.qmd
-            - api/patterns.qmd
             - api/defaults.qmd
             - api/settings.qmd
             - api/utils.qmd
@@ -140,7 +136,7 @@ interlinks:
     matplotlib:
       url: https://matplotlib.org/stable/
     sciris:
-      url: https://docs.sciris.org/en/latest/
+      url: https://docs.sciris.org/
     starsim:
       url: https://docs.starsim.org/
   autolink: true
@@ -163,17 +159,13 @@ quartodoc:
     - title: API reference
       desc: Full details on all Typhoidsim classes and functions.
       contents:
-        - calibration
         - defaults
         - distributions
-        - environment
         - immunity
         - ingest
         - interventions
         - monitors
         - networks
-        - patterns
-        - products
         - settings
         - typhoid
         - utils

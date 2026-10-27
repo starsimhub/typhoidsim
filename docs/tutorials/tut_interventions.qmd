@@ -4,9 +4,9 @@ jupyter: python3
 ---
 
 
-This tutorial shows how to use a routine diagnostic intervention, that administers a test (the product) to a fraction of the eligible population. By default the eligible population is _acute_ individuals. The eligibility criteria can can optionally passed to the intervention as a function that returns the indices (uids) of the eligibile individuals, or directly as an array of uids. 
+This tutorial shows how to use a routine diagnostic intervention, that administers a test (the product) to a fraction of the eligible population. Here, people are screened as they become _acute_ (`on=`, an event: here, the onset of acute infection). Who is eligible can instead be given as a condition (`where=`, e.g. `where=typhoid.chronic` with `interval=ss.years(1)` for yearly rounds of screening of chronic carriers).
 
-The sensitivity of the diagnostic product (the test), understood as the probability of receiving a positive diagnostic given that the individual is infected, can be set when instantiating the product. 
+The sensitivity of the diagnostic product (the test), understood as the probability of receiving a positive diagnostic given that the individual is infected, can be set when instantiating the product. Each result (`positive` and `negative`) is an event that a following step, such as `ss.treat(..., on=screening.positive)`, can be triggered by.
 
 
 ```{python}
@@ -15,9 +15,9 @@ import typhoidsim as ty
 
 # Define high-level simulation parameters
 pars = dict(
-    start    = 2000,  # Starting year
-    dur      = 2.0,   # Duration of the simulation in years
-    dt       = 7.0/365.0,     # Timestep of 1 week, expressed in years
+    start    = 2000,          # Starting year
+    dur      = ss.years(2),   # Duration of the simulation
+    dt       = ss.weeks(1),   # Timestep of 1 week
     verbose  = 0,             # Do not print details of the run
 )
 
@@ -25,18 +25,18 @@ pars = dict(
 ppl = ss.People(50_000)
 
 # Person to person transmission
-random_p2p = ss.RandomNet({'n_contacts': 10})
+random_p2p = ss.RandomNet(n_contacts=10)
 
 # The disease
-typhoid = ty.Typhoid(pars={'tppi':0.1, 'init_seroprev':0.8, 'init_prev':0.001})
+typhoid = ty.Typhoid(tppi=0.1, init_seroprev=0.8, init_prev=0.001)
 
-# Create an intervention that routine screens symptoimatic (acute) inidividuals. 
+# Create an intervention that screens symptomatic (acute) individuals as they become acute.
 # The diagnostic product is a test that is equivalent to a blood test with sensitivity of 0.65
-blood_test   = ty.typhoid_test(pars=dict(sensitivity=ss.bernoulli(p=0.65)))
-screen_acute = ty.routine_acute_screening(product=blood_test, prob=0.3, start_year=2001.0) # Screen 30% of acute individuals every year starting in 2001
+blood_test   = ss.Diagnostic(sensitivity=0.65)
+screen_acute = ss.screen(blood_test, on=typhoid.onset.to(typhoid.acute), coverage=0.3, start=2001, name='screening') # Screen 30% of acute individuals, starting in 2001
 
 
-# Now create two sims: a baseline sim and one with the intervention
+# Now create the sim with the intervention
 sim = ss.Sim(pars=pars, 
              people=ppl, 
              networks=random_p2p,
@@ -52,22 +52,27 @@ sim.plot()
 ```{python}
 import matplotlib.pyplot as plt
 
-plt.figure()
-plt.plot(sim.timevec, sim.interventions.routine_acute_screening.results.new_screened, label='New screened acute carriers')
-plt.plot(sim.timevec,  sim.interventions.routine_acute_screening.results.new_positive, label='New screened who tested positive')
+res = sim.results.screening
 
-plt.axvline(x=2001, color='k', ls='--')
+plt.figure()
+plt.plot(sim.timevec, res.delivered, label='New screened acute carriers')
+plt.plot(sim.timevec, res.positive, label='New screened who tested positive')
+
+plt.axvline(x=ss.date(2001), color='k', ls='--')
 plt.legend()
 plt.show()
 ```
 
 ```{python}
 #| collapsed: false
-plt.figure()
-plt.plot(sim.timevec, sim.interventions.routine_acute_screening.results.positivity, label='Instantaneous Positivity')
+import numpy as np
 
-plt.axvline(x=2001, color='k', ls='--')
+positivity = np.divide(res.positive, res.delivered, out=np.full(len(res.delivered), np.nan), where=res.delivered > 0)
+
+plt.figure()
+plt.plot(sim.timevec, positivity, label='Instantaneous positivity')
+
+plt.axvline(x=ss.date(2001), color='k', ls='--')
 plt.legend()
 plt.show()
 ```
-

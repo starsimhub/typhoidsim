@@ -12,28 +12,24 @@ import typhoidsim as ty
 
 # Define high-level simulation parameters
 pars = dict(
-    start    = 2000,  # Starting year
-    dur      = 1.0,   # Duration of the simulation in years
-    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    start    = 2000,          # Starting year
+    dur      = ss.years(1),   # Duration of the simulation
+    dt       = ss.days(1),    # Timestep of 1 day
     verbose  = 0,             # Do not print details of the run
 )
 
 # The population
 ppl = ss.People(10_000)
 
-# The environment the population is affected by, and can carry the pathogen
-environment = ty.EnvironmentalPool()
-
 # Person to person transmission
-random_p2p = ss.RandomNet({'n_contacts': 5})
+random_p2p = ss.RandomNet(n_contacts=5)
 
-# The disease 
+# The disease, including the environment the population is affected by, and which can carry the pathogen
 typhoid = ty.Typhoid()
 
 sim = ss.Sim(
     pars=pars,
     people=ppl, 
-    demographics=environment,
     networks=random_p2p,
     diseases=typhoid,
     )

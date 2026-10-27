@@ -1,240 +1,73 @@
 """
-Test that the histogram monitors are counting correctly
+Test counts by age, from the sim's own results (stratified by age), and by vaccination
+status, from an analyzer, against what the agents say
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
-import functools
-
 import sciris as sc
 import starsim as ss
 import typhoidsim as ty
 
-import pytest
+age_bin_edges = [0, 2, 5, 10, 15, 20, 40, 60]
+pars = sc.objdict(start=2000, dur=ss.years(1), dt=ss.days(1), verbose=0, rand_seed=2)
 
 
-def make_sim_with_histogram_monitor():
-    # Define the parameters
-    pars = sc.objdict(
-        start=2000,
-        dur=1.0,
-        dt=1.0/365.0,
-        verbose=0,
-        rand_seed=2,
-    )
+class infections_by_vaccination(ss.Analyzer):
+    """ Count the new infections each step among those aged 2-5 who have been vaccinated, and those who have not """
+    def init_results(self):
+        super().init_results()
+        self.define_results(ss.Result('vaccinated', dtype=int), ss.Result('unvaccinated', dtype=int), ss.Result('all', dtype=int))
+        return
 
-    ppl = ss.People(10_000)
-    typhoid = ty.Typhoid(pars={"init_prev": ss.bernoulli(p=0.05), "p_death":0.0})
-    random_p2p = ss.RandomNet({'n_contacts': 5})
+    def step(self):
+        sim = self.sim
+        typhoid = sim.diseases.typhoid
+        new = ss.uids.concatenate(typhoid.contact.uids, typhoid.environment.uids)
+        age = sim.people.age[new]
+        new = new[(age >= 2) & (age < 5)]
+        vaccinated = np.isfinite(sim.interventions.vaccination.product.ti_delivered[new])
+        self.results.vaccinated[self.ti] = vaccinated.sum()
+        self.results.unvaccinated[self.ti] = (~vaccinated).sum()
+        self.results.all[self.ti] = len(new)
+        return
 
-    vax1 = ty.blocking_vaccine(efficacy=0.2)
-    elgibility = functools.partial(ty.eligibility_by_age, age_min=2.0, age_max=5.0)
 
-    # Create the interventions
-    my_intervention_vax1 = ss.routine_vx(
-        start_year=pars["start"],
-        prob=0.2,
-        product=vax1,
-        eligibility=elgibility
-    )
-
-    age_bin_edges = [0, 2, 5, 10, 15, 20, 40, 60, ty.max_age]
-    age_bin_labels = ['<2', '2-4', '5-9', '10-14', '15-19', '20-39', '40-59',
-                      '60+']
-
-    to_record = dict(ti_infected=dict(path=("diseases", "typhoid"), label="infected"),
-                     alive=dict(path=("people",)))
-
-    m1_name = "monitor_cases"
-    agg_sex = True
-    monitor_cases = ty.histograms_by_age_sex_monitor(
-        age_bins=age_bin_edges,
-        age_bin_labels=age_bin_labels,
-        to_record=to_record,
-        resampling_period=1.0,
-        aggregate_sex=agg_sex,
-        aggregate_time="sum",
-        # Sum over the resampling period
-        record_from=pars["start"],
-        name=m1_name)
-
-    m2_name = "monitor_cases_vax"
-    monitor_cases_vax = ty.histogram_by_vaccination_status(
-        track_vaccinated=True,
-        age_bins=age_bin_edges,
-        age_bin_labels=age_bin_labels,
-        to_record=to_record,
-        resampling_period=1.0,
-        aggregate_sex=agg_sex,
-        aggregate_time="sum",
-        # Sum over the resampling period
-        record_from=pars["start"],
-        name=m2_name)
-
-    m3_name = "monitor_cases_unvax"
-    monitor_cases_unvax = ty.histogram_by_vaccination_status(
-        track_vaccinated=False,   # tracks unvaccinated
-        age_bins=age_bin_edges,
-        age_bin_labels=age_bin_labels,
-        to_record=to_record,
-        resampling_period=1.0,
-        aggregate_sex=agg_sex,
-        aggregate_time="sum",
-        # Sum over the resampling period
-        record_from=pars["start"],
-        name=m3_name)
-
-    m4_name = "monitor_people"
-    monitor_people = ty.histograms_by_age_sex_monitor(
-        age_bins=age_bin_edges,
-        age_bin_labels=age_bin_labels,
-        to_record=to_record,
-        aggregate_time="mean",
-        resampling_period=1.0,
-        aggregate_sex=agg_sex,
-        record_from=pars["start"],
-        name=m4_name)
-
-    sim = ss.Sim(pars=pars,
-                 people=ppl,
-                 diseases=typhoid,
-                 networks=random_p2p,
-                 interventions=[my_intervention_vax1],
-                 analyzers=[monitor_cases, monitor_cases_vax, monitor_cases_unvax, monitor_people],
-                 use_aging=False)
-
+def make_sim():
+    typhoid = ty.Typhoid(init_prev=0.05, p_death=0.0)
+    vaccine = ss.Vaccine(efficacy=0.8)
+    vaccination = ss.vaccinate(vaccine, at=[2000], where=(ss.ppl.age >= 2) & (ss.ppl.age < 5), coverage=0.5)
+    sim = ss.Sim(pars=pars, people=ss.People(10_000, age_data=ss.uniform(0, 60)), diseases=typhoid, networks=ss.RandomNet(n_contacts=5),
+                 interventions=vaccination, analyzers=infections_by_vaccination(), stratify=dict(age=age_bin_edges), use_aging=False)
     return sim
 
 
 def test_vaccinated_counts():
-    sim = make_sim_with_histogram_monitor()
-    sim.run()
-
-    flat = sim.results.flatten()
-    m1_name = "monitor_cases"
-    m2_name = "monitor_cases_vax"
-    m3_name = "monitor_cases_unvax"
-    quantity = "_b_new_infected"
-
-    age_bin_idx = 1 ## Check number for age_bin that received vaccines
-    m1_infected = flat[f"{m1_name}{quantity}"]
-    m2_infected = flat[f"{m2_name}{quantity}"]
-    m3_infected = flat[f"{m3_name}{quantity}"]
-    assert m1_infected[0, age_bin_idx] == (m2_infected[0, age_bin_idx] + m3_infected[0, age_bin_idx])
-    return
-
-
-@pytest.mark.parametrize("dt,rs", [
-    (1.0/365, 0.2),
-    (1.0/365, 1.0),
-    (1.0/365, 1.0/52),
-    (1.0/365, 1.0/12),    # monthly
-    (1.0/365, 7.0/365),   # weekly
-    (1.0/365, 15.0/365),  # fortnightly
-    (1.0/365, 30.41/365)])
-def test_histogram_monitor_aggregate_resampling(dt, rs):
-    pars = sc.objdict(
-        start=2000,
-        dur=1.0,
-        dt=dt,
-        verbose=0,
-        rand_seed=2,
-    )
-
-    ppl = ss.People(1_000)
-    typhoid = ty.Typhoid(pars={"init_prev": ss.bernoulli(p=0.05), "p_death": 0.0})
-    random_p2p = ss.RandomNet({'n_contacts': 5})
-    to_record = dict(alive=dict(path=("people",)))
-
-    m1_name = "monitor_people"
-    agg_sex = True
-    monitor_people = ty.histograms_by_age_sex_monitor(
-        to_record=to_record,
-        resampling_period=rs,
-        aggregate_sex=agg_sex,
-        aggregate_time="sum",
-        # Sum over the resampling period
-        record_from=pars["start"],
-        name=m1_name)
-
-    sim = ss.Sim(pars=pars,
-                 people=ppl,
-                 diseases=typhoid,
-                 networks=random_p2p,
-                 analyzers=[monitor_people],
-                 use_aging=False)
-
-    sim.run()
-
-    assert sim.complete
-    return
-
-
-@pytest.mark.parametrize("dt,rs", [
-    (1.0/365, 0.2),
-    (1.0/365, 1.0),
-    (1.0/365, 1.0/52),
-    (1.0/365, 1.0/12),    # monthly
-    (1.0/365, 7.0/365),   # weekly
-    (1.0/365, 15.0/365),  # fortnightly
-    (1.0/365, 30.41/365)])
-def test_histogram_monitor_subsampling(dt, rs):
-    pars = sc.objdict(
-        start=2000,
-        dur=1.0,
-        dt=dt,
-        verbose=0,
-        rand_seed=2,
-    )
-
-    ppl = ss.People(1_000)
-    typhoid = ty.Typhoid(pars={"init_prev": ss.bernoulli(p=0.05), "p_death": 0.0})
-    random_p2p = ss.RandomNet({'n_contacts': 5})
-    to_record = dict(alive=dict(path=("people",)))
-
-    m1_name = "monitor_people"
-    agg_sex = True
-    monitor_people = ty.histograms_by_age_sex_monitor(
-        to_record=to_record,
-        resampling_period=rs,
-        aggregate_sex=agg_sex,
-        aggregate_time="subsample",
-        # Sum over the resampling period
-        record_from=pars["start"],
-        name=m1_name)
-
-    sim = ss.Sim(pars=pars,
-                 people=ppl,
-                 diseases=typhoid,
-                 networks=random_p2p,
-                 analyzers=[monitor_people],
-                 use_aging=False)
-
-    sim.run()
-
-    assert sim.complete
-    return
+    """ Infections among the vaccinated and the unvaccinated add up, and the vaccinated are infected less """
+    sim = make_sim().run()
+    res = sim.results.infections_by_vaccination
+    assert (res.vaccinated + res.unvaccinated == res.all).all()
+    n_vx = sim.results.vaccination.delivered.sum()
+    n_group = np.count_nonzero((sim.people.age >= 2) & (sim.people.age < 5))
+    rate_vx = res.vaccinated.sum()/n_vx
+    rate_unvx = res.unvaccinated.sum()/(n_group - n_vx)
+    assert rate_vx < rate_unvx, f'Infections per person: {rate_vx:.3f} vaccinated, {rate_unvx:.3f} unvaccinated'
+    return sim
 
 
 def test_by_age_counts():
-    sim = make_sim_with_histogram_monitor()
+    """ With no aging, births, or deaths, the people in typhoid's states by age group are those of each age at the start """
+    sim = make_sim()
     sim.init()
-    init_ages = sim.people.age.raw.copy() # this population does not change and does not age
+    init_ages = sim.people.age.values.copy()
     sim.run()
-
-    age_bin_edges = [0, 2, 5, 10, 15, 20, 40, 60, ty.max_age]
-    n_alive =  np.reshape(np.histogram(init_ages, bins=age_bin_edges)[0],(1, -1))
-
-    flat = sim.results.flatten()
-    m4_name = "monitor_people"
-    quantity = "_b_n_alive"
-    m4_alive = flat[f"{m4_name}{quantity}"]
-    assert (m4_alive == n_alive).all()
-    return
+    typhoid = sim.results.typhoid
+    states = ['unexposed', 'susceptible', 'prepatent', 'acute', 'subclinical', 'chronic', 'recovered']
+    by_age = sum(typhoid[state].by('age').values[-1] for state in states)
+    expected = np.histogram(init_ages, bins=age_bin_edges + [np.inf])[0]
+    assert np.allclose(by_age, expected)
+    return sim
 
 
 if __name__ == "__main__":
     test_vaccinated_counts()
     test_by_age_counts()
-    test_histogram_monitor_aggregate_resampling(1.0/365, 7.0/365)
-    test_histogram_monitor_subsampling(1.0/365, 7.0/365)

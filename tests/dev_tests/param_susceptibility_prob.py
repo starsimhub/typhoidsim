@@ -11,7 +11,7 @@ import typhoidsim as ty
 
 ages = np.linspace(0, 101, 100)
 
-# This is the function called by typhoid.susceptibilty_prob_function() during a simulation
+# The share susceptible by age: the share at the start of a simulation, and the curve whose hazard is the rate of Typhoid.become_susceptible
 age_thr = 20.0  # years
 slope = 0.0    #
 p_sus = ty.utils_math.sigmoid(ages, age_thr, slope)

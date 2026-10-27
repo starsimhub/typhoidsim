@@ -6,7 +6,7 @@ jupyter: python3
 
 Typhoidsim is a library for running agent-based simulations of typhoid spread. This library is built upon the [Starsim framework](https://github.com/starsimhub/starsim), and covers a lot of functionality from the EMOD-Typhoid implementation. 
 
-To get started you will need to have python installed in yur system. We recommend to use a form of virtual environment.  
+To get started you will need to have Python installed in your system. We recommend to use a form of virtual environment.  
  
 To install, you first need to clone or download the a copy of the source code from https://github.com/starsimhub/typhoidsim
  
@@ -29,7 +29,7 @@ This tutorial walks you through the simplest possible version of how to do these
 
 
 ## Hello world
-Let's start with running a simple simulation with no transmission routes. The disease will not propagate throughout the population, but we will be able to look at the natural history of the disease on individual agents.
+Let's start with running a simple simulation with no transmission routes. The disease will not propagate throughout the population, but we will be able to look at the natural history of the disease on individual agents. Typhoid spreads by contact between people and through the environment; with no contact network, Starsim mixes everyone with everyone, so we switch off both routes: `exposure2contact_rate=0` for contact and `teer=0` (the environmental exposure rate) for the environment.
 
 ```{python}
 import starsim as ss
@@ -37,15 +37,15 @@ import typhoidsim as ty
 
 # Define high-level simulation parameters, and define the main ingredients of the model of the world we will simulate
 pars = dict(
-    start    = 2000,  # Starting year
-    dur      = 1.0,   # Duration of the simulation in years
-    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    start    = 2000,          # Starting year
+    dur      = ss.years(1),   # Duration of the simulation
+    dt       = ss.days(1),    # Timestep of 1 day
     verbose  = 0,             # Do not print details of the run
     n_agents = 10_000,        # Number of agents to simulate
 )
 
-# The disease 
-typhoid = ty.Typhoid()
+# The disease, with no transmission
+typhoid = ty.Typhoid(exposure2contact_rate=0, teer=0)
 
 sim = ss.Sim(
     pars=pars,

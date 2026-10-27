@@ -2,7 +2,6 @@
 
 """
 import numpy as np
-import networkx as nx
 
 import matplotlib.pyplot as plt
 
@@ -13,8 +12,8 @@ import typhoidsim as ty
 # Define the parameters
 pars = sc.objdict(
     start=2000,       # Starting year
-    dur=1.0,      # Number of days to simulate
-    dt=1.0/365.0,     # Timestep of 1 day, expressed in years
+    dur=ss.years(1),  # Duration of the simulation
+    dt=ss.days(1),    # Timestep of 1 day
     verbose=1,        # Print details of the run
     rand_seed=2,      # Set a non-default seed
 )
@@ -23,7 +22,7 @@ typhoid = ty.Typhoid()
 
 ppl = ss.People(10_000)
 
-network = ss.RandomNet({'n_contacts': 5})
+network = ss.RandomNet(n_contacts=5)
 
 sim = ss.Sim(
     people=ppl,

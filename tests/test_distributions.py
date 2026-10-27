@@ -1,7 +1,8 @@
 """
-Test that the number of infections tracked in results and as internal state add up
+Test the distributions used for vaccine waning
 """
 import sciris as sc
+import starsim as ss
 import typhoidsim as ty
 
 import matplotlib.pyplot as plt
@@ -10,7 +11,7 @@ import matplotlib.pyplot as plt
 def test_truncnorm(n_samples=1000, a_trunc=0, b_trunc=2_000):
     sc.heading('Testing truncnorm')
     mu, sigma = 1_000, 1_000
-    dist = ty.truncnorm(a_trunc=a_trunc, b_trunc=b_trunc, loc=mu, scale=sigma, name='test_truncnorm', strict=False)
+    dist = ss.truncnorm(loc=mu, scale=sigma, low=a_trunc, high=b_trunc, name='test_truncnorm', strict=False)
     dist.init()
     rvs = dist(n_samples)
     print(rvs)

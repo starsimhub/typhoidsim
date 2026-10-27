@@ -1,7 +1,6 @@
 """
 This script shows how to perform kind of a parameter sweep, using a (random)
-sampler from optuna (the library Starsim and typhoidsim) use on the backgrounds
-to perform calibration.
+sampler from optuna (which Starsim's sim.fit() can use for calibration).
 
 The random samplers will always sample using whatever distribution are passed
  (i.e. a uniform or log-uniform distribution) and tell the trial to evaluate
@@ -40,32 +39,26 @@ def make_sim(vax_eff=1.0, vax_cov=1.0, start=2000.0):
 
     # Define high-level simulation parameters
     pars = dict(
-        start    =2000,          # Starting year
-        dur      =2.0,           # Duration of the simulation in years
-        dt       =1.0/365.0,     # Timestep of 1 day, expressed in years
-        verbose  =0,             # Do not print details of the run
+        start    = 2000,          # Starting year
+        dur      = ss.years(2),   # Duration of the simulation
+        dt       = ss.days(1),    # Timestep of 1 day
+        verbose  = 0,             # Do not print details of the run
     )
 
     # The population
     ppl = ss.People(1_000)
 
     # The disease
-    typhoid = ty.Typhoid(pars={'init_prev': ss.bernoulli(0.1)})
+    typhoid = ty.Typhoid(init_prev=0.1)
 
     # The contacts
-    network = ss.RandomNet({'n_contacts': 10})
+    network = ss.RandomNet(n_contacts=10)
 
-    # Create products
-    vax1 = ty.typhoid_vaccine(efficacy=vax_eff)  # PARAMETER 1
+    # The vaccination: each person not yet vaccinated is vaccinated with a probability of vax_cov a year, from start
+    vaccination = ss.vaccinate(efficacy=vax_eff, coverage=ss.probperyear(vax_cov), start=start) # PARAMETERS 1, 2, and 3
 
-    # Create the intervention
-    my_intervention_vax1 = ss.routine_vx(
-        start_year=start,    # PARAMETER 3
-        prob=vax_cov,        # PARAMETER 2
-        product=vax1         # Use vax 1
-    )
     # Create the simulation with specific intervention parameters
-    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, networks=network, interventions=my_intervention_vax1, label=f"Vax efficacy:{vax_eff}; coverage:{vax_cov}")
+    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, networks=network, interventions=vaccination, label=f"Vax efficacy:{vax_eff}; coverage:{vax_cov}")
     return sim
 
 
@@ -91,8 +84,7 @@ def objective(trial):
 
     # For the sake of this example, we will use the total number of acute cases as the "cost" we need to minimise with
     # the vaccination intervention.
-    res = sim.results.flatten()
-    cost = res["typhoid_new_acute"].sum()
+    cost = sim.results.typhoid['onset.acute'].sum()
     return cost
 
 

@@ -10,8 +10,8 @@ import typhoidsim as ty
 # Define the parameters
 pars = sc.objdict(
     start=2000,       # Starting year
-    dur=1.0,      # Number of days to simulate
-    dt=1.0/365.0,     # Timestep of 1 day, expressed in years
+    dur=ss.years(1),  # Duration of the simulation
+    dt=ss.days(1),    # Timestep of 1 day
     rand_seed=2,      # Set a non-default seed
 )
 
@@ -21,14 +21,15 @@ ppl = ss.People(10_000)
 
 
 demographics = [
-    ss.Births(birth_rate=20),
-    ss.Deaths(death_rate=15)
+    ss.Births(birth_rate=ss.peryear(20)), # Per 1000 people
+    ss.Deaths(death_rate=ss.peryear(15))
 ]
 
-network = ss.RandomNet({'n_contacts': 5})
+network = ss.RandomNet(n_contacts=5)
 
 sim = ss.Sim(
     pars=pars,
+    people=ppl,
     networks=network,
     diseases=typhoid,
     demographics=demographics

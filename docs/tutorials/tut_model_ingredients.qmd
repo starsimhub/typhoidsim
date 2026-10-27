@@ -11,7 +11,7 @@ In the previous tutorial we mentioned `model ingredients`. Within Starsim, these
 - (contact) networks: describing how people interact
 - diseases: describe the natural history of a pathogen in individuals and handle the transmission of the pathogen 
 - interventions: can modify aspects of any of the ingredients above.
-- analyzers: for reporting results of a simulation, they collect data from the simulation in a specific way (ie, by age and by sex) and plot them. For more details, have a look at the Starsim tutorial on [how to build your own analyzer](https://github.com/starsimhub/starsim/blob/main/docs/tutorials/dev_tut_analyzers.ipynb).
+- analyzers: for reporting results of a simulation, they collect data from the simulation in a specific way (ie, by age and by sex) and plot them. For more details, have a look at the Starsim user guide on [how to use analyzers](https://docs.starsim.org/user_guide/running_analyzers.html).
 
 In this tutorial we'll specify the same model as we did before, but you will notice that people is specified as an 'ingredient'. Other ingredients wil be covered later. 
 
@@ -22,17 +22,17 @@ import typhoidsim as ty
 
 # Define high-level simulation parameters
 pars = dict(
-    start    = 2000,  # Starting year
-    dur      = 1.0,   # Duration of the simulation in years
-    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    start    = 2000,          # Starting year
+    dur      = ss.years(1),   # Duration of the simulation
+    dt       = ss.days(1),    # Timestep of 1 day
     verbose  = 0,             # Do not print details of the run
 )
 
 # The population
 ppl = ss.People(10_000)
 
-# The disease 
-typhoid = ty.Typhoid()
+# The disease, with no transmission (as in the previous tutorial)
+typhoid = ty.Typhoid(exposure2contact_rate=0, teer=0)
 
 sim = ss.Sim(
     pars=pars,

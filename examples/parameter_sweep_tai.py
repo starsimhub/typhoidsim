@@ -17,26 +17,26 @@ def make_sim(tai=42_000):
 
     # Define high-level simulation parameters
     pars = dict(
-        start    =2000,          # Starting year
-        dur      =20.0,           # Duration of the simulation in years
-        dt       =1.0/365.0,     # Timestep of 1 day, expressed in years
-        verbose  =0,             # Do not print details of the run
+        start    = 2000,          # Starting year
+        dur      = ss.years(20),  # Duration of the simulation
+        dt       = ss.days(1),    # Timestep of 1 day
+        verbose  = 0,             # Do not print details of the run
     )
 
     # The population
     ppl = ss.People(10_000)
 
-    # The disease
-    typhoid = ty.Typhoid(pars={'init_prev': ss.bernoulli(0.001), 'tai': tai})
-
-
-    # ENVIRONMENT
-    environment = ty.EnvironmentalPool(pars={'teer_lam': 1.99,  # TEER: Typhoid environmental exposure rate
-                                             'volume': 1,       # Set the volume to 1 if we want to reproduce EMOD-like results
-                                             'transmission': ss.Pars({'rel_trans': 0.00001})})  # This parameter is equivalent to mEL parameter in Gauld etal 2018
+    # The disease, with only the environmental route
+    typhoid = ty.Typhoid(
+        init_prev = 0.001,
+        tai = tai,
+        exposure2contact_rate = 0,  # No transmission by contact
+        teer = ss.perday(1.99),     # TEER: Typhoid environmental exposure rate
+        env_rel_trans = 0.00001,    # Equivalent to the mEL parameter in Gauld et al. 2018
+    )
 
     # Create the simulation with specific intervention parameters
-    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid,  demographics=environment, label=f"TAI:{tai}")
+    sim = ss.Sim(pars=pars, people=ppl, diseases=typhoid, label=f"TAI:{tai}")
     return sim
 
 
@@ -48,7 +48,6 @@ for val in [1_000, 5_000, 10_0000, 20_000, 42_000]:
     sims.append(make_sim(tai=val))
 
 # Run them
-msim = ss.MultiSim(sims)
-msim.run()
-msim.plot(key="typhoid")
+msim = ss.parallel(sims)
+msim.plot('typhoid')
 plt.show()

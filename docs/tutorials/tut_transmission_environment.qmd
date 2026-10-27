@@ -1,10 +1,10 @@
 ---
-title: T3 - Environment (as a demographics module)
+title: T3 - Environment
 jupyter: python3
 ---
 
 
-The environment plays a key role in the spread of typhoid. At the moment, the environment is defined as a Starsim Demographic module -- as of starsim v1.0.1 the environment is not supported as one of the independent model ingredients we saw before. Watch this space 👀 -- this is architecture is subject to change.   
+The environment plays a key role in the spread of typhoid. It is part of the disease: `ty.Typhoid` tracks the colony-forming units (CFUs) in the environment as `cfu`, and infects people through it (the `environment` route) as well as by contact. Its parameters are the disease's, e.g. `shedding_rate`, `decay_rate`, `env_rel_trans`, and `teer` (the environmental exposure rate). Here we switch off contact transmission (`exposure2contact_rate=0`) to see the environmental route on its own.
 
 
 ```{python}
@@ -13,29 +13,25 @@ import typhoidsim as ty
 
 # Define high-level simulation parameters
 pars = dict(
-    start    = 2000,  # Starting year
-    dur      = 1.0,   # Duration of the simulation in years
-    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    start    = 2000,          # Starting year
+    dur      = ss.years(1),   # Duration of the simulation
+    dt       = ss.days(1),    # Timestep of 1 day
     verbose  = 0,             # Do not print details of the run
 )
 
 # The population
 ppl = ss.People(10_000)
 
-# The environment the population is affected by, and can carry the pathogen
-environment = ty.EnvironmentalPool()
-
-# The disease 
-typhoid = ty.Typhoid()
+# The disease, which includes the environment the population is affected by, and which can carry the pathogen
+typhoid = ty.Typhoid(exposure2contact_rate=0) # Transmission only through the environment
 
 sim = ss.Sim(
     pars=pars,
     people=ppl, 
-    demographics=environment,
     diseases=typhoid,
     )
 sim.run()
-sim.plot(key=('environmentalpool_cfu_conc'))
+sim.plot('typhoid_cfu')
 ```
 
 ```{python}
@@ -46,7 +42,7 @@ sim.results
 ### Environmental dynamics 
 
 This model of the environment changes over time:
-- grows (↑↑) by receiving CFUs from infectious individuals;
-- decays (↓↓) according to a decay rate that you can specify.
+- grows (↑↑) by receiving CFUs from infectious individuals (at `shedding_rate` times their infectiousness);
+- decays (↓↓) according to a decay rate that you can specify (`decay_rate`).
     
 

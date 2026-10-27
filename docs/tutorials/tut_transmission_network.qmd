@@ -13,9 +13,9 @@ import typhoidsim as ty
 
 # Define high-level simulation parameters
 pars = dict(
-    start    = 2000,  # Starting year
-    dur      = 1.0,   # Duration of the simulation in years
-    dt       = 1.0/365.0,     # Timestep of 1 day, expressed in years
+    start    = 2000,          # Starting year
+    dur      = ss.years(1),   # Duration of the simulation
+    dt       = ss.days(1),    # Timestep of 1 day
     verbose  = 0,             # Do not print details of the run
 )
 
@@ -23,10 +23,10 @@ pars = dict(
 ppl = ss.People(10_000)
 
 # Person to person transmission
-random_p2p = ss.RandomNet({'n_contacts': 5})
+random_p2p = ss.RandomNet(n_contacts=5)
 
-# The disease 
-typhoid = ty.Typhoid()
+# The disease, with no environmental route (`teer=0`), so all transmission is by contact
+typhoid = ty.Typhoid(teer=0)
 
 sim = ss.Sim(
     pars=pars,
@@ -40,14 +40,9 @@ sim.plot()
 
 ## Contact route: how it currently works
 
-For this particular network, a _target_ individual will be in contact on average with 5 people (called _sources_) on each time step. These sources can be infected or not. If they are infected, the _target_ individual will receive a dose of CFUs that will depend on: 
+For this particular network, a _target_ individual will be in contact on average with 5 people (called _sources_) on each time step. These sources can be infected or not. If they are infected, the _target_ individual is infected at a rate per contact (`exposure2contact_rate`, per day) that depends on:
 
-- the infectiousness of the source individual
-- the individual shedding rate of the source individual -- currently captured in a variable called `rel_trans` (abbreviation for relative transmissibility)
+- the infectiousness of the source individual, by stage of infection relative to acute (`tpri` for prepatent, `tsri` for subclinical, `tcri` for chronic) -- and their relative transmissibility, `rel_trans`, which interventions can change
+- the susceptibility of the _target_ individual, which is reduced by each past infection (by a factor `1 - tppi` per infection), and their relative susceptibility, `rel_sus`
 
-The tranmission is handled as follows: 
-
-- For every source contact of a _target_ individual
-    -  (1) draw a daily daily number of exposures to the source, and
-    -  (2) assess whether the _target_ becomes infected 
-
+Infections by contact have the prepatent period of a high dose.

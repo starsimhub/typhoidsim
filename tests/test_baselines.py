@@ -9,16 +9,14 @@ import typhoidsim as ty
 
 baseline_filename = sc.thisdir(__file__, 'baseline.json')
 benchmark_filename = sc.thisdir(__file__, 'benchmark.json')
-parameters_filename = sc.thisdir(ss.__file__, 'regression',
-                                 f'pars_v{ss.__version__}.json')
 sc.options(interactive=False)  # Assume not running interactively
 
 # Define the parameters
 pars = sc.objdict(
     n_agents=10e3,             # Number of agents
     start=2000,                # Starting year
-    dur=2,                # Number of years to simulate
-    dt=1.0/ty.days_per_year,   # Timestep of 1 day, expressed in years
+    stop=2002,                 # End year
+    dt=ss.days(1),             # Timestep of 1 day
     verbose=0,                 # Don't print details of the run
     rand_seed=2,               # Set a non-default seed
 )
@@ -29,11 +27,10 @@ def make_sim(run=False):
     Define a default simulation for testing the baseline. If run directly (not
     via pytest), also plot the sim by default.
     """
-    diseases = [ty.Typhoid()]
-    networks = [ss.RandomNet({'n_contacts': 1})]
-    demographics = [ty.EnvironmentalPool()]
+    diseases = [ty.Typhoid()] # With the environmental route
+    networks = [ss.RandomNet(n_contacts=1)]
 
-    sim = ss.Sim(pars=pars, networks=networks, demographics=demographics, diseases=diseases)
+    sim = ss.Sim(pars=pars, networks=networks, diseases=diseases)
 
     # Optionally run and plot
     if run:
@@ -73,7 +70,7 @@ def test_baseline():
     new.run()
 
     # Compute the comparison
-    ss.diff_sims(old, new, die=True)
+    ss.debugtools.diff_sims(old, new, die=True)
 
     return new
 
@@ -142,8 +139,9 @@ def test_benchmark(do_save=False, repeats=1, verbose=True):
     },
         'parameters': {
             'n_agents': sim.pars.n_agents,
-            'dur': sim.pars.dur,
-            'dt': sim.pars.dt,
+            'start': sim.pars.start,
+            'stop': sim.pars.stop,
+            'dt': str(sim.pars.dt),
         },
         'cpu_performance': ratio,
     }
