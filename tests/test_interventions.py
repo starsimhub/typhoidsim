@@ -28,7 +28,7 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
     n = sim.results.alive[-1]
     p_acute = sim.diseases.typhoid.pars.p_acute.value
     assert np.isclose(res.delivered.sum()/n, init_prev*p_acute*prob_test, rtol=0.1)
-    assert np.isclose(res.positive.sum()/n, init_prev*p_acute*prob_test*prob_test_positive, rtol=0.1)
+    assert np.isclose(res.positive.sum()/n, init_prev*p_acute*prob_test*prob_test_positive, rtol=0.25) # About 150 positives, so 10% would be one SD
     if do_plot:
         sim.plot()
     return sim
