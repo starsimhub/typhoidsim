@@ -33,7 +33,7 @@ typhoid = ty.Typhoid(tppi=0.1, init_seroprev=0.8, init_prev=0.001)
 # Create an intervention that screens symptomatic (acute) individuals as they become acute.
 # The diagnostic product is a test that is equivalent to a blood test with sensitivity of 0.65
 blood_test   = ss.Diagnostic(sensitivity=0.65)
-screen_acute = ss.screen(blood_test, on=typhoid.onset.to(typhoid.acute), coverage=0.3, start=2001, name='screening') # Screen 30% of acute individuals, starting in 2001
+screen_acute = ss.screen(blood_test, who=typhoid.onset.to(typhoid.acute), coverage=0.3, start=2001, name='screening') # Screen 30% of acute individuals, starting in 2001
 
 
 # Now create the sim with the intervention

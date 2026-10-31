@@ -42,9 +42,9 @@ campaign_vax_0_2_yo = ty.vaccination_with_waning(
 n_agents = len(ppl)
 tracked = sc.objdict(rel_sus=[], eff_sus=[])
 def tracker(sim):
-    rel_sus = sim.diseases.typhoid.rel_sus
-    tracked.rel_sus.append(rel_sus.raw[:n_agents].copy()) # By UID; there are no births
-    tracked.eff_sus.append(rel_sus.effective.raw[:n_agents].copy())
+    disease = sim.diseases.typhoid
+    tracked.rel_sus.append(disease.rel_sus.raw[:n_agents].copy()) # By UID; there are no births
+    tracked.eff_sus.append(disease.current_value('rel_sus').raw[:n_agents].copy())
 
 sim = ss.Sim(
     pars=pars,

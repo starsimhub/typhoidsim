@@ -12,7 +12,7 @@ import typhoidsim as ty
 def make_screening(coverage, sensitivity, typhoid):
     """ Screen people as they become acute, with a test of this sensitivity """
     test = ss.Diagnostic(sensitivity=sensitivity)
-    return ss.screen(test, on=typhoid.onset.to(typhoid.acute), coverage=coverage, name='screening')
+    return ss.screen(test, who=typhoid.onset.to(typhoid.acute), coverage=coverage, name='screening')
 
 
 def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):

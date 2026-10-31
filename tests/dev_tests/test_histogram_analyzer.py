@@ -22,7 +22,7 @@ network = ss.RandomNet(n_contacts=4)
 
 # Create and apply the test intervention: screen 30% of people as they become acute
 blood_test = ss.Diagnostic(sensitivity=0.65)
-screen_all = ss.screen(blood_test, on=typhoid.onset.to(typhoid.acute), coverage=0.3, name='screening')
+screen_all = ss.screen(blood_test, who=typhoid.onset.to(typhoid.acute), coverage=0.3, name='screening')
 
 age_bin_edges = [0, 2, 5, 10, 15, 20, 40, 60]
 states = ['unexposed', 'susceptible', 'prepatent', 'acute', 'subclinical', 'chronic', 'recovered']

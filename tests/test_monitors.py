@@ -35,7 +35,7 @@ class infections_by_vaccination(ss.Analyzer):
 def make_sim():
     typhoid = ty.Typhoid(init_prev=0.05, p_death=0.0)
     vaccine = ss.Vaccine(efficacy=0.8)
-    vaccination = ss.vaccinate(vaccine, at=[2000], where=(ss.ppl.age >= 2) & (ss.ppl.age < 5), coverage=0.5)
+    vaccination = ss.vaccinate(vaccine, at=[2000], who=(ss.ppl.age >= 2) & (ss.ppl.age < 5), coverage=0.5)
     sim = ss.Sim(pars=pars, people=ss.People(10_000, age_data=ss.uniform(0, 60)), diseases=typhoid, networks=ss.RandomNet(n_contacts=5),
                  interventions=vaccination, analyzers=infections_by_vaccination(), stratify=dict(age=age_bin_edges), use_aging=False)
     return sim

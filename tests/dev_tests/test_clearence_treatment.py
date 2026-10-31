@@ -25,7 +25,7 @@ ppl = ss.People(10_000)
 # Treatment: each day, 5% of those infected (of any type: prepatent, acute, subclinical, chronic) are cured
 # (was ty.infection_clearence(product=ty.infectiousness_clearence(clearance_rate=0.05)), which reduced infectiousness by 5% a day, but never cleared anyone)
 cure = ss.Treatment(cure=1.0, to='recovered')
-clearance = ss.treat(cure, where=typhoid.infected, coverage=ss.probperday(0.05), name='clearance')
+clearance = ss.treat(cure, who=typhoid.infected, coverage=ss.probperday(0.05), name='clearance')
 
 sim = ss.Sim(
     pars=pars,
