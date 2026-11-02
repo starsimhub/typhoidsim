@@ -267,7 +267,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
         if self.resampling_period and self.aggregate_time in set(aggregation_functions):
             # integer number of timesteps we need to aggregate to downsample result arrays
-            self.monitor_step_size = round(self.resampling_period / float(self.t.dt)) # CK: TODO: use time units
+            self.monitor_step_size = round(self.resampling_period / self.t.dt.years) # CK: TODO: use time units
             self.monitor_period = self.resampling_period
             self.agg_func = aggregation_functions.get(self.aggregate_time)
             if self.aggregate_time in ["subsample"]:
@@ -282,7 +282,7 @@ class histograms_by_age_sex_monitor(Monitor):
 
         # [record_from, record_until)
         self.start_point = sc.findnearest(sim.timevec.years - self.record_from, 0.0)
-        self.end_point   = sc.findnearest(sim.timevec.years - (self.record_until-float(sim.t.dt)), 0.0)
+        self.end_point   = sc.findnearest(sim.timevec.years - (self.record_until-sim.t.dt.years), 0.0)
 
         self.obs_timepoints = sc.inclusiverange(self.start_point, self.end_point).astype(int)
         obs_n_steps = len(self.obs_timepoints)
@@ -376,8 +376,8 @@ class histograms_by_age_sex_monitor(Monitor):
         """ Set the correction endpoints of the observation period recorded by this monitor"""
         # In v3, sim.pars.stop may be None when the sim is defined via start+dur; use the
         # timeline's start/stop (as float years) which always hold the resolved values.
-        sim_start = float(sim.t.start)
-        sim_stop = float(sim.t.stop)
+        sim_start = sim.t.start.years
+        sim_stop = sim.t.stop.years
         if self.record_from is None and self.record_until is None:
             start_year = sim_start
             stop_year = sim_stop

@@ -4,7 +4,12 @@ All notable changes to the codebase are documented in this file. Changes that ma
 
 
 ## Version 1.0.1 (2026-11-01)
-- Require Starsim below 4 (`starsim<4`), since this version does not run on Starsim 4.
+- Require Starsim 3.3.1 or later, which added `ss.uids.concatenate()`, and below 4 (`starsim>=3.3.1,<4`), since this version does not run on Starsim 4.
+- Updated for Starsim 3.7, which no longer allows `float()` on an `ss.TimePar`: durations and timeline values now use `.years`. Results are unchanged for a given Starsim version when `dt` is in years.
+- Fixed the Sciris interlinks URL in the docs, and changed `dt` in the vaccination and interventions tutorials to 1/52 so routine delivery can find the start and end years on the timestep grid.
+- `test_base_test` now compares against the realized initial prevalence, since `init_prev` only applies to agents who are susceptible at t=0.
+- Regenerated `tests/baseline.json` under Starsim 3.7.2.
+- *Regression information*: The new baseline differs because `ss.RandomNet` changed in Starsim 3.5 and 3.6, not because of any change here: in the baseline sim, cumulative infections are 11.5% lower than under Starsim 3.4. To recover the previous network behavior, use `ss.RandomExactNet`.
 
 
 ## Version 1.0.0 (2026-06-07)

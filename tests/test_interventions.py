@@ -127,12 +127,15 @@ def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
     actual_cum_screened = np.cumsum(sim.results['routine_acute_screening']['new_screened'])[-1]
     actual_cum_positive = np.cumsum(sim.results['routine_acute_screening']['new_positive'])[-1]
 
+    # init_prev only applies to agents who are susceptible at t=0, so use the realized initial prevalence
+    realized_init_prev = sim.diseases.typhoid.n_initial_cases / sim.results['n_alive'][-1]
+
     assert np.isclose(actual_cum_screened / sim.results['n_alive'][-1],
-                      init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test,
+                      realized_init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test,
                       rtol=0.1)
 
     assert np.isclose(actual_cum_positive / sim.results['n_alive'][-1],
-                      init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test * prob_test_positive,
+                      realized_init_prev * sim.diseases.typhoid.pars.p_acute.pars.p * prob_test * prob_test_positive,
                       rtol=0.1)
 
     if do_plot:
