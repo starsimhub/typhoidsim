@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.37">
+<meta name="generator" content="quarto-1.10.20">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -12,10 +12,13 @@
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
 */
-code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: min(4vw, 1.5em);}
-div.column{flex: auto; overflow-x: auto;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
 div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
@@ -76,14 +79,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-29e00c98bbba659d91ab3844292f79dc.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-86fc916b84669629367aabb2a24c5117.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-29e00c98bbba659d91ab3844292f79dc.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-52748901a92be0f40b1b71967a65718b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-7b08722db7b8837b422d6b4de827e391.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-52748901a92be0f40b1b71967a65718b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-009a0460a27c95c10ecf0afb3d063171.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-abc873a0cbf847d34bf2a6eb7da68446.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-009a0460a27c95c10ecf0afb3d063171.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -478,7 +481,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>The environment plays a key role in the spread of typhoid. At the moment, the environment is defined as a Starsim Demographic module – as of starsim v1.0.1 the environment is not supported as one of the independent model ingredients we saw before. Watch this space 👀 – this is architecture is subject to change.</p>
-<div id="91cf43f6" class="cell" data-execution_count="1">
+<div id="766f6eb2" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> starsim <span class="im">as</span> ss</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> typhoidsim <span class="im">as</span> ty</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -518,7 +521,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<div id="0a7536df" class="cell" data-execution_count="2">
+<div id="2373e688" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sim.results</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div class="ansi-escaped-output">
@@ -526,33 +529,33 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 0. timevec: array(start=2000.01.01, stop=2001.01.01)
 1. environmentalpool: <span class="ansi-cyan-fg">Results(EnvironmentalPool)</span>
     1.0. <span class="ansi-green-fg">timevec</span>: array(start=2000.01.01, stop=2001.01.01)
-    1.1. <span class="ansi-green-fg">cfu_conc</span>: Result(min=0, mean=622387, max=6.53795e+06)
-    1.2. <span class="ansi-green-fg">cfu_num</span>: Result(min=0, mean=622387, max=6537952)
+    1.1. <span class="ansi-green-fg">cfu_conc</span>: Result(min=0, mean=615845, max=4.67896e+06)
+    1.2. <span class="ansi-green-fg">cfu_num</span>: Result(min=0, mean=615845, max=4678956)
 2. typhoid: <span class="ansi-cyan-fg">Results(Typhoid)</span>
     2.0. <span class="ansi-green-fg">timevec</span>: array(start=2000.01.01, stop=2001.01.01)
-    2.1. <span class="ansi-green-fg">n_susceptible</span>: Result(min=9204, mean=9294.08, max=9345)
-    2.2. <span class="ansi-green-fg">n_infected</span>: Result(min=0, mean=4.75956, max=50)
-    2.3. <span class="ansi-green-fg">n_unexposed</span>: Result(min=655, mean=701.027, max=747)
-    2.4. <span class="ansi-green-fg">n_prepatent</span>: Result(min=0, mean=1.45355, max=49)
-    2.5. <span class="ansi-green-fg">n_acute</span>: Result(min=0, mean=0.647541, max=8)
-    2.6. <span class="ansi-green-fg">n_subclinical</span>: Result(min=0, mean=2.65847, max=33)
-    2.7. <span class="ansi-green-fg">n_chronic</span>: Result(min=0, mean=0, max=0)
-    2.8. <span class="ansi-green-fg">n_recovered</span>: Result(min=0, mean=0.136612, max=3)
-    2.9. <span class="ansi-green-fg">n_infected_ever</span>: Result(min=49, mean=49.9945, max=50)
-    2.10. <span class="ansi-green-fg">prevalence</span>: Result(min=0, mean=0.000475956, max=0.005)
-    2.11. <span class="ansi-green-fg">new_infections</span>: Result(min=0, mean=0.136612, max=49)
-    2.12. <span class="ansi-green-fg">cum_infections</span>: Result(min=49, mean=49.9945, max=50)
-    2.13. <span class="ansi-green-fg">new_susceptible</span>: Result(min=655, mean=726.563, max=9951)
-    2.14. <span class="ansi-green-fg">new_prepatent</span>: Result(min=0, mean=0.00273224, max=1)
-    2.15. <span class="ansi-green-fg">new_acute</span>: Result(min=0, mean=0.0245902, max=2)
-    2.16. <span class="ansi-green-fg">cum_acute</span>: Result(min=0, mean=8.74317, max=9)
-    2.17. <span class="ansi-green-fg">new_subclinical</span>: Result(min=0, mean=0.112022, max=11)
-    2.18. <span class="ansi-green-fg">new_chronic</span>: Result(min=0, mean=0, max=0)
-    2.19. <span class="ansi-green-fg">new_recovered</span>: Result(min=0, mean=0.136612, max=3)
+    2.1. <span class="ansi-green-fg">n_susceptible</span>: Result(min=9171, mean=9240.41, max=9288)
+    2.2. <span class="ansi-green-fg">n_infected</span>: Result(min=1, mean=5.2377, max=36)
+    2.3. <span class="ansi-green-fg">n_unexposed</span>: Result(min=711, mean=754.246, max=793)
+    2.4. <span class="ansi-green-fg">n_prepatent</span>: Result(min=0, mean=1.18306, max=36)
+    2.5. <span class="ansi-green-fg">n_acute</span>: Result(min=0, mean=0.153005, max=3)
+    2.6. <span class="ansi-green-fg">n_subclinical</span>: Result(min=0, mean=3.04098, max=28)
+    2.7. <span class="ansi-green-fg">n_chronic</span>: Result(min=0, mean=0.860656, max=1)
+    2.8. <span class="ansi-green-fg">n_recovered</span>: Result(min=0, mean=0.10929, max=3)
+    2.9. <span class="ansi-green-fg">n_infected_ever</span>: Result(min=36, mean=40.6066, max=41)
+    2.10. <span class="ansi-green-fg">prevalence</span>: Result(min=0.0001, mean=0.00052377, max=0.0036)
+    2.11. <span class="ansi-green-fg">new_infections</span>: Result(min=0, mean=0.112022, max=36)
+    2.12. <span class="ansi-green-fg">cum_infections</span>: Result(min=36, mean=40.6066, max=41)
+    2.13. <span class="ansi-green-fg">new_susceptible</span>: Result(min=711, mean=779.637, max=9964)
+    2.14. <span class="ansi-green-fg">new_prepatent</span>: Result(min=0, mean=0.0136612, max=2)
+    2.15. <span class="ansi-green-fg">new_acute</span>: Result(min=0, mean=0.00819672, max=1)
+    2.16. <span class="ansi-green-fg">cum_acute</span>: Result(min=0, mean=2.91257, max=3)
+    2.17. <span class="ansi-green-fg">new_subclinical</span>: Result(min=0, mean=0.103825, max=4)
+    2.18. <span class="ansi-green-fg">new_chronic</span>: Result(min=0, mean=0.00273224, max=1)
+    2.19. <span class="ansi-green-fg">new_recovered</span>: Result(min=0, mean=0.10929, max=3)
     2.20. <span class="ansi-green-fg">new_deaths</span>: Result(min=0, mean=0, max=0)
     2.21. <span class="ansi-green-fg">cum_deaths</span>: Result(min=0, mean=0, max=0)
 3. n_alive: Result(min=10000, mean=10000, max=10000)
-4. n_female: Result(min=5013, mean=5013, max=5013)
+4. n_female: Result(min=4993, mean=4993, max=4993)
 5. new_deaths: Result(min=0, mean=0, max=0)
 6. new_emigrants: Result(min=0, mean=0, max=0)
 7. cum_deaths: Result(min=0, mean=0, max=0)</pre>
@@ -999,7 +1002,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       &nbsp;
     </div>   
     <div class="nav-footer-center">
-<p>Docs built for Typhoidsim v1.0.0 (2026-06-07).<br>© 2024–2026, Gates Foundation. All rights reserved. <a href="https://www.gatesfoundation.org/Privacy-and-Cookies-Notice">Privacy and Cookies Notice</a> | <a href="https://www.gatesfoundation.org/Terms-of-Use">Terms of Use</a></p>
+<p>Docs built for Typhoidsim v1.0.1 (2026-11-01).<br>© 2024–2026, Gates Foundation. All rights reserved. <a href="https://www.gatesfoundation.org/Privacy-and-Cookies-Notice">Privacy and Cookies Notice</a> | <a href="https://www.gatesfoundation.org/Terms-of-Use">Terms of Use</a></p>
 <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/starsimhub/typhoidsim/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
       <ul class="footer-items list-unstyled">

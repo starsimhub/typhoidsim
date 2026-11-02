@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.37">
+<meta name="generator" content="quarto-1.10.20">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -12,10 +12,13 @@
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
 */
-code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: min(4vw, 1.5em);}
-div.column{flex: auto; overflow-x: auto;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
 div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
@@ -76,14 +79,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-23bbe8b5e4efc1e257f6d59dce478b08.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-29e00c98bbba659d91ab3844292f79dc.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-86fc916b84669629367aabb2a24c5117.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-29e00c98bbba659d91ab3844292f79dc.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-52748901a92be0f40b1b71967a65718b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-7b08722db7b8837b422d6b4de827e391.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-52748901a92be0f40b1b71967a65718b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-009a0460a27c95c10ecf0afb3d063171.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-abc873a0cbf847d34bf2a6eb7da68446.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-009a0460a27c95c10ecf0afb3d063171.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -479,7 +482,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>set up the calibration oject</li>
 <li>run the calibration</li>
 </ul>
-<div id="681423b5" class="cell" data-execution_count="1">
+<div id="ba4ad57b" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> starsim <span class="im">as</span> ss</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sciris <span class="im">as</span> sc</span>
@@ -487,7 +490,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p>We usually have some data we’d like to fit the model to. The data below is simulated data using specific values for <code>init_prev</code> (0.01) and <code>p_cpg</code> (0.35). The simplest way to pass data for a calibration is in the form of a dataframe with column names matching quantities tracked by the <code>Sim</code>. For instance, <code>n_alive</code>, or <code>typhoid.n_chronic</code> – the cumulative number of chroi</p>
 <p>We first make a function that will create a Sim object with the ingredients we believe explain our data, and over a span of time that matches that of our data. Inside this function you will see that we have wrapped the basic setup seen in many of the other tutorials.</p>
-<div id="e7639ce1" class="cell" data-execution_count="2">
+<div id="5ec9999b" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_sim():</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    pars <span class="op">=</span> <span class="bu">dict</span>(</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    start    <span class="op">=</span> <span class="dv">1982</span>,  <span class="co"># Starting year</span></span>
@@ -506,7 +509,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sim</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="bf97f7c6" class="cell" data-execution_count="3">
+<div id="fb533ffc" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_reference_data():</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    sim <span class="op">=</span> make_sim()</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    sim.init()</span>
@@ -521,7 +524,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    </span>
 <span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> expected_data</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="52e7e100" class="cell" data-execution_count="4">
+<div id="64ab1690" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> extract_simulated_data(sim):</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> sim.to_df()</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    simulated_data <span class="op">=</span> pd.DataFrame(data<span class="op">=</span>{<span class="st">"n"</span>: df[<span class="st">"n_alive"</span>],</span>
@@ -532,7 +535,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> simulated_data</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Then, we specifiy which parameters need to be calibrated, and what are the ranges to explore. The calibration parameters has a hierarchical/nested structure similar to the Sim class.</p>
-<div id="fdd6998b" class="cell" data-execution_count="5">
+<div id="cdf7efd7" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_calib_pars():</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    calib_pars <span class="op">=</span> <span class="bu">dict</span>(</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>                init_prev <span class="op">=</span><span class="bu">dict</span>(low<span class="op">=</span><span class="fl">0.00</span>,high<span class="op">=</span><span class="fl">0.1</span>, guess<span class="op">=</span><span class="fl">0.05</span>), </span>
@@ -540,7 +543,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>            )</span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> calib_pars</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="42258ead" class="cell" data-execution_count="6">
+<div id="01d006dc" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calib_pars_updater(sim, calib_pars, <span class="op">**</span>kwargs):</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Also referred to as as build_sim function in some of starsim's tutorials.</span></span>
@@ -572,7 +575,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>                <span class="cf">raise</span> <span class="pp">NotImplementedError</span>(<span class="ss">f"Do not know how to update parameter </span><span class="sc">{</span>par_name<span class="sc">}</span><span class="ss">."</span>)</span>
 <span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sim    </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="36a21484" class="cell" data-execution_count="7">
+<div id="fcb109f7" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_calib_components():</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>     expected_data <span class="op">=</span> get_reference_data()</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>     <span class="co"># In Starsim v3, the likelihood function is chosen by selecting a CalibComponent</span></span>
@@ -587,7 +590,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>     <span class="cf">return</span> components</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Now we set up the put all the elements together using Starsim’s <code>Calibration</code> class that uses <a href="https://optuna.org/">optuna</a></p>
-<div id="d0545829" class="cell" data-execution_count="8">
+<div id="a6a04ab8" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_calibration():</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    sc.heading(<span class="st">'Testing calibration'</span>)</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -618,7 +621,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sim, calib</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="dce9664b" class="cell" data-execution_count="9">
+<div id="c6241a8c" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>run_calibration()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <div class="ansi-escaped-output">
@@ -646,46 +649,46 @@ sqlite:///typhoidsim_tutorial
 </div>
 <div class="cell-output cell-output-stderr">
 <div class="ansi-escaped-output">
-<pre><span class="ansi-green-fg">[I 2026-06-07 20:36:52,900]</span> A new study created in RDB with name: starsim_calibration
+<pre><span class="ansi-green-fg">[I 2026-11-02 03:42:37,788]</span> A new study created in RDB with name: starsim_calibration
 
-<span class="ansi-green-fg">[I 2026-06-07 20:37:00,430]</span> Trial 0 finished with value: inf and parameters: {'init_prev': 0.08771719257824223, 'p_cpg': 0.05301682351428011, 'rand_seed': 586907}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:42:47,950]</span> Trial 0 finished with value: inf and parameters: {'init_prev': 0.007865825000725402, 'p_cpg': 0.28874781050629095, 'rand_seed': 175981}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:37:07,810]</span> Trial 1 finished with value: inf and parameters: {'init_prev': 0.09842852377075789, 'p_cpg': 0.050796017006391504, 'rand_seed': 893117}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:42:58,118]</span> Trial 1 finished with value: inf and parameters: {'init_prev': 0.001432929954068174, 'p_cpg': 0.16568553345061143, 'rand_seed': 327263}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:37:14,523]</span> Trial 2 finished with value: inf and parameters: {'init_prev': 0.07511757805853374, 'p_cpg': 0.341788989564013, 'rand_seed': 113951}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:43:09,439]</span> Trial 2 finished with value: inf and parameters: {'init_prev': 0.04645090503349513, 'p_cpg': 0.17278837752920723, 'rand_seed': 366204}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:37:21,971]</span> Trial 3 finished with value: inf and parameters: {'init_prev': 0.07669088847474967, 'p_cpg': 0.06584136979696, 'rand_seed': 896865}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:43:20,833]</span> Trial 3 finished with value: inf and parameters: {'init_prev': 0.042981189935013445, 'p_cpg': 0.2524298479822707, 'rand_seed': 69823}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:37:28,683]</span> Trial 4 finished with value: inf and parameters: {'init_prev': 0.0027571013977813145, 'p_cpg': 0.2589722993699589, 'rand_seed': 525883}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:43:30,879]</span> Trial 4 finished with value: inf and parameters: {'init_prev': 0.02768997036459786, 'p_cpg': 0.13860178966701459, 'rand_seed': 209253}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:37:36,079]</span> Trial 5 finished with value: inf and parameters: {'init_prev': 0.09370866115232589, 'p_cpg': 0.16953206138753363, 'rand_seed': 488691}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:43:40,867]</span> Trial 5 finished with value: inf and parameters: {'init_prev': 0.008774036760447046, 'p_cpg': 0.3220945029580416, 'rand_seed': 692000}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:37:42,799]</span> Trial 6 finished with value: inf and parameters: {'init_prev': 0.0824178224400627, 'p_cpg': 0.2663381943887316, 'rand_seed': 14884}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:43:52,328]</span> Trial 6 finished with value: inf and parameters: {'init_prev': 0.0931375231408739, 'p_cpg': 0.21568204889127213, 'rand_seed': 592347}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:37:50,232]</span> Trial 7 finished with value: inf and parameters: {'init_prev': 0.08203528652011972, 'p_cpg': 0.10708059100802791, 'rand_seed': 985512}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:44:03,600]</span> Trial 7 finished with value: inf and parameters: {'init_prev': 0.0924919822104713, 'p_cpg': 0.3632047595989256, 'rand_seed': 42658}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:37:57,829]</span> Trial 8 finished with value: inf and parameters: {'init_prev': 0.051681553042429024, 'p_cpg': 0.2757170783202996, 'rand_seed': 100128}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:44:15,048]</span> Trial 8 finished with value: inf and parameters: {'init_prev': 0.08518972814345892, 'p_cpg': 0.3559820473233102, 'rand_seed': 749140}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:38:04,415]</span> Trial 9 finished with value: inf and parameters: {'init_prev': 0.07707698124000974, 'p_cpg': 0.08966386065303814, 'rand_seed': 132735}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:44:25,074]</span> Trial 9 finished with value: inf and parameters: {'init_prev': 0.08572952900140383, 'p_cpg': 0.353359304473066, 'rand_seed': 851129}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:38:11,863]</span> Trial 10 finished with value: inf and parameters: {'init_prev': 0.04842845327229383, 'p_cpg': 0.17080646924049664, 'rand_seed': 612269}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:44:35,396]</span> Trial 10 finished with value: inf and parameters: {'init_prev': 0.03788138741420234, 'p_cpg': 0.09123179992984906, 'rand_seed': 998733}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:38:18,662]</span> Trial 11 finished with value: inf and parameters: {'init_prev': 0.049526718727763465, 'p_cpg': 0.05296598942385594, 'rand_seed': 746893}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:44:45,435]</span> Trial 11 finished with value: inf and parameters: {'init_prev': 0.007937442316469208, 'p_cpg': 0.34113978438795417, 'rand_seed': 141193}. Best is trial 0 with value: inf.
 
-<span class="ansi-green-fg">[I 2026-06-07 20:38:26,262]</span> Trial 12 finished with value: inf and parameters: {'init_prev': 0.09887706692044018, 'p_cpg': 0.14123239741742843, 'rand_seed': 317742}. Best is trial 0 with value: inf.
+<span class="ansi-green-fg">[I 2026-11-02 03:44:56,911]</span> Trial 12 finished with value: inf and parameters: {'init_prev': 0.016528348601075077, 'p_cpg': 0.38775542265413265, 'rand_seed': 441443}. Best is trial 0 with value: inf.
 </pre>
 </div>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Making results structure...
 Processed 13 trials; 0 failed
-Best pars: {'init_prev': 0.08771719257824223, 'p_cpg': 0.05301682351428011, 'rand_seed': 586907}
+Best pars: {'init_prev': 0.007865825000725402, 'p_cpg': 0.28874781050629095, 'rand_seed': 175981}
 Removed existing calibration file typhoidsim_tutorial
-{'init_prev': 0.08771719257824223, 'p_cpg': 0.05301682351428011, 'rand_seed': 586907}</code></pre>
+{'init_prev': 0.007865825000725402, 'p_cpg': 0.28874781050629095, 'rand_seed': 175981}</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="9">
 <pre><code>(Sim(n=10000; 1982—None; not initialized),
- &lt;starsim.calibration.Calibration at 0x754be53ef0e0&gt;
+ &lt;starsim.calibration.Calibration at 0x77e925b941d0&gt;
  [&lt;class 'starsim.calibration.Calibration'&gt;, &lt;class 'sciris.sc_printing.prettyobj'&gt;]
  ————————————————————————————————————————————————————————————————————————
  Methods:
@@ -698,9 +701,9 @@ Removed existing calibration file typhoidsim_tutorial
  ————————————————————————————————————————————————————————————————————————
   after_msim: None
  before_msim: None
-   best_pars: {'init_prev': 0.08771719257824223, 'p_cpg':
-              0.05301682351428011, 'ran [...]
-    build_fn: &lt;function calib_pars_updater at 0x754be6c2b560&gt;
+   best_pars: {'init_prev': 0.007865825000725402, 'p_cpg':
+              0.28874781050629095, 'ra [...]
+    build_fn: &lt;function calib_pars_updater at 0x77e9260974c0&gt;
     build_kw: {}
   calib_pars: {'init_prev': {'low': 0.0, 'high': 0.1, 'guess': 0.05},
               'p_cpg': {'lo [...]
@@ -709,22 +712,22 @@ Removed existing calibration file typhoidsim_tutorial
           df:     index  mismatch  init_prev     p_cpg  rand_seed
               0       0       i [...]
          die: True
-     elapsed: 93.6798152923584
+     elapsed: 139.7005970478058
      eval_fn: &lt;bound method Calibration._eval_fit of
               &lt;starsim.calibration.Calibrati [...]
      eval_kw: {}
        label: None
     prune_fn: None
       reseed: True
-    run_args: #0. 'n_trials':    13
-              #1. 'n_workers':   4
-              #2. 'debug':       True
-              #3 [...]
+    run_args: sc.objdict(
+                  n_trials    = 13,
+                  n_workers   = 4,
+                  debug      [...]
          sim: Sim(n=10000; 1982—None; not initialized)
-       study: &lt;optuna.study.study.Study object at 0x754be3eaba10&gt;
-  study_data: #0. 'index':     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-              12]
-              #1. 'mism [...]
+       study: &lt;optuna.study.study.Study object at 0x77e925bafd70&gt;
+  study_data: sc.objdict(
+                  index     = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+              [...]
      verbose: True
  ————————————————————————————————————————————————————————————————————————)</code></pre>
 </div>
@@ -1165,7 +1168,7 @@ Removed existing calibration file typhoidsim_tutorial
       &nbsp;
     </div>   
     <div class="nav-footer-center">
-<p>Docs built for Typhoidsim v1.0.0 (2026-06-07).<br>© 2024–2026, Gates Foundation. All rights reserved. <a href="https://www.gatesfoundation.org/Privacy-and-Cookies-Notice">Privacy and Cookies Notice</a> | <a href="https://www.gatesfoundation.org/Terms-of-Use">Terms of Use</a></p>
+<p>Docs built for Typhoidsim v1.0.1 (2026-11-01).<br>© 2024–2026, Gates Foundation. All rights reserved. <a href="https://www.gatesfoundation.org/Privacy-and-Cookies-Notice">Privacy and Cookies Notice</a> | <a href="https://www.gatesfoundation.org/Terms-of-Use">Terms of Use</a></p>
 <div class="toc-actions"><ul><li><a href="https://github.com/starsimhub/typhoidsim/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
       <ul class="footer-items list-unstyled">
