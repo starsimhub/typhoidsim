@@ -199,7 +199,7 @@ class Typhoid(ss.Disease):
                 # expect this parameter to exist. To cancel out the effect we set
                 # beta to be the time step, such that when beta_per_dt is calculated
                 # the effective value is 1.0
-                self.pars.beta = 1.0/float(self.t.dt)
+                self.pars.beta = 1.0/self.t.dt.years
 
             # If beta is a scalar, apply this bi-directionally to all networks
             if sc.isnumber(self.pars.beta):
@@ -503,7 +503,7 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_prep = self.pars.dur_prep_dist.rvs(uids).astype(float)  # in days
         dur_prep = dur_prep * tyd.day2year  # in years
-        return sc.randround(dur_prep / float(dt))  # in number of timesteps
+        return sc.randround(dur_prep / dt.years)  # in number of timesteps
 
     def get_acute_duration_by_age(self, uids):
         """
@@ -513,7 +513,7 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_acu = p.dur_inf_dist.rvs(uids) * tyd.days_per_week  # in days
         dur_acu = dur_acu * tyd.day2year  # in years
-        return sc.randround(dur_acu / float(dt))  # in number of timesteps
+        return sc.randround(dur_acu / dt.years)  # in number of timesteps
 
     def get_subclinical_duration_by_age(self, uids):
         """
@@ -523,7 +523,7 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_scl = p.dur_inf_dist.rvs(uids) * tyd.days_per_week  # in days
         dur_scl = dur_scl * tyd.day2year
-        return sc.randround(dur_scl / float(dt))
+        return sc.randround(dur_scl / dt.years)
 
     def get_wait_duration(self, uids):
         """
@@ -534,14 +534,14 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_wait = p.dur_wait2treatment.rvs(uids).astype(float)
         dur_wait = dur_wait * tyd.day2year
-        return sc.randround(dur_wait / float(dt))
+        return sc.randround(dur_wait / dt.years)
 
     def get_recovered_duration(self, uids):
         p = self.pars
         dt = self.t.dt
         dur_rec = p.dur_rec_dist.rvs(uids)  # duration in days
         dur_rec = dur_rec * tyd.day2year                  # duration in years
-        return sc.randround(dur_rec / float(dt))        # duration in integer number of timesteps
+        return sc.randround(dur_rec / dt.years)        # duration in integer number of timesteps
 
     def get_chronic_duration(self, uids):
         """
@@ -552,7 +552,7 @@ class Typhoid(ss.Disease):
         dt = self.t.dt
         dur_chro = p.dur_chro_dist.rvs(uids) * tyd.days_per_week  # duration in in days
         dur_chro = dur_chro * tyd.day2year        # duration in years
-        return sc.randround(dur_chro / float(dt))        # duration in integer number of timesteps
+        return sc.randround(dur_chro / dt.years)        # duration in integer number of timesteps
 
 
     def get_tai_vals(self, uids):
@@ -667,7 +667,7 @@ class Typhoid(ss.Disease):
         sat_age = module.pars.unexp2sus_saturation_age
         slope = module.pars.unexp2sus_slope
         p2 = tyum.sigmoid(sim.people.age[uids], sat_age, slope)
-        p1 = tyum.sigmoid(sim.people.age[uids] - float(sim.t.dt), sat_age, slope)
+        p1 = tyum.sigmoid(sim.people.age[uids] - sim.t.dt.years, sat_age, slope)
         if module.ti == 0:
             p_sus = p2
         else:
@@ -840,7 +840,7 @@ class Typhoid(ss.Disease):
         sources = []
         networks = []
         betamap = self._check_betas()
-        dt = float(self.t.dt)
+        dt = self.t.dt.years
 
         # TODO: Handle in disease module and then use standard starsim transmission
         rel_sus   = self.rel_sus.asnew(self.susceptible * self.rel_sus) \
@@ -921,7 +921,7 @@ class Typhoid(ss.Disease):
         if not self.pars.has_environment:
             return []
         ti = self.ti
-        dt = float(self.t.dt)
+        dt = self.t.dt.years
         n_agents = np.count_nonzero(self.sim.people.alive) # current N, number of agents currently alive
         exposure_volume = 1.0 / n_agents  # CFUs in the environment need to be proportionally distributed among agents, so we don't have the case where number of CFUs received by agents > CFU's available in the environment
         environment = self.sim.demographics['environmentalpool']

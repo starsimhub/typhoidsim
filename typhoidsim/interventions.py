@@ -382,7 +382,7 @@ class WASH(ss.Intervention):
         if self.dur is None:
             # In v3, sim.pars['stop'] may be None when the sim is defined via start+dur;
             # the timeline always holds the resolved start/stop (as float years).
-            self.dur = float(sim.t.stop) - float(sim.t.start)
+            self.dur = sim.t.stop.years - sim.t.start.years
         super().init_pre(sim)
         return
 
@@ -392,7 +392,7 @@ class WASH(ss.Intervention):
         # time is the compact support to evaluate the pattern over.
         # time = 0, represents time relative to the start of the temporal pattern.
         # so a sin() pattern would always return a value of 0.0 on its start
-        self.time = sc.inclusiverange(0, self.dur, float(self.t.dt))  # CK: TODO: replace with self.t
+        self.time = sc.inclusiverange(0, self.dur, self.t.dt.years)  # CK: TODO: replace with self.t
         self.define_results(
             ss.Result('efficacy', dtype=float, scale=False),
             ss.Result('effective_value', dtype=float, scale=False, label='Effective Value')
@@ -595,10 +595,10 @@ class environmental_seasonality(ss.Intervention):
         if self.dur is None:
             # In v3, sim.pars['stop'] may be None when the sim is defined via start+dur;
             # the timeline always holds the resolved start/stop (as float years).
-            self.dur = float(sim.t.stop) - float(sim.t.start)
+            self.dur = sim.t.stop.years - sim.t.start.years
 
         # This is the "time" variable relative to the specified start year
-        self.t_relative = sc.inclusiverange(0, self.dur, float(sim.t.dt))
+        self.t_relative = sc.inclusiverange(0, self.dur, sim.t.dt.years)
         super().init_pre(sim)  # PSL: TODO: refactor? starsim interventions init_pre() call self.init_results() (?), so some attributes used by that method are not defined
         return
 
@@ -686,8 +686,8 @@ class RoutineDelivery(ss.Intervention):
         # If start_year and end_year are not provided, figure them out from the provided years or the sim
         # In v3, sim.pars.stop may be None when the sim is defined via start+dur;
         # the timeline always holds the resolved start/stop (as float years).
-        if self.start_year is None: self.start_year = float(sim.t.start)
-        if self.end_year is None:   self.end_year = float(sim.t.stop)
+        if self.start_year is None: self.start_year = sim.t.start.years
+        if self.end_year is None:   self.end_year = sim.t.stop.years
         self._dt = sim.pars.dt  # TODO: need to eventually replace with own timestep, but not initialized yet since super().init_pre() hasn't been called
         self._timevec = sim.t.timevec
 
@@ -930,8 +930,8 @@ class vaccination_with_waning(RoutineDelivery):
         vaccinated_uids = self.vaccinated.uids
 
         if sim.ti in self.timepoints:
-            self.t_to_booster1[self.t_to_booster1 > 0.0] -= self.sim.t.dt
-            self.t_to_booster2[self.t_to_booster2 > 0.0] -= self.sim.t.dt
+            self.t_to_booster1[self.t_to_booster1 > 0.0] -= self.sim.t.dt.years
+            self.t_to_booster2[self.t_to_booster2 > 0.0] -= self.sim.t.dt.years
             ti_rel = sc.findinds(self.timepoints, sim.ti)[0] # ti relative to the start of the intervention
             prob = self.prob[ti_rel]  # Get the proportion of people who will be tested this timestep
             is_eligible = self.check_eligibility()  # Check eligibility by age for first dose
