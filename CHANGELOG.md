@@ -3,6 +3,10 @@
 All notable changes to the codebase are documented in this file. Changes that may result in differences in model output, or are required in order to run an old parameter set with the current version, are flagged with the term "Regression information".
 
 
+## Version 1.0.1 (2026-11-01)
+- Require Starsim below 4 (`starsim<4`), since this version does not run on Starsim 4.
+
+
 ## Version 1.0.0 (2026-06-07)
 - Ported the codebase from Starsim v2.3 to Starsim v3.
 - Regenerated `tests/baseline.json` under Starsim v3.
