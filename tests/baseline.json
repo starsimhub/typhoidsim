@@ -33,8 +33,7 @@
     "typhoid_infections": 10997.0,
     "alive": 9988.0,
     "female": 5093.0,
-    "new_deaths": 12.0,
-    "new_emigrants": 0.0,
-    "cum_deaths": 12.0
+    "died": 12.0,
+    "emigrated": 0.0
   }
 }
