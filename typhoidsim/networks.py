@@ -300,7 +300,7 @@ class HouseholdNet(ss.DynamicNetwork):
         if isinstance(self.pars.dur, ss.Dist):
             dur = self.pars.dur.rvs(p1)
         else:
-            dur = np.full(len(p1), self.pars.dur.to_dt() if isinstance(self.pars.dur, ss.dur) else self.pars.dur) # In steps
+            dur = np.full(len(p1), self.pars.dur.to_dt() if isinstance(self.pars.dur, ss.Duration) else self.pars.dur) # In steps
 
         self.append(p1=p1, p2=p2, beta=beta, dur=dur)
         return

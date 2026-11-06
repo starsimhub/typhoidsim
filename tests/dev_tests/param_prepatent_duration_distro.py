@@ -39,7 +39,7 @@ sim.run()
 p = sim.diseases.typhoid.pars
 dose = sim.results.typhoid.dose[-1]
 mean, sigma = [ty.typhoid.by_dose(ty.typhoid.prepatent_levels[key], dose, p.cfu_lo_me.value, p.cfu_me_hi.value) for key in ['mean_dur', 'std_dur']]
-prepatent_dur = ss.lognorm_im(mean=mean, sigma=sigma, strict=False).rvs(10_000)
+prepatent_dur = ss.lognormal(log_mean=mean, log_std=sigma, strict=False).rvs(10_000)
 prepatent_dur_ti = sc.randround(prepatent_dur/sim.t.dt.days)          # prepatent duration in number of timesteps (equivalent to 1 day if dt=1 day)
 
 fig, axs = plt.subplots(1, 1)

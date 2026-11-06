@@ -11,8 +11,8 @@ This tutorial shows how to use a simple vaccination, that acts independently of 
 
 In addition to direct modification of environmental shedding (previous tutorial), vaccination uses Starsim's _products_ and _deliveries_. A vaccine product, `ss.Vaccine(efficacy=...)`, which reduces susceptibility to infection, can be delivered with `ss.vaccinate()`:
 
-- with no `interval` or `at`, as routine vaccination: each person is offered it once, when they first become eligible (e.g. `where=ss.ppl.age < 5`);
-- with `at=[...]` or `interval=...`, in campaigns or rounds.
+- with no `every` or `at`, as routine vaccination: each person is offered it once, when they first become eligible (e.g. `where=ss.person.age < 5`);
+- with `at=[...]` or `every=...`, in campaigns or rounds.
 
 Typhoidsim also has `ty.vaccination_with_waning()`, a purpose-built implementation of typhoid vaccine schedules with boosters and optional age-specific waning, which returns the deliveries to pass to the sim.
 

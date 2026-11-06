@@ -12,7 +12,7 @@ import typhoidsim as ty
 def make_screening(coverage, sensitivity, typhoid):
     """ Screen people as they become acute, with a test of this sensitivity """
     test = ss.Diagnostic(sensitivity=sensitivity)
-    return ss.screen(test, who=typhoid.onset.to(typhoid.acute), coverage=coverage, name='screening')
+    return ss.screen(test, on=typhoid.onset.to(typhoid.acute), coverage=coverage, name='screening')
 
 
 def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
@@ -46,7 +46,7 @@ def test_wash_behavior_change():
     sim0 = make_env_sim().run()
     behavior = ss.modify('typhoid.rel_sus', multiply=0.0, start=2000.5) # From the middle of the year
     sim1 = make_env_sim(behavior).run()
-    half = sim0.t.npts//2 + 1
+    half = sim0.t.npts//2 # The step from the middle of the year, the first with the change
     inf0, inf1 = sim0.results.typhoid.environment, sim1.results.typhoid.environment
     assert inf0[half:].sum() > 0
     assert inf1[half:].sum() == 0

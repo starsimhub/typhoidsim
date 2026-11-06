@@ -46,7 +46,7 @@ class Typhoid(ss.Disease):
         init_prev (float): the share of people infected (prepatent) at the start
         init_seroprev (float): the share of the susceptible at the start who have been infected before, a Poisson number of times with a mean that rises with age
     """
-    # The states: people are born unexposed (see first)
+    # The states: people are born unexposed (see default_state)
     unexposed   = ss.State(label='Unexposed')
     susceptible = ss.State(label='Susceptible')
     prepatent   = ss.State(label='Prepatent')
@@ -55,7 +55,7 @@ class Typhoid(ss.Disease):
     chronic     = ss.State(label='Chronic carrier')
     recovered   = ss.State(label='Recovered')
     cfu         = ss.State(people=False, label='CFUs in the environment') # A count, not people
-    first       = 'unexposed'
+    default_state = 'unexposed'
 
     # Becoming susceptible with age (Gauld et al. 2018, Fig. 2B)
     unexp2sus_saturation_age = ss.par(20.0, doc='Age (years) by which everyone has become susceptible')
@@ -97,7 +97,7 @@ class Typhoid(ss.Disease):
     dur_rec  = ss.par(ss.constant(ss.days(1)), doc='Time from recovery to being susceptible again')
 
     # Becoming susceptible: the share susceptible by age a is 1 - (A - a)/(k*a + A), which is everyone by age A; it is the share at the start, and this is its hazard
-    A, k, age = unexp2sus_saturation_age, unexp2sus_slope, ss.ppl.age
+    A, k, age = unexp2sus_saturation_age, unexp2sus_slope, ss.person.age
     share_susceptible = np.minimum(1 - (A - age)/(k*age + A), 1)
     become_susceptible = unexposed >> susceptible @ ss.peryear(1)*(k + 1)*A/((k*age + A)*np.maximum(A - age, 1e-9))
 
@@ -110,7 +110,7 @@ class Typhoid(ss.Disease):
     infections = ss.outcome(contact + environment, label='Infections')
 
     # Shedding into the environment, by each person's infectiousness (so less by those treated), and decay
-    shedding = ss.null >> cfu @ shedding_rate*tai*(tpri*prepatent.n_trans + acute.n_trans + tsri*subclinical.n_trans + tcri*chronic.n_trans)
+    shedding = ss.null >> cfu @ shedding_rate*tai*(tpri*prepatent.n_infectious + acute.n_infectious + tsri*subclinical.n_infectious + tcri*chronic.n_infectious)
     decay = cfu >> ss.null @ decay_rate
 
     # The course of an infection; the prepatent period's parameters are by the dose of the infection: by contact, a high dose (as in EMOD),
@@ -118,9 +118,9 @@ class Typhoid(ss.Disease):
     infection_dose = ss.attr({contact: 1.1*cfu_me_hi, environment: dose}, label='Dose of the latest infection (CFUs)')
     prepatent_mean  = by_dose(prepatent_levels['mean_dur'], infection_dose, cfu_lo_me, cfu_me_hi)
     prepatent_sigma = by_dose(prepatent_levels['std_dur'], infection_dose, cfu_lo_me, cfu_me_hi)
-    dur_prepatent = ss.par(ss.lognorm_im(mean=prepatent_mean, sigma=prepatent_sigma, unit='day'), doc='Prepatent period: lognormal, with the parameters (of the log of the days) by the dose of the infection')
+    dur_prepatent = ss.par(ss.lognormal(log_mean=prepatent_mean, log_std=prepatent_sigma, unit='day'), doc='Prepatent period: lognormal, with the parameters (of the log of the days) by the dose of the infection')
     onset = ss.Transition(prepatent, [acute, subclinical], p=[p_acute, None], dur=dur_prepatent)
-    dur_inf = ss.par(ss.lognorm_im(mean=inf_dur_mean, sigma=inf_dur_sigma, unit='week'), doc='Duration of acute and subclinical infection: lognormal, with the parameters of the log of the weeks')
+    dur_inf = ss.par(ss.lognormal(log_mean=inf_dur_mean, log_std=inf_dur_sigma, unit='week'), doc='Duration of acute and subclinical infection: lognormal, with the parameters of the log of the weeks')
     acute_end = ss.Transition(acute, [chronic, recovered, ss.null], p=[p_cpg*p_gall, None, (1 - p_cpg*p_gall)*p_death], dur=dur_inf)
     subclinical_end = ss.Transition(subclinical, [chronic, recovered], p=[p_cpg*p_gall, None], dur=dur_inf)
     carrier_end = ss.Transition(chronic, [recovered, ss.stay], p=[p_rec, None], dur=dur_chro)

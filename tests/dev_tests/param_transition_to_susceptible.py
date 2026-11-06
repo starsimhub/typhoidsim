@@ -18,7 +18,7 @@ def make_sim(saturation_age=20.0):
         start=1990,        # Starting year
         dur=ss.years(2),   # Number of years to simulate
         dt=ss.days(1),     # Timestep of 1 day
-        use_aging=True,    # Use for debugging purposes, as a changing population may affect the results
+        aging=True,    # Use for debugging purposes, as a changing population may affect the results
         verbose=1,         # Print details of the run
         rand_seed=2,       # Set a non-default seed
     )

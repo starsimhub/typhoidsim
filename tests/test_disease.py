@@ -47,7 +47,6 @@ def test_n_infections():
     res = typhoid.results
     n_seeds = res.prepatent[0]
     n_infections = np.nansum(typhoid['n_infections'].values)
-    assert res.infections[0] == 0 # The results at the start are before any step
     assert res.infections.sum() > 0
     assert res.infections.sum() + n_seeds == n_infections, f'{res.infections.sum()} infections and {n_seeds} seeds, but the agents count {n_infections}'
     return sim

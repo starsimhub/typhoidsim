@@ -4,7 +4,7 @@ jupyter: python3
 ---
 
 
-This tutorial shows how to use a routine diagnostic intervention, that administers a test (the product) to a fraction of the eligible population. Here, people are screened as they become _acute_ (`on=`, an event: here, the onset of acute infection). Who is eligible can instead be given as a condition (`where=`, e.g. `where=typhoid.chronic` with `interval=ss.years(1)` for yearly rounds of screening of chronic carriers).
+This tutorial shows how to use a routine diagnostic intervention, that administers a test (the product) to a fraction of the eligible population. Here, people are screened as they become _acute_ (`on=`, an event: here, the onset of acute infection). Who is eligible can instead be given as a condition (`where=`, e.g. `where=typhoid.chronic` with `every=ss.years(1)` for yearly rounds of screening of chronic carriers).
 
 The sensitivity of the diagnostic product (the test), understood as the probability of receiving a positive diagnostic given that the individual is infected, can be set when instantiating the product. Each result (`positive` and `negative`) is an event that a following step, such as `ss.treat(..., on=screening.positive)`, can be triggered by.
 
@@ -33,7 +33,7 @@ typhoid = ty.Typhoid(tppi=0.1, init_seroprev=0.8, init_prev=0.001)
 # Create an intervention that screens symptomatic (acute) individuals as they become acute.
 # The diagnostic product is a test that is equivalent to a blood test with sensitivity of 0.65
 blood_test   = ss.Diagnostic(sensitivity=0.65)
-screen_acute = ss.screen(blood_test, who=typhoid.onset.to(typhoid.acute), coverage=0.3, start=2001, name='screening') # Screen 30% of acute individuals, starting in 2001
+screen_acute = ss.screen(blood_test, on=typhoid.onset.to(typhoid.acute), coverage=0.3, start=2001, name='screening') # Screen 30% of acute individuals, starting in 2001
 
 
 # Now create the sim with the intervention

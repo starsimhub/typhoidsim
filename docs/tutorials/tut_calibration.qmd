@@ -43,11 +43,11 @@ def make_sim(init_prev=ss.par(0.05, bounds=[0.001, 0.1]), p_cpg=ss.par(0.05, bou
     return sim
 ```
 
-We usually have some data we'd like to fit the model to. The data below is simulated data using specific values for `init_prev` (0.01) and `p_cpg` (0.35). The simplest way to pass data for a calibration is in the form of a dataframe with a `date` column and columns named like the results of the `Sim`, for instance `typhoid.infected`, the number infected. `sim.to_data()` makes such a dataframe from a sim.
+We usually have some data we'd like to fit the model to. The data below is simulated data using specific values for `init_prev` (0.01) and `p_cpg` (0.35). The simplest way to pass data for a calibration is in the form of a dataframe with a `date` column and columns named like the results of the `Sim`, for instance `typhoid.infected`, the number infected. `sim.to_synthetic_data()` makes such a dataframe from a sim.
 
 ```{python}
 truth = make_sim(init_prev=0.01, p_cpg=0.35, rand_seed=2).run()
-data = truth.to_data('typhoid.infected')
+data = truth.to_synthetic_data('typhoid.infected')
 data.head()
 ```
 
@@ -55,7 +55,7 @@ Now we put all the elements together: the sim with the data, calibrated with `si
 
 ```{python}
 sim = make_sim(data=data)
-fit = sim.fit(method='optuna', n_trials=60, n_workers=4, verbose=0) # The trials run in parallel
+fit = sim.fit(method='optuna', n_trials=60, workers=4, verbose=0) # The trials run in parallel
 fit.summarize()
 ```
 

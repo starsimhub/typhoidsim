@@ -22,7 +22,7 @@ def make_sim(n_agents=5_000, **kwargs):
         age_pars=dict(min_age=0.0, max_age=2.0),
         **kwargs,
     )
-    sim = ss.Sim(pars=pars, diseases=typhoid, interventions=vaccination, people=ss.People(n_agents, age_data=ss.uniform(0, 60)), use_aging=False)
+    sim = ss.Sim(pars=pars, diseases=typhoid, interventions=vaccination, people=ss.People(n_agents, age_data=ss.uniform(0, 60)), aging=False)
     return sim
 
 
