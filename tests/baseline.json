@@ -20,7 +20,7 @@
     "typhoid_acute_end": 1780.0,
     "typhoid_acute_end.chronic": 58.0,
     "typhoid_acute_end.recovered": 1709.0,
-    "typhoid_acute_end.null": 13.0,
+    "typhoid_acute_end.dead": 13.0,
     "typhoid_subclinical_end": 9321.0,
     "typhoid_subclinical_end.chronic": 344.0,
     "typhoid_subclinical_end.recovered": 8977.0,

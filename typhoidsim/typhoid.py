@@ -110,8 +110,8 @@ class Typhoid(ss.Disease):
     infections = ss.outcome(contact + environment, label='Infections')
 
     # Shedding into the environment, by each person's infectiousness (so less by those treated), and decay
-    shedding = ss.null >> cfu @ shedding_rate*tai*(tpri*prepatent.n_infectious + acute.n_infectious + tsri*subclinical.n_infectious + tcri*chronic.n_infectious)
-    decay = cfu >> ss.null @ decay_rate
+    shedding = ss.outside >> cfu @ shedding_rate*tai*(tpri*prepatent.n_infectious + acute.n_infectious + tsri*subclinical.n_infectious + tcri*chronic.n_infectious)
+    decay = cfu >> ss.dead @ decay_rate
 
     # The course of an infection; the prepatent period's parameters are by the dose of the infection: by contact, a high dose (as in EMOD),
     # and from the environment, the dose received then, from the low to the high dose's in two steps at cfu_lo_me and cfu_me_hi
@@ -121,7 +121,7 @@ class Typhoid(ss.Disease):
     dur_prepatent = ss.par(ss.lognormal(log_mean=prepatent_mean, log_std=prepatent_sigma, unit='day'), doc='Prepatent period: lognormal, with the parameters (of the log of the days) by the dose of the infection')
     onset = ss.Transition(prepatent, [acute, subclinical], p=[p_acute, None], dur=dur_prepatent)
     dur_inf = ss.par(ss.lognormal(log_mean=inf_dur_mean, log_std=inf_dur_sigma, unit='week'), doc='Duration of acute and subclinical infection: lognormal, with the parameters of the log of the weeks')
-    acute_end = ss.Transition(acute, [chronic, recovered, ss.null], p=[p_cpg*p_gall, None, (1 - p_cpg*p_gall)*p_death], dur=dur_inf)
+    acute_end = ss.Transition(acute, [chronic, recovered, ss.dead], p=[p_cpg*p_gall, None, (1 - p_cpg*p_gall)*p_death], dur=dur_inf)
     subclinical_end = ss.Transition(subclinical, [chronic, recovered], p=[p_cpg*p_gall, None], dur=dur_inf)
     carrier_end = ss.Transition(chronic, [recovered, ss.stay], p=[p_rec, None], dur=dur_chro)
     waning = recovered >> susceptible @ dur_rec

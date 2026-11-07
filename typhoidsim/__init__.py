@@ -1,3 +1,5 @@
+# Last verified on: Starsim 4.0.0rc3 (84f1803ee)
+
 from .defaults import *
 from .distributions import *
 from .immunity import *
