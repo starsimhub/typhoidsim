@@ -16,8 +16,8 @@ pars = sc.objdict(
     rand_seed=2,         # Set a non-default seed
 )
 
-ppl_chile    = ss.people('Chile', n_agents=10_000) # The country's age structure, from Starsim's own data (was synthpops)
-ppl_pakistan = ss.people('Pakistan', n_agents=10_000)
+ppl_chile    = ss.population('Chile', n_agents=10_000) # The country's age structure, from Starsim's own data (was synthpops)
+ppl_pakistan = ss.population('Pakistan', n_agents=10_000)
 
 sim_chile = ss.Sim(pars=pars, people=ppl_chile)
 sim_chile.run()

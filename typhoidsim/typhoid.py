@@ -102,7 +102,7 @@ class Typhoid(ss.Disease):
     become_susceptible = unexposed >> susceptible @ ss.peryear(1)*(k + 1)*A/((k*age + A)*np.maximum(A - age, 1e-9))
 
     # Infection, by either route, multiplied by the susceptibility left after past infections
-    n_infections = ss.attr(1, on=prepatent.enter, combine='sum', label='Number of infections')
+    n_infections = ss.attr(1, when=prepatent.enter, combine='sum', label='Number of infections')
     contact = susceptible >> prepatent @ (1 - tppi)**n_infections*exposure2contact_rate*(tpri*prepatent + acute + tsri*subclinical + tcri*chronic)
     dose = env_rel_trans*cfu.n/(unexposed + susceptible + prepatent + acute + subclinical + chronic + recovered).n # CFUs per exposure to the environment
     p_response = 1 - (1 + dose*(2**(1/drc_alpha) - 1)/drc_n50)**(-drc_alpha) # Dose-response: the probability of infection per exposure
@@ -119,11 +119,11 @@ class Typhoid(ss.Disease):
     prepatent_mean  = by_dose(prepatent_levels['mean_dur'], infection_dose, cfu_lo_me, cfu_me_hi)
     prepatent_sigma = by_dose(prepatent_levels['std_dur'], infection_dose, cfu_lo_me, cfu_me_hi)
     dur_prepatent = ss.par(ss.lognormal(log_mean=prepatent_mean, log_std=prepatent_sigma, unit='day'), doc='Prepatent period: lognormal, with the parameters (of the log of the days) by the dose of the infection')
-    onset = ss.Transition(prepatent, [acute, subclinical], p=[p_acute, None], dur=dur_prepatent)
+    onset = ss.Transition(prepatent, {acute: p_acute, subclinical: None}, dur=dur_prepatent)
     dur_inf = ss.par(ss.lognormal(log_mean=inf_dur_mean, log_std=inf_dur_sigma, unit='week'), doc='Duration of acute and subclinical infection: lognormal, with the parameters of the log of the weeks')
-    acute_end = ss.Transition(acute, [chronic, recovered, ss.dead], p=[p_cpg*p_gall, None, (1 - p_cpg*p_gall)*p_death], dur=dur_inf)
-    subclinical_end = ss.Transition(subclinical, [chronic, recovered], p=[p_cpg*p_gall, None], dur=dur_inf)
-    carrier_end = ss.Transition(chronic, [recovered, ss.stay], p=[p_rec, None], dur=dur_chro)
+    acute_end = ss.Transition(acute, {chronic: p_cpg*p_gall, recovered: None, ss.dead: (1 - p_cpg*p_gall)*p_death}, dur=dur_inf)
+    subclinical_end = ss.Transition(subclinical, {chronic: p_cpg*p_gall, recovered: None}, dur=dur_inf)
+    carrier_end = ss.Transition(chronic, {recovered: p_rec, ss.stay: None}, dur=dur_chro)
     waning = recovered >> susceptible @ dur_rec
 
     # Results
@@ -134,7 +134,7 @@ class Typhoid(ss.Disease):
         super().__init__(init_prev=init_prev, init=dict(susceptible=self.share_susceptible), **kwargs) # At the start, the share of each age who would have become susceptible by then
         self.init_seroprev = init_seroprev
         self.init_sero = ss.random() # Who has been infected before the start
-        self.n_prior = ss.poisson(lam=lambda self, sim, uids: tyum.sigmoid(sim.people.age[uids], 120, 1.0)) # How many times (a placeholder: the mean rises with age)
+        self.n_prior = ss.poisson(mean=lambda self, sim, uids: tyum.sigmoid(sim.people.age[uids], 120, 1.0)) # How many times (a placeholder: the mean rises with age)
         return
 
     def init_post(self):

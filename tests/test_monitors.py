@@ -16,7 +16,7 @@ class infections_by_vaccination(ss.Analyzer):
     """ Count the new infections each step among those aged 2-5 who have been vaccinated, and those who have not """
     def init_results(self):
         super().init_results()
-        self.define_results(ss.Result('vaccinated', dtype=int), ss.Result('unvaccinated', dtype=int), ss.Result('all', dtype=int))
+        self.define_results(*[ss.Result(key, dtype=int, kind='flow') for key in ['vaccinated', 'unvaccinated', 'all']])
         return
 
     def step(self):
@@ -35,7 +35,7 @@ class infections_by_vaccination(ss.Analyzer):
 def make_sim():
     typhoid = ty.Typhoid(init_prev=0.05, p_death=0.0)
     vaccine = ss.Vaccine(efficacy=0.8)
-    vaccination = ss.vaccinate(vaccine, at=[2000], who=(ss.person.age >= 2) & (ss.person.age < 5), coverage=0.5)
+    vaccination = ss.vaccinate(vaccine, when=2000, who=(ss.person.age >= 2) & (ss.person.age < 5), coverage=0.5)
     sim = ss.Sim(pars=pars, people=ss.People(10_000, age_data=ss.uniform(0, 60)), diseases=typhoid, networks=ss.RandomNet(n_contacts=5),
                  interventions=vaccination, analyzers=infections_by_vaccination(), stratify=dict(age=age_bin_edges), aging=False)
     return sim

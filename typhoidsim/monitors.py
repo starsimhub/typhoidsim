@@ -31,7 +31,7 @@ class track_individuals_monitor(ss.Analyzer):
     def init_results(self):
         super().init_results()
         shape = (self.t.npts, len(self.sim.people))
-        self.define_results(*[ss.Result(key, shape=shape, dtype=float, scale=False, label=key) for key in self.to_record])
+        self.define_results(*[ss.Result(key, shape=shape, dtype=float, kind='ratio', label=key) for key in self.to_record]) # A value for each person, so not scaled
         return
 
     def step(self):

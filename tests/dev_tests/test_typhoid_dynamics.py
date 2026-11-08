@@ -24,7 +24,7 @@ typhoid = ty.Typhoid()
 ppl = ss.People(10_000)
 
 # Person-to-person interactions
-network = ss.RandomNet(n_contacts=ss.poisson(lam=0.18))   # lam represents the average number of daily exposures
+network = ss.RandomNet(n_contacts=ss.poisson(mean=0.18))   # The mean is the average number of daily exposures
 
 # Intervention, cleans up the environment: each day, it removes a share of the CFUs (the efficacy), which varies in time
 start_year = 2000.5 # Was 2500, after the end of the sim, so it was never active (v4 refuses a start outside the sim)

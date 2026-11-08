@@ -12,7 +12,6 @@ from . import defaults as tyd
 from . import ingest as tyi
 from . import utils as tyu
 
-ss_float_ = ss.dtypes.float
 ss_int_ = ss.dtypes.int
 
 __all__ = ["CommunityNet", "HouseholdNet"]
@@ -141,9 +140,8 @@ class CommunityNet(ss.DynamicNetwork):
 
         p1, p2 = self.get_contacts(born)
 
-        beta = np.ones(len(p1), dtype=ss_float_)
         dur = np.full(len(p1), self.pars.dur.value)
-        self.append(p1=p1, p2=p2, beta=beta, dur=dur)
+        self.append(p1=p1, p2=p2, dur=dur) # Each edge's weight is 1
         return
 
     def step(self):
@@ -295,14 +293,13 @@ class HouseholdNet(ss.DynamicNetwork):
         number_of_contacts = sc.randround(number_of_contacts / 2).astype(ss_int_)  # One-way contacts
 
         p1, p2 = self.get_contacts(born.uids, number_of_contacts)
-        beta = np.ones(len(p1), dtype=ss_float_)
 
         if isinstance(self.pars.dur, ss.Dist):
             dur = self.pars.dur.rvs(p1)
         else:
             dur = np.full(len(p1), self.pars.dur.to_dt() if isinstance(self.pars.dur, ss.Duration) else self.pars.dur) # In steps
 
-        self.append(p1=p1, p2=p2, beta=beta, dur=dur)
+        self.append(p1=p1, p2=p2, dur=dur) # Each edge's weight is 1
         return
 
     def make_households(self):

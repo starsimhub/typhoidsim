@@ -55,7 +55,6 @@ sims = sc.autolist()
 for n_agents in [1_000, 10_000, 100_000, 100_000]:
     sims.append(make_sim(n_agents=n_agents))
 
-msim = ss.MultiSim(sims)
-msim.run()
+msim = ss.parallel(sims)
 msim.plot('typhoid')
 plt.show()

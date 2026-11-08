@@ -12,7 +12,7 @@ import typhoidsim as ty
 def make_screening(coverage, sensitivity, typhoid):
     """ Screen people as they become acute, with a test of this sensitivity """
     test = ss.Diagnostic(sensitivity=sensitivity)
-    return ss.screen(test, on=typhoid.onset.to(typhoid.acute), coverage=coverage, name='screening')
+    return ss.screen(test, when=typhoid.onset.to(typhoid.acute), coverage=coverage, name='screening')
 
 
 def run_sim_base_test(prob_test, prob_test_positive, do_plot=False):
@@ -104,7 +104,7 @@ def test_acute_treatment():
         pars = sc.objdict(start=2000, dur=ss.years(1), dt=ss.days(1), n_agents=5_000, verbose=0)
         typhoid = ty.Typhoid(p_acute=0.9, tsri=0.2, tpri=0.1, tcri=0.1, teer=0, init_prev=0.002) # Mostly acute, which is where treatment acts; the environment infects nobody, but is still shed into
         sim = ss.Sim(pars=pars, diseases=typhoid, interventions=list(interventions), networks=ss.RandomNet(n_contacts=1))
-        res = sim.run(n_runs=6, verbose=0).results.typhoid
+        res = ss.parallel(sim, n_runs=6, verbose=0).results.typhoid
         return res.infections.sum(axis=1).mean(), (res.shedding.sum(axis=1)/res.acute.sum(axis=1)).mean()
     base, base_shed = run()
     treated, treated_shed = run(ty.acute_treatment(efficacy=1.0, coverage=1.0, delay=ss.constant(ss.days(1))))

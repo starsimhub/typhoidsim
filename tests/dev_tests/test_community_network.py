@@ -20,7 +20,7 @@ pars = sc.objdict(
 
 location = 'Chile'
 # Who
-ppl = ss.people(location, n_agents=10_000) # The country's age structure, from Starsim's own data (was synthpops)
+ppl = ss.population(location, n_agents=10_000) # The country's age structure, from Starsim's own data (was synthpops)
 
 # What
 typhoid = ty.Typhoid()

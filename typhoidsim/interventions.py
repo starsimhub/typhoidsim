@@ -41,7 +41,7 @@ def acute_treatment(efficacy=0.5, coverage=1.0, delay=None, disease='typhoid', n
     if delay is None:
         delay = ss.lognormal(mean=ss.days(11.93), std=ss.days(6.98)) # EMOD's lognormal with mean 2.332 and sd 0.543 of the log of the days
     drug = ss.Treatment(efficacy=dict(transmission=efficacy), during=acute, name=f'{name}_drug') # Held only while acute
-    return ss.treat(drug, on=onset, delay=delay, coverage=coverage, name=name, **kwargs)
+    return ss.treat(drug, when=ss.on(onset, delay=delay), coverage=coverage, name=name, **kwargs)
 
 
 def vaccination_with_waning(start_year=None, end_year=None, age_pars=None, prob=None, prob_type='annual',
@@ -113,9 +113,10 @@ def vaccination_with_waning(start_year=None, end_year=None, age_pars=None, prob=
     vaccine = ss.Vaccine(efficacy=1.0, waning=waning, name=f'{name}_vaccine')
     in_group = (ss.person.age >= min_age) & (ss.person.age < max_age)
     interval = ss.days(1) if prob_type == 'timestep' else None # A typed rate as coverage= is a chance at each step while people are eligible; a bare probability is offered once, so in daily rounds
-    first = ss.vaccinate(vaccine, who=in_group & ~vaccine.held, coverage=coverage, every=interval, start=start_year, stop=end_year, name=name)
+    when = ss.schedule(every=interval) if interval is not None else None # None is routine: offered at each step while eligible
+    first = ss.vaccinate(vaccine, who=in_group & ~vaccine.held, coverage=coverage, when=when, start=start_year, stop=end_year, name=name)
     out = [first]
     for i,(p, interval) in enumerate([(booster1_prob, booster1_interval), (booster2_prob, booster2_interval)]):
         if p > 0:
-            out.append(ss.vaccinate(vaccine, on=first, delay=ss.years(interval), coverage=p, name=f'{name}_booster{i+1}'))
+            out.append(ss.vaccinate(vaccine, when=ss.on(first, delay=ss.years(interval)), coverage=p, name=f'{name}_booster{i+1}'))
     return out

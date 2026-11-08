@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 def test_truncnorm(n_samples=1000, a_trunc=0, b_trunc=2_000):
     sc.heading('Testing truncnorm')
     mu, sigma = 1_000, 1_000
-    dist = ss.truncnorm(loc=mu, scale=sigma, low=a_trunc, high=b_trunc, name='test_truncnorm', strict=False)
+    dist = ss.truncnorm(mean=mu, std=sigma, low=a_trunc, high=b_trunc, name='test_truncnorm', strict=False)
     dist.init()
     rvs = dist(n_samples)
     print(rvs)
