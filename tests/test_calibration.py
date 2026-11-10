@@ -23,7 +23,7 @@ def test_calibration(do_plot=False):
     truth = make_sim(init_prev=0.02, rand_seed=2).run()
     data = truth.to_synthetic_data('typhoid.infected')
     sim = make_sim(data=data)
-    fit = sim.fit(method=ss.fit.method('optuna', n_trials=30, n_runs=4, workers=1 if debug else 4), verbose=0)
+    fit = sim.fit(method=ss.fitting.method('optuna', n_trials=30, n_runs=4, workers=1 if debug else 4), verbose=0)
     print(fit.summarize())
     trials = fit.to_df()
     best = trials.init_prev[trials.objective.idxmin()] # The best-scoring trial; fit.pars smooths over the trials (see TY10 in the port notes)

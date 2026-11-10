@@ -55,7 +55,7 @@ Now we put all the elements together: the sim with the data, calibrated with `si
 
 ```{python}
 sim = make_sim(data=data)
-fit = sim.fit(method=ss.fit.method('optuna', n_trials=60, workers=4), verbose=0) # The trials run in parallel
+fit = sim.fit(method=ss.fitting.method('optuna', n_trials=60, workers=4), verbose=0) # The trials run in parallel
 fit.summarize()
 ```
 
