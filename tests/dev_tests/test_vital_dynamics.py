@@ -21,8 +21,8 @@ ppl = ss.People(10_000)
 
 
 demographics = [
-    ss.Births(birth_rate=ss.peryear(20)), # Per 1000 people
-    ss.Deaths(death_rate=ss.peryear(15))
+    ss.Births(birth_rate=ss.peryear(0.02)), # 20 per 1,000 people
+    ss.Deaths(death_rate=ss.peryear(0.015))
 ]
 
 network = ss.RandomNet(n_contacts=5)

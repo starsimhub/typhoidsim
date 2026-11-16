@@ -112,9 +112,10 @@ def vaccination_with_waning(start_year=None, end_year=None, age_pars=None, prob=
     waning = tyi.box_gamma_waning(ve0=imm_ve0, constant_dur=imm_constant_dur, shape=imm_decay_shape, rate=imm_decay_rate)
     vaccine = ss.Vaccine(efficacy=1.0, waning=waning, name=f'{name}_vaccine')
     in_group = (ss.person.age >= min_age) & (ss.person.age < max_age)
-    interval = ss.days(1) if prob_type == 'timestep' else None # A typed rate as coverage= is a chance at each step while people are eligible; a bare probability is offered once, so in daily rounds
+    interval = ss.days(1) if prob_type == 'timestep' else None # A typed rate (rate=) is a chance at each step while people are eligible; a bare probability (coverage=) is offered once, so in daily rounds
     when = ss.schedule(every=interval) if interval is not None else None # None is routine: offered at each step while eligible
-    first = ss.vaccinate(vaccine, who=in_group & ~vaccine.held, coverage=coverage, when=when, start=start_year, stop=end_year, name=name)
+    reach = dict(rate=coverage) if isinstance(coverage, ss.TimePar) else dict(coverage=coverage)
+    first = ss.vaccinate(vaccine, who=in_group & ~vaccine.held, when=when, start=start_year, stop=end_year, name=name, **reach)
     out = [first]
     for i,(p, interval) in enumerate([(booster1_prob, booster1_interval), (booster2_prob, booster2_interval)]):
         if p > 0:

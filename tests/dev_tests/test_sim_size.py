@@ -32,8 +32,8 @@ def make_sim(n_agents=1_000, dur=1.0, add_monitor=False):
     # What, and how: the environment is part of the disease
     typhoid = ty.Typhoid()
 
-    births = ss.Births(birth_rate=ss.peryear(10))
-    deaths = ss.Deaths(death_rate=ss.peryear(10))
+    births = ss.Births(birth_rate=ss.peryear(0.01))
+    deaths = ss.Deaths(death_rate=ss.peryear(0.01))
     demographics = [births, deaths]
 
     # The population by age group (was histograms_by_age_sex_monitor)
